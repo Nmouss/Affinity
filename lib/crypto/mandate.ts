@@ -1,6 +1,6 @@
 import type { CartMandate } from "@/types/domain";
 
-function unsignedPayload(mandate: CartMandate) {
+export function unsignedPayload(mandate: CartMandate) {
   return new TextEncoder().encode(JSON.stringify({
     mission: mandate.mission,
     bundle: mandate.bundle,

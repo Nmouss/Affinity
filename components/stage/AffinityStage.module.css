@@ -1,0 +1,11 @@
+.stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 75%, #7a341d 0, #2e1712 30%, #120d0b 70%);
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}

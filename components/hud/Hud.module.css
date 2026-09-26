@@ -1,0 +1,30 @@
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hud > * {
+  pointer-events: auto;
+}
+
+.top {
+  position: absolute;
+  top: 1rem;
+  left: 1.25rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+}
+
+.phase {
+  color: #dcc8b7;
+  font-size: 0.875rem;
+}
+
+.mission {
+  position: absolute;
+  left: 50%;
+  bottom: 2rem;
+  transform: translateX(-50%);
+}

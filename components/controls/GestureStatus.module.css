@@ -1,0 +1,33 @@
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: rgb(18 13 11 / 0.6);
+  color: #dcc8b7;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pip {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #8a7768;
+}
+
+.status[data-source="leap"] .pip,
+.status[data-source="mediapipe"] .pip {
+  background: #e0a458;
+}
+
+.status[data-source="replay"] .pip {
+  background: #8fb8ff;
+}
+
+.status[data-live="true"] .pip {
+  background: #7ce0a0;
+  box-shadow: 0 0 8px #7ce0a0;
+}

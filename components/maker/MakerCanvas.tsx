@@ -136,9 +136,8 @@ export interface MakerCanvasProps {
 
 export default function MakerCanvas({ step, draft }: MakerCanvasProps) {
   const editing = (step === "editor" || step === "quit-dialog") && draft !== null;
-  const plazaHovered = usePlaza((state) => state.hoveredId !== null);
-  const plazaDragging = usePlaza((state) => state.draggingId !== null);
-  const cursor = editing ? "auto" : plazaDragging ? "grabbing" : plazaHovered ? "pointer" : "auto";
+  // In the plaza the canvas inherits PeopleMaker's pointing-hand / grabbing-fist cursor.
+  const cursor = editing ? "auto" : "inherit";
 
   // The single mouse pointer source for the plaza (usePlaza.pointer); the hand track writes the
   // same field from Leap frames. Only wired while not editing — the turntable has its own drag

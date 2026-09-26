@@ -16,7 +16,7 @@ lib/demo/               Fixed-seed playback and one-key reset helpers
 public/                  GLB models and sprite/icon assets
 types/                   Shared domain and event contracts
 tests/                   Unit and end-to-end council-flow tests
-backend/                 Reserved Python fallback; not used by the main app
+backend/                 Python LangGraph council and FastAPI endpoints
 ```
 
 ## Start
@@ -28,6 +28,17 @@ npm run dev
 ```
 
 Open `http://localhost:3000`. The local URL is intentional because the Leap tracking WebSocket does not provide secure WebSockets.
+
+### Agent backend
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn backend.api:app --reload --port 8000
+```
+
+`DEMO_MODE=true` uses deterministic local opinions and scoring. Set it to `false` and provide `OPENAI_API_KEY` to use structured model output. Start a run with `POST /runs`, retain its `threadId`, then send the handshake result to `POST /runs/resume`.
 
 ## MVP implementation order
 

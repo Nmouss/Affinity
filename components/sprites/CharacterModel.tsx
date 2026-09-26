@@ -5,7 +5,16 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { FamilyProfile } from "@/types/domain";
 import type { SpriteMood } from "@/types/stage";
-import { characterFor, type Accessory, type CharacterMotion } from "./characterPose";
+import {
+  characterFor,
+  characterTuning,
+  createPose,
+  poseFor,
+  type Accessory,
+  type CharacterMotion,
+  type Pose,
+  type PoseInput,
+} from "./characterPose";
 
 // Shared procedural geometry keeps the three characters lightweight: every instance reuses the
 // same GPU buffers, while profile color and accessories provide their individual silhouettes.
@@ -219,13 +228,22 @@ export interface CharacterModelProps {
 /** The model origin sits at the soles, so the character stands on whatever y it is placed at. */
 const BASE_Y = 0;
 
-export function CharacterModel({ profile, mood, gaze }: CharacterModelProps) {
+// Each foot group's pivot sits at the ankle; the foot mesh is offset down and forward from it
+// (matching the old fixed mesh position) so a pitch rotation lifts the toe about the ankle
+// instead of about the mesh's own center.
+const ANKLE_Y = 0.2;
+const ANKLE_Z = 0.02;
+const FOOT_MESH_OFFSET: [number, number, number] = [0, 0.16 - ANKLE_Y, 0.1 - ANKLE_Z];
+
+export function CharacterModel({ profile, mood, gaze, motion }: CharacterModelProps) {
   const actor = useRef<THREE.Group>(null);
   const torso = useRef<THREE.Group>(null);
+  const twist = useRef<THREE.Group>(null);
   const eyes = useRef<THREE.Group>(null);
   const leftArm = useRef<THREE.Group>(null);
   const rightArm = useRef<THREE.Group>(null);
-  const feet = useRef<THREE.Group>(null);
+  const leftFoot = useRef<THREE.Group>(null);
+  const rightFoot = useRef<THREE.Group>(null);
   const accessory = useRef<THREE.Group>(null);
   const closedMouth = useRef<THREE.Mesh>(null);
   const openMouth = useRef<THREE.Mesh>(null);
@@ -233,16 +251,39 @@ export function CharacterModel({ profile, mood, gaze }: CharacterModelProps) {
   const time = useRef(0);
   const stateTime = useRef(0);
   const previousMood = useRef<SpriteMood>(mood.current);
+
+  const character = characterFor(profile.id);
+
   const springs = useRef({
+    lift: spring(),
     squash: spring(1),
     lean: spring(),
     nod: spring(),
-    lift: spring(),
-    left: spring(-0.28),
-    right: spring(0.28),
+    twist: spring(),
+    armLeftRaise: spring(0.28),
+    armRightRaise: spring(0.28),
+    armLeftSwing: spring(),
+    armRightSwing: spring(),
+    footLeftLift: spring(),
+    footLeftPitch: spring(),
+    footLeftForward: spring(),
+    footRightLift: spring(),
+    footRightPitch: spring(),
+    footRightForward: spring(),
   });
-
-  const character = characterFor(profile.id);
+  // Reused every frame so poseFor and the driver below never allocate.
+  const poseInput = useRef<PoseInput>({
+    mood: mood.current,
+    character,
+    time: 0,
+    sinceMood: 0,
+    speed: 0,
+    gaitPhase: 0,
+    sinceJump: Infinity,
+    sinceLand: Infinity,
+    dragVelocityX: 0,
+  });
+  const pose = useRef<Pose>(createPose());
 
   const materials = useMemo(() => {
     const core = new THREE.Color(profile.colors[0] ?? "#ffffff");
@@ -262,8 +303,18 @@ export function CharacterModel({ profile, mood, gaze }: CharacterModelProps) {
     [materials],
   );
 
-  useFrame((_, rawDelta) => {
-    if (!actor.current || !torso.current || !eyes.current || !leftArm.current || !rightArm.current || !feet.current) return;
+  useFrame((state, rawDelta) => {
+    if (
+      !actor.current ||
+      !torso.current ||
+      !twist.current ||
+      !eyes.current ||
+      !leftArm.current ||
+      !rightArm.current ||
+      !leftFoot.current ||
+      !rightFoot.current
+    )
+      return;
     const delta = Math.min(rawDelta, 0.05);
     const activity = mood.current;
     time.current += delta;
@@ -275,96 +326,78 @@ export function CharacterModel({ profile, mood, gaze }: CharacterModelProps) {
 
     const t = time.current + character.phase;
     const since = stateTime.current;
-    const beat = (since * (profile.id === "son" ? 1.1 : 0.9)) % 3.8;
-    const phrase = pulse(beat, 0.65, 0.32) + 0.65 * pulse(beat, 1.65, 0.27) + 0.4 * pulse(beat, 2.35, 0.19);
-    const speaking = activity === "speaking";
-    const listening = activity === "listening" || activity === "seated";
-    const happy = activity === "happy" || activity === "celebrating";
+    const elapsed = state.clock.elapsedTime;
 
     const blinkTime = (t + Math.sin(t * 0.15) * 0.4) % 4.7;
     eyes.current.scale.y = 1 - 0.95 * pulse(blinkTime, 4.52, 0.065);
     eyes.current.position.x = THREE.MathUtils.damp(eyes.current.position.x, gaze.current.x * 0.035, 12, delta);
-    eyes.current.position.y = THREE.MathUtils.damp(eyes.current.position.y, 1.63 + gaze.current.y * 0.025, 12, delta);
 
-    let armLeft = -0.28;
-    let armRight = 0.28;
-    let lean = Math.sin(t * 0.9) * 0.013;
-    let nod = 0;
-    let squash = 1 + Math.sin(t * 1.5) * 0.01;
-    let lift = 0;
+    // Fill the reused pose input from mood, character, locomotion and clock state, then let
+    // poseFor (owned by the pose track) turn it into joint targets.
+    const input = poseInput.current;
+    input.mood = activity;
+    input.character = character;
+    input.time = t;
+    input.sinceMood = since;
+    input.speed = motion?.current.speed ?? 0;
+    input.gaitPhase = motion?.current.gaitPhase ?? 0;
+    input.dragVelocityX = motion?.current.dragVelocityX ?? 0;
+    const jumpAt = motion?.current.jumpAt ?? null;
+    input.sinceJump = jumpAt === null ? Infinity : elapsed - jumpAt;
+    const landAt = motion?.current.landAt ?? null;
+    input.sinceLand = landAt === null ? Infinity : elapsed - landAt;
+    const target = poseFor(input, pose.current);
 
-    if (activity === "hovered") {
-      armRight = 2.28 + Math.sin(since * 9) * 0.16;
-      lean = -0.035;
-    }
-    if (speaking) {
-      armRight = 0.45 + phrase * 0.82 * character.energy;
-      armLeft = -0.28 - phrase * 0.19;
-      nod = phrase * 0.035 * character.energy;
-      lean = -0.018 + phrase * 0.03;
-      squash += phrase * 0.012;
-    }
-    if (listening) {
-      lean = -0.035;
-      nod = 0.045 + pulse(beat, 2.9, 0.2) * 0.1;
-      armRight = 0.32;
-    }
-    if (activity === "thinking" || activity === "scoring") {
-      lean = -0.07;
-      armRight = 2.3;
-      nod = -0.025;
-    }
-    if (activity === "vetoing") {
-      armRight = 2.05;
-      lean = -0.04;
-      nod = -0.025;
-    }
-    if (activity === "conceding" || activity === "sad") {
-      nod = 0.1;
-      squash = 0.97;
-      armLeft = -0.18;
-      armRight = 0.18;
-    }
-    if (activity === "held") {
-      lift = 0.16;
-      squash = 1.04;
-      armLeft = -0.7;
-      armRight = 0.7;
-    }
-    if (happy) {
-      const local = (since + character.phase * 0.13) % 2.2;
-      squash = 1 - 0.11 * pulse(local, 0.2, 0.12) + 0.065 * pulse(local, 0.47, 0.16) - 0.09 * pulse(local, 0.87, 0.1);
-      lift = local > 0.3 && local < 0.88 ? Math.sin(((local - 0.3) / 0.58) * Math.PI) * 0.22 * character.energy : 0;
-      armLeft = -2.05;
-      armRight = 2.35;
-      lean = Math.sin(t * 2.5) * 0.045;
-    }
+    eyes.current.position.y = THREE.MathUtils.damp(
+      eyes.current.position.y,
+      1.63 + gaze.current.y * 0.025 + target.eyeLift * 0.02,
+      12,
+      delta,
+    );
 
     const values = springs.current;
-    actor.current.position.y = BASE_Y + advance(values.lift, lift, delta, 280, 27);
-    const scaleY = advance(values.squash, squash, delta, 150, 13);
+    actor.current.position.y = BASE_Y + advance(values.lift, target.lift, delta, 280, 27);
+    actor.current.rotation.y = target.spin; // whole-body spin is applied directly, never sprung
+    actor.current.scale.setScalar(character.scale * characterTuning.scale);
+
+    const scaleY = advance(values.squash, target.squash, delta, 150, 13);
     torso.current.scale.set(character.width / Math.sqrt(scaleY), scaleY, 1 / Math.sqrt(scaleY));
-    torso.current.rotation.z = advance(values.lean, lean, delta, 100, 15);
-    torso.current.rotation.x = advance(values.nod, nod, delta, 130, 16);
-    leftArm.current.rotation.z = advance(values.left, armLeft, delta, 105, 13);
-    rightArm.current.rotation.z = advance(values.right, armRight, delta, 115, 13);
-    rightArm.current.rotation.x = THREE.MathUtils.damp(rightArm.current.rotation.x, activity === "thinking" ? -0.28 : speaking ? -0.2 * phrase : 0, 7, delta);
-    feet.current.rotation.x = THREE.MathUtils.damp(feet.current.rotation.x, activity === "held" ? -0.35 : 0, 8, delta);
+    torso.current.rotation.z = advance(values.lean, target.lean, delta, 100, 15);
+    torso.current.rotation.x = advance(values.nod, target.nod, delta, 130, 16);
+    twist.current.rotation.y = advance(values.twist, target.twist, delta, 120, 15);
+
+    // raise is mirrored per side (today's rest pose: left -0.28, right +0.28); swing rotates
+    // about x, and since the arm hangs from the shoulder along -y, a positive swing has to be a
+    // negative x rotation to swing the hand toward the character's front (+z).
+    leftArm.current.rotation.z = -advance(values.armLeftRaise, target.armLeft.raise, delta, 170, 16);
+    rightArm.current.rotation.z = advance(values.armRightRaise, target.armRight.raise, delta, 170, 16);
+    leftArm.current.rotation.x = -advance(values.armLeftSwing, target.armLeft.swing, delta, 170, 16);
+    rightArm.current.rotation.x = -advance(values.armRightSwing, target.armRight.swing, delta, 170, 16);
+
+    // Same sign as arm swing: the foot mesh sits forward (+z) of its ankle pivot, so a positive
+    // pitch (toe up) has to be a negative x rotation to raise that +z point. Lift is clamped at 0
+    // so an under-shooting spring never sinks the sole into the floor.
+    leftFoot.current.position.y = ANKLE_Y + Math.max(0, advance(values.footLeftLift, target.footLeft.lift, delta, 260, 22));
+    leftFoot.current.position.z = ANKLE_Z + advance(values.footLeftForward, target.footLeft.forward, delta, 260, 22);
+    leftFoot.current.rotation.x = -advance(values.footLeftPitch, target.footLeft.pitch, delta, 260, 22);
+    rightFoot.current.position.y = ANKLE_Y + Math.max(0, advance(values.footRightLift, target.footRight.lift, delta, 260, 22));
+    rightFoot.current.position.z = ANKLE_Z + advance(values.footRightForward, target.footRight.forward, delta, 260, 22);
+    rightFoot.current.rotation.x = -advance(values.footRightPitch, target.footRight.pitch, delta, 260, 22);
+
     if (accessory.current) accessory.current.rotation.z = -values.lean.velocity * 0.025;
 
-    const syllable = (Math.sin(t * 13) * 0.5 + 0.5) * phrase;
-    const mouthOpen = speaking && syllable > 0.13;
+    const mouthOpen = target.mouth === "open";
     openMouth.current!.visible = mouthOpen;
-    openMouth.current!.scale.y = 0.018 + Math.min(1, syllable) * 0.05;
-    closedMouth.current!.visible = !mouthOpen && activity !== "sad" && activity !== "conceding";
-    worriedMouth.current!.visible = activity === "sad" || activity === "conceding";
-    materials.skin.emissiveIntensity = happy ? 0.12 : activity === "vetoing" ? 0.08 : 0.025;
+    openMouth.current!.scale.y = 0.018 + Math.min(1, target.mouthOpen) * 0.05;
+    closedMouth.current!.visible = target.mouth === "smile";
+    worriedMouth.current!.visible = target.mouth === "worried";
+    materials.skin.emissiveIntensity = target.glow;
   });
 
   return (
-    <group ref={actor} position-y={BASE_Y} scale={character.scale}>
+    <group ref={actor} position-y={BASE_Y}>
       <group ref={torso} position-y={0.34}>
-        <group position-y={-0.34}>
+        <group ref={twist} position-y={-0.34}>
           <mesh geometry={bodyGeometry} material={materials.skin} castShadow receiveShadow />
           <mesh geometry={faceGeometry} material={faceMaterial} />
           <group ref={eyes} position={[0, 1.63, 0.454]}>
@@ -392,17 +425,11 @@ export function CharacterModel({ profile, mood, gaze }: CharacterModelProps) {
           </group>
         </group>
       </group>
-      <group ref={feet}>
-        {[-1, 1].map((side) => (
-          <mesh
-            key={side}
-            geometry={footGeometry}
-            material={materials.skin}
-            position={[side * 0.205, 0.16, 0.1]}
-            scale={[0.132, 0.175, 0.2]}
-            castShadow
-          />
-        ))}
+      <group ref={leftFoot} position={[-0.205, ANKLE_Y, ANKLE_Z]}>
+        <mesh geometry={footGeometry} material={materials.skin} position={FOOT_MESH_OFFSET} scale={[0.132, 0.175, 0.2]} castShadow />
+      </group>
+      <group ref={rightFoot} position={[0.205, ANKLE_Y, ANKLE_Z]}>
+        <mesh geometry={footGeometry} material={materials.skin} position={FOOT_MESH_OFFSET} scale={[0.132, 0.175, 0.2]} castShadow />
       </group>
     </group>
   );

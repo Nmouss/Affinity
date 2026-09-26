@@ -1,11 +1,14 @@
 import type { SpriteMood } from "@/types/stage";
+import type { AccessoryType, CharacterLook } from "@/types/character";
 
 // Mood + locomotion → joint targets for CharacterModel. Pure (no three.js) so it is unit-tested,
 // and it writes into a reused Pose so nothing allocates per frame. CharacterModel springs every
 // value; SpriteToken fills CharacterMotion as the character walks, jumps, and is dragged.
 // Units are the unscaled model's (soles at y = 0, head top at MODEL_HEIGHT) unless noted.
 
-export type Accessory = "scarf" | "bow" | "dinosaur";
+// Widened to the full People Maker accessory set. CharacterModel is the only reader, and every
+// value CHARACTERS uses today ("scarf" | "bow" | "dinosaur") is still a member of AccessoryType.
+export type Accessory = AccessoryType;
 export type Fidget = "toeBounce" | "sway" | "scarfTug";
 
 export interface CharacterConfig {
@@ -42,6 +45,63 @@ export const CHARACTERS: Record<string, CharacterConfig> = {
 
 export function characterFor(id: string): CharacterConfig {
   return CHARACTERS[id] ?? CHARACTERS.daughter!;
+}
+
+function clamp01Range(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+/** Deterministic 0..4 (seconds) spread from an id's characters, so people never move in lockstep. */
+function hashPhase(id: string): number {
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) {
+    hash = (hash * 31 + id.charCodeAt(index)) >>> 0;
+  }
+  return ((hash % 1000) / 1000) * 4;
+}
+
+/**
+ * Derives a CharacterConfig straight from a People Maker CharacterLook, replacing the old
+ * hard-coded-by-id CHARACTERS lookup for anyone rendered from a look. `id` only seeds the phase
+ * hash (so two people with an identical look still move out of step).
+ *
+ * scale/width are tuned so the three STARTER_LOOKS land within ±0.015 of today's CHARACTERS
+ * scale/width (wife 0.95/1, daughter 0.86/0.98, son 0.84/1.05).
+ */
+export function characterForLook(look: CharacterLook, id: string): CharacterConfig {
+  const { height, build } = look.body;
+
+  const scale = 0.72 + 0.23 * height;
+  const width = 0.9 + 0.2 * build;
+
+  // Smaller and rounder people read as more energetic (bouncier idle fidgets, bigger gestures).
+  const smallness = 1 - height;
+  const roundness = build;
+  const energy = clamp01Range(0.7 + 0.5 * smallness + 0.1 * (roundness - 0.5), 0.65, 1.25);
+
+  // Shorter legs take shorter steps; because walkSpeed shrinks slower than stride does, cadence
+  // (walkSpeed / stride, in the gait-phase math SpriteToken drives from these) still comes out
+  // faster for a little one than for a grown-up.
+  const stride = 0.85 + 0.45 * height;
+  const walkSpeed = 4.2 - 1 * height;
+
+  const energyNorm = clamp01Range((energy - 0.7) / 0.5, 0, 1);
+  const bounce = clamp01Range(0.03 + 0.02 * energyNorm, 0.03, 0.05);
+
+  const fidget: Fidget =
+    look.accessory.type === "scarf" ? "scarfTug" : height < 0.65 ? "toeBounce" : "sway";
+
+  return {
+    accessory: look.accessory.type,
+    scale,
+    width,
+    energy,
+    phase: hashPhase(id),
+    stride,
+    walkSpeed,
+    bounce,
+    fidget,
+  };
 }
 
 /** Lab-tunable multipliers (leva sliders in SpriteLab mutate these). */

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "maya",
+    "name": "Maya",
+    "avatarId": "maya",
+    "category": "cabin_supplies",
+    "preferences": { "durability": 0.72, "compactness": 0.88, "simpleControls": 0.82, "expressiveStyle": 0.25 },
+    "evidenceCounts": { "durability": 1, "compactness": 1, "simpleControls": 1, "expressiveStyle": 1 },
+    "rules": [],
+    "preferredUseTraits": [],
+    "confirmedUseRequirements": ["one_hand_operation"]
+  },
+  {
+    "id": "alex",
+    "name": "Alex",
+    "avatarId": "alex",
+    "category": "cabin_supplies",
+    "preferences": { "durability": 0.42, "compactness": 0.45, "simpleControls": 0.5, "expressiveStyle": 0.92 },
+    "evidenceCounts": { "durability": 1, "compactness": 1, "simpleControls": 1, "expressiveStyle": 1 },
+    "rules": [],
+    "preferredUseTraits": [],
+    "confirmedUseRequirements": []
+  },
+  {
+    "id": "judge",
+    "name": "Judge",
+    "avatarId": "judge",
+    "category": "cabin_supplies",
+    "preferences": { "durability": 0.98, "compactness": 0.35, "simpleControls": 0.52, "expressiveStyle": 0.25 },
+    "evidenceCounts": { "durability": 3, "compactness": 1, "simpleControls": 1, "expressiveStyle": 1 },
+    "rules": ["no_fragile_glass"],
+    "preferredUseTraits": [],
+    "confirmedUseRequirements": []
+  }
+]

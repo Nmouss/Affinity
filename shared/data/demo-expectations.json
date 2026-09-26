@@ -1,0 +1,28 @@
+{
+  "mission": {
+    "id": "cabin-trip",
+    "title": "Cabin Trip Coffee Kit",
+    "missionType": "group_trip_supplies",
+    "sharedBudget": 150,
+    "durationDays": 3,
+    "destination": "cabin",
+    "participantIds": ["maya", "alex"],
+    "categories": ["cooking", "comfort"],
+    "status": "confirmed"
+  },
+  "beforeJudge": {
+    "shopperIds": ["maya", "alex"],
+    "expectedSelectedBundle": "Premium Cabin Bundle"
+  },
+  "afterJudge": {
+    "shopperIds": ["maya", "alex", "judge"],
+    "expectedSelectedBundle": "Balanced Cabin Bundle",
+    "expectedIneligibleBundle": "Premium Cabin Bundle",
+    "ineligibilityRule": "no_fragile_glass",
+    "durabilitySupportBundle": "Balanced Cabin Bundle"
+  },
+  "comparisonEvidence": [
+    { "shopperId": "judge", "pairId": "durability-01", "choice": "left" }
+  ],
+  "notes": "Expected bundle transitions are deterministic after shopper state and comparison evidence are applied."
+}

@@ -1,0 +1,6 @@
+[
+  { "pairId": "durability-01", "axis": "durability", "leftProductId": "trail-mug", "rightProductId": "basic-pump", "leftValue": 0.9, "rightValue": 0.45 },
+  { "pairId": "compactness-01", "axis": "compactness", "leftProductId": "easy-press", "rightProductId": "classic-press", "leftValue": 0.92, "rightValue": 0.48 },
+  { "pairId": "controls-01", "axis": "simpleControls", "leftProductId": "easy-press", "rightProductId": "smart-press", "leftValue": 0.94, "rightValue": 0.38 },
+  { "pairId": "style-01", "axis": "expressiveStyle", "leftProductId": "colorway-press", "rightProductId": "trail-mug", "leftValue": 0.95, "rightValue": 0.2 }
+]

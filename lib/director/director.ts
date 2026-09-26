@@ -263,8 +263,11 @@ export function createDirector(options: DirectorOptions): Director {
         state.setError(null);
         state.setVoiceStatus("listening");
         const talkRun = run; // a reset() between now and onFinal bumps `run`, dropping the result
+        // A fatal error still ends in an empty onFinal; keep its message instead of "didn't catch that".
+        let failed = false;
         recognizer.start({
           onInterim: (text) => {
+            if (talkRun !== run) return;
             state.setMissionText(text);
             state.setVoiceInterim(text);
           },
@@ -272,7 +275,7 @@ export function createDirector(options: DirectorOptions): Director {
             if (talkRun !== run) return;
             const heard = text.trim();
             if (!heard) {
-              get().setError("I didn't catch that — hold your palm up and try again.");
+              if (!failed) get().setError("I didn't catch that — hold your palm up and try again.");
               return;
             }
             get().setMissionText(heard);
@@ -282,6 +285,7 @@ export function createDirector(options: DirectorOptions): Director {
           },
           onError: (code) => {
             if (code === "no-speech" || code === "aborted") return;
+            failed = true;
             if (code === "not-allowed" || code === "service-not-allowed") {
               get().setError("Voice needs microphone access — allow it for this page and try again.");
             } else if (code === "network") {

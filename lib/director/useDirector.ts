@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useStage } from "@/lib/stage/store";
+import { createRecognizer } from "@/lib/voice/recognizer";
+import { createSpeaker } from "@/lib/voice/speaker";
 import { createDirector, type Director } from "./director";
 
 export interface DirectorFlags {
@@ -32,8 +34,7 @@ export function useDirector(): { director: Director | null; flags: DirectorFlags
       store: useStage,
       preferReplay: flags.preferReplay,
       cut90: flags.cut90,
-      // Track B's real engines get wired in here at merge time, e.g.:
-      // voice: { recognizer: createRecognizer(), speaker: createSpeaker() }
+      voice: { recognizer: createRecognizer(), speaker: createSpeaker() },
     });
     setMounted({ director, flags });
 

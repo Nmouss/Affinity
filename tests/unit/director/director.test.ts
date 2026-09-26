@@ -416,6 +416,16 @@ describe("voice", () => {
     expect(state().phase).toBe("lobby");
   });
 
+  it("keeps a fatal error's message when the empty final transcript follows it", () => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    emitGesture({ type: "talkStart" });
+    rec.emitError("not-allowed");
+    emitGesture({ type: "talkEnd" });
+    rec.emitFinal("");
+    expect(state().error).toMatch(/microphone/i);
+  });
+
   it.each([
     ["not-allowed", /microphone/i],
     ["service-not-allowed", /microphone/i],

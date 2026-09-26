@@ -67,6 +67,21 @@ export interface SpriteStageState {
   score: number | null;
 }
 
+/**
+ * Who is on each side of a veto, filled in by the director from the `veto` event (explicit fields
+ * when the agents send them, matching heuristics otherwise). Room and sprites render the beat from it.
+ */
+export interface ConflictAttribution {
+  /** Sprite whose wish was vetoed (Leo in the demo). */
+  wishBy: string | null;
+  /** Sprite whose house rule vetoed it (Maya in the demo). */
+  ruleBy: string | null;
+  /** Catalog item that broke the rule (inflatable-trex). */
+  itemId: string | null;
+  /** Catalog item that resolves the conflict (orn-dino). */
+  resolvedItemId: string | null;
+}
+
 export interface LoggedCouncilEvent {
   event: CouncilEvent;
   /** performance.now() when the event was applied. */

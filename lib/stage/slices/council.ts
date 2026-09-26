@@ -9,7 +9,13 @@ import type {
   SpriteOpinion,
   SpriteScore,
 } from "@/types/domain";
-import type { LoggedCouncilEvent, SpriteMood, SpriteStageState, StagePhase } from "@/types/stage";
+import type {
+  ConflictAttribution,
+  LoggedCouncilEvent,
+  SpriteMood,
+  SpriteStageState,
+  StagePhase,
+} from "@/types/stage";
 import type { StageStore } from "../store";
 
 // Owned by the director track. This is the minimal reducer the lab stepper needs; the director
@@ -24,6 +30,8 @@ export interface CouncilSlice {
   opinions: Record<string, SpriteOpinion>;
   constraints: ConstraintSet | null;
   veto: ConstraintSet["conflicts"][number] | null;
+  /** Set by the director when a veto arrives; null until then. */
+  conflict: ConflictAttribution | null;
   bundle: Bundle | null;
   scores: Record<string, SpriteScore>;
   mandate: CartMandate | null;
@@ -33,6 +41,7 @@ export interface CouncilSlice {
   eventLog: LoggedCouncilEvent[];
   applyCouncilEvent: (event: CouncilEvent) => void;
   setPhase: (phase: StagePhase) => void;
+  setConflict: (conflict: ConflictAttribution | null) => void;
   setSpriteMood: (spriteId: string, mood: SpriteMood) => void;
   seatSprite: (spriteId: string, seat: number | null) => void;
   resetCouncil: () => void;
@@ -52,6 +61,7 @@ function initialCouncil() {
     opinions: {},
     constraints: null,
     veto: null,
+    conflict: null,
     bundle: null,
     scores: {},
     mandate: null,
@@ -113,6 +123,8 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
     }),
 
   setPhase: (phase) => set({ phase }),
+
+  setConflict: (conflict) => set({ conflict }),
 
   setSpriteMood: (spriteId, mood) => set((state) => ({ sprites: patchSprite(state.sprites, spriteId, { mood }) })),
 

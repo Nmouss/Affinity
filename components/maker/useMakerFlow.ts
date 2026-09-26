@@ -14,6 +14,7 @@ export function useMakerFlow(): [MakerState, (action: MakerAction) => void] {
       const deps: FlowDeps = {
         addPerson: useRoster.getState().addPerson,
         updatePerson: useRoster.getState().updatePerson,
+        removePerson: useRoster.getState().removePerson,
       };
       return flowReducer(current, action, deps);
     },

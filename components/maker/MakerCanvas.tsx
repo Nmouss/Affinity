@@ -1,102 +1,41 @@
 "use client";
 
-import { Suspense, useRef } from "react";
+import { Suspense, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
 import { MathUtils } from "three";
 import { CharacterModel } from "@/components/sprites/CharacterModel";
 import { createMotion, type CharacterMotion } from "@/components/sprites/characterPose";
-import { useCircle, useLook } from "@/lib/people/roster";
 import type { FamilyProfile } from "@/types/domain";
-import type { Circle } from "@/types/character";
 import type { SpriteMood } from "@/types/stage";
 import type { DraftPerson, MakerStep } from "./flow";
+import { PlazaCrowd } from "./plaza/PlazaCrowd";
+import { PlazaFloor } from "./plaza/PlazaFloor";
+import { PlazaPointer } from "./plaza/PlazaPointer";
+import { usePlaza } from "./plaza/plazaState";
 import { reactions } from "./reactions";
 import { addYaw, turntable } from "./turntable";
 
-// The People Maker's one canvas: a Plaza (everyone wandering their corner) in every step but the
-// editor, and a turntable with the draft person while editing. Kept intentionally simple — no
-// postprocessing, cheap shadows — since this is a UI-heavy screen, not the family council stage.
-
-const CORNERS: Record<Circle, { x: number; z: number }> = {
-  family: { x: -2.6, z: 0.4 },
-  friend: { x: 2.6, z: 0.4 },
-};
-const CORNER_RADIUS = 1.6;
-const WALK_SPEED = 0.85;
-
-function randomPointInCorner(circle: Circle): [number, number] {
-  const corner = CORNERS[circle];
-  const angle = Math.random() * Math.PI * 2;
-  const radius = Math.random() * CORNER_RADIUS;
-  return [corner.x + Math.cos(angle) * radius, corner.z + Math.sin(angle) * radius];
-}
-
-function WanderingCharacter({ profile, circle }: { profile: FamilyProfile; circle: Circle }) {
-  const group = useRef<import("three").Group>(null);
-  const mood = useRef<SpriteMood>("idle");
-  const gaze = useRef({ x: 0, y: 0 });
-  const motion = useRef<CharacterMotion>(createMotion());
-  const look = useLook(profile.id);
-  const start = useRef(randomPointInCorner(circle));
-  const goal = useRef<[number, number]>(randomPointInCorner(circle));
-  const position = useRef<[number, number]>(start.current);
-  const idleUntil = useRef(0.5 + Math.random() * 2);
-
-  useFrame((state, rawDelta) => {
-    const delta = Math.min(rawDelta, 0.05);
-    const g = group.current;
-    if (!g) return;
-    const [gx, gz] = goal.current;
-    const [px, pz] = position.current;
-    const dx = gx - px;
-    const dz = gz - pz;
-    const dist = Math.hypot(dx, dz);
-    const t = state.clock.elapsedTime;
-
-    if (t < idleUntil.current || dist < 0.08) {
-      motion.current.speed = 0;
-      if (dist < 0.08 && t >= idleUntil.current) {
-        goal.current = randomPointInCorner(circle);
-        idleUntil.current = t + 1.5 + Math.random() * 2.5;
-      }
-    } else {
-      const nx = (dx / dist) * WALK_SPEED * delta;
-      const nz = (dz / dist) * WALK_SPEED * delta;
-      position.current = [px + nx, pz + nz];
-      g.position.set(position.current[0], 0, position.current[1]);
-      g.rotation.y = Math.atan2(nx, nz);
-      const stepDist = Math.hypot(nx, nz);
-      motion.current.speed = stepDist / delta;
-      motion.current.gaitPhase += (stepDist / 1.1) * Math.PI * 2;
-    }
-  });
-
-  return (
-    <group ref={group} position={[position.current[0], 0, position.current[1]]}>
-      <CharacterModel profile={profile} mood={mood} gaze={gaze} motion={motion} look={look} />
-    </group>
-  );
-}
+// The People Maker's one canvas: a Mii-style Plaza (everyone wandering the tiled floor) in every
+// step but the editor, and a turntable with the draft person while editing. Kept intentionally
+// simple — no postprocessing, cheap shadows — since this is a UI-heavy screen, not the family
+// council stage.
 
 function PlazaScene() {
-  const family = useCircle("family");
-  const friends = useCircle("friend");
   return (
     <group>
-      {family.map((profile) => (
-        <WanderingCharacter key={profile.id} profile={profile} circle="family" />
-      ))}
-      {friends.map((profile) => (
-        <WanderingCharacter key={profile.id} profile={profile} circle="friend" />
-      ))}
-      <ambientLight intensity={0.65} />
-      <directionalLight position={[4, 6, 4]} intensity={0.9} castShadow={false} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow={false}>
-        <planeGeometry args={[16, 10]} />
-        <meshStandardMaterial color="#f6e4c8" />
-      </mesh>
+      <PlazaFloor />
+      <PlazaCrowd />
+      <PlazaPointer />
     </group>
   );
+}
+
+/** Reads the mouse's client position off a plaza pointer event as canvas-relative NDC. */
+function eventToNdc(event: ReactPointerEvent<HTMLDivElement>): [number, number] {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  const y = -(((event.clientY - rect.top) / rect.height) * 2 - 1);
+  return [x, y];
 }
 
 function draftToProfile(draft: DraftPerson): FamilyProfile {
@@ -197,15 +136,45 @@ export interface MakerCanvasProps {
 
 export default function MakerCanvas({ step, draft }: MakerCanvasProps) {
   const editing = (step === "editor" || step === "quit-dialog") && draft !== null;
+  // In the plaza the canvas inherits PeopleMaker's pointing-hand / grabbing-fist cursor.
+  const cursor = editing ? "auto" : "inherit";
+
+  // The single mouse pointer source for the plaza (usePlaza.pointer); the hand track writes the
+  // same field from Leap frames. Only wired while not editing — the turntable has its own drag
+  // (OrbitPlane) and never reads usePlaza.
+  const pointerHandlers = editing
+    ? undefined
+    : {
+        onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => usePlaza.getState().setPointer(eventToNdc(event), "mouse"),
+        onPointerLeave: () => {
+          if (!usePlaza.getState().grabbing) usePlaza.getState().setPointer(null, null);
+        },
+        // Capture the press so a person dragged over the DOM rails keeps reporting moves and the
+        // release lands here (the scene then hit-tests the rail icon under the pointer for the drop).
+        onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          usePlaza.getState().setPointer(eventToNdc(event), "mouse");
+          usePlaza.getState().setGrabbing(true);
+        },
+        onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => {
+          usePlaza.getState().setPointer(eventToNdc(event), "mouse");
+          usePlaza.getState().setGrabbing(false);
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+        },
+        onPointerCancel: () => usePlaza.getState().setGrabbing(false),
+      };
+
   return (
     <Canvas
       shadows={false}
       dpr={[1, 1.5]}
+      style={{ cursor }}
       camera={{
-        position: editing ? [0, 1.5, 3.4] : [0, 6, 7.5],
-        fov: editing ? 35 : 45,
+        position: editing ? [0, 1.5, 3.4] : [0, 12, 10],
+        fov: editing ? 35 : 40,
       }}
       onCreated={({ camera }) => camera.lookAt(0, editing ? 1 : 0, 0)}
+      {...pointerHandlers}
     >
       <Suspense fallback={null}>{editing && draft ? <EditorScene draft={draft} /> : <PlazaScene />}</Suspense>
     </Canvas>

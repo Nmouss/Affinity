@@ -72,4 +72,5 @@ export const FAVORITE_COLORS = [
 
 /** Face patch tones; the first is today's cream face. */
 export const SKIN_TONES = ["#ffedce", "#ffe3c8", "#f5c9a0", "#e0a878", "#b87a4b", "#8a5634", "#5a3620"] as const;
-export const EYE_COLORS = ["#302c2b", "#5a3a22", "#2f5d8a", "#3d7a4a", "#6b6b73", "#7a3fa0"] as const;
+/** The last one is pale, so eyes stay readable on the darkest face tones. */
+export const EYE_COLORS = ["#302c2b", "#5a3a22", "#2f5d8a", "#3d7a4a", "#6b6b73", "#7a3fa0", "#e9eef4"] as const;

@@ -1,16 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { MakerHands } from "@/components/hands/MakerHands";
 import { useRosterHydration } from "@/lib/people/roster";
 import { HAND_TARGET_ATTR } from "@/components/hands/makerHitTest";
+import { usePlaza } from "@/components/maker/plaza/plazaState";
+import { GRABBING_CURSOR_CSS, POINTER_CURSOR_CSS } from "@/components/maker/plaza/plazaIcons";
 import type { MakerAction } from "./flow";
 import { useMakerFlow } from "./useMakerFlow";
 import { useMakerKeyboard } from "./useMakerKeyboard";
 import { playBlip } from "./sound";
 import { reactCelebrate, reactPick } from "./reactions";
-import { PlazaPanel } from "./PlazaPanel";
+import { PlazaRails } from "./plaza/PlazaRails";
 import { WhoCirclePanel, WhoSizePanel } from "./WhoPanel";
 import { StartPanel } from "./StartPanel";
 import { EditorPanel } from "./EditorPanel";
@@ -41,28 +43,30 @@ const PICK_ACTIONS = new Set<MakerAction["type"]>([
 export function PeopleMaker() {
   useRosterHydration();
   const [state, dispatch] = useMakerFlow();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   useMakerKeyboard(state, dispatch);
 
   const wrappedDispatch = useCallback(
     (action: MakerAction) => {
       if (PICK_ACTIONS.has(action.type)) reactPick();
       if (action.type === "save") reactCelebrate();
-      if (action.type === "newPerson" || action.type === "editPerson") setSelectedId(null);
+      // Selection lives in the plaza seam (usePlaza), shared with the 3D scene track; clear it
+      // whenever we leave the plaza so a stale selection doesn't linger under the editor.
+      if (action.type === "newPerson" || action.type === "editPerson") usePlaza.getState().select(null);
       dispatch(action);
     },
     [dispatch],
   );
 
   useHoverBlips();
+  const plazaCursor = usePlazaCursor(state.step === "plaza");
 
   return (
-    <div className={styles.root}>
+    <div className={styles.root} style={plazaCursor ? { cursor: plazaCursor } : undefined}>
       <div className={styles.canvas} data-orbit-zone>
         <MakerCanvas step={state.step} draft={state.draft} />
       </div>
 
-      {state.step === "plaza" && <PlazaPanel dispatch={wrappedDispatch} selectedId={selectedId} onSelect={setSelectedId} />}
+      {state.step === "plaza" && <PlazaRails state={state} dispatch={wrappedDispatch} />}
 
       {(state.step === "who-circle" || state.step === "who-size" || state.step === "start") && (
         <div className={styles.overlay}>
@@ -83,6 +87,18 @@ export function PeopleMaker() {
       <MakerHands />
     </div>
   );
+}
+
+/**
+ * The plaza's mouse cursor: a Wii-remote-style pointing hand, swapping to a grabbing fist while a
+ * Mii is being grabbed or dragged (usePlaza.grabbing/draggingId, written by the mouse or a Leap
+ * hand — see MakerHands and the plaza scene). Only active in the plaza itself; other steps keep the
+ * native cursor over their own buttons and fields.
+ */
+function usePlazaCursor(active: boolean): string | null {
+  const grabbing = usePlaza((s) => s.grabbing || s.draggingId !== null);
+  if (!active) return null;
+  return grabbing ? GRABBING_CURSOR_CSS : POINTER_CURSOR_CSS;
 }
 
 /** A soft hover blip for mouse users (MakerHands plays its own on hand hover). */

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { MakerHands } from "@/components/hands/MakerHands";
+import { useRosterHydration } from "@/lib/people/roster";
 import { HAND_TARGET_ATTR } from "@/components/hands/makerHitTest";
 import type { MakerAction } from "./flow";
 import { useMakerFlow } from "./useMakerFlow";
@@ -38,6 +39,7 @@ const PICK_ACTIONS = new Set<MakerAction["type"]>([
 ]);
 
 export function PeopleMaker() {
+  useRosterHydration();
   const [state, dispatch] = useMakerFlow();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   useMakerKeyboard(state, dispatch);

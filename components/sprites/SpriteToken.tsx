@@ -14,7 +14,8 @@ import { getTargetWorldPosition, registerTarget } from "@/lib/stage/targets";
 import type { FamilyProfile } from "@/types/domain";
 import type { SpriteMood } from "@/types/stage";
 import { CharacterModel } from "./CharacterModel";
-import { characterFor, characterHeight, characterTuning, createMotion } from "./characterPose";
+import { BLANK_LOOK, STARTER_LOOKS } from "@/lib/people/starters";
+import { MODEL_HEIGHT, characterForLook, characterTuning, createMotion } from "./characterPose";
 import { IconMesh } from "./IconMesh";
 import { iconsForProfile } from "./icons";
 import { createAuraMaterial } from "./materials";
@@ -59,9 +60,13 @@ export interface SpriteTokenProps {
 export function SpriteToken({ profile }: SpriteTokenProps) {
   const { id, name, colors } = profile;
   const targetId = `sprite:${id}` as const;
-  const character = useMemo(() => characterFor(id), [id]);
+  // Walk physics and bubble height come from the same look CharacterModel renders, so a custom
+  // person walks and speaks at their own size.
+  const characterLook = useLook(id);
+  const look = characterLook ?? STARTER_LOOKS[id] ?? BLANK_LOOK;
+  const character = useMemo(() => characterForLook(look, id), [look, id]);
   const icons = useMemo(() => iconsForProfile(profile), [profile]);
-  const bubbleY = useMemo(() => characterHeight(id) + 0.5, [id]);
+  const bubbleY = useMemo(() => MODEL_HEIGHT * character.scale * characterTuning.scale + 0.5, [character]);
   const palette = useMemo(() => {
     const core = new Color(coreColor(colors));
     return {
@@ -90,7 +95,6 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
   const characterGaze = useRef({ x: 0, y: 0 });
   const motion = useRef(createMotion());
 
-  const characterLook = useLook(id);
   const bubble = useStage((state) => state.sprites[id]?.bubble ?? null);
   const thinking = useStage((state) => state.sprites[id]?.mood === "thinking");
   const celebrating = useStage((state) => state.phase === "receipt");
@@ -276,7 +280,7 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
 
         <group ref={lift}>
           <group ref={body} rotation-order="YXZ">
-            <CharacterModel profile={profile} mood={characterMood} gaze={characterGaze} motion={motion} look={characterLook} />
+            <CharacterModel profile={profile} mood={characterMood} gaze={characterGaze} motion={motion} look={look} />
           </group>
 
           <group ref={chest} position-y={SPRITE_FLOAT_HEIGHT}>

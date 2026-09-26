@@ -24,7 +24,7 @@ class HouseRule(TypedDict):
 
 
 class FamilyProfile(TypedDict):
-    """Locally stored identity and preferences for exactly one sprite."""
+    """Identity and preferences for one of any number of invited sprites."""
 
     id: str
     name: str
@@ -35,6 +35,52 @@ class FamilyProfile(TypedDict):
     loves: list[str]
     avoids: list[str]
     houseRules: list[HouseRule]
+    email: NotRequired[str]
+    emailNotifications: NotRequired[bool]
+
+
+class ShoppingSlot(TypedDict):
+    """One product category that must be filled by the shopping node."""
+
+    id: str
+    query: str
+    quantity: NotRequired[int]
+
+
+class SearchSlotPlan(TypedDict):
+    """Provider-independent query strategy for one product or place slot."""
+
+    slotId: str
+    queries: list[str]
+    rationale: str
+
+
+class SearchPlan(TypedDict):
+    """Structured query plan generated before a live provider is called."""
+
+    kind: Literal["shopping", "plan"]
+    slots: list[SearchSlotPlan]
+
+
+class PlanLocation(TypedDict):
+    """Human-readable plan area with an optional geographic search bias."""
+
+    label: str
+    latitude: NotRequired[float]
+    longitude: NotRequired[float]
+    radiusMeters: NotRequired[float]
+
+
+class PlanSlot(TypedDict):
+    """One required stop, such as dinner, an activity, or dessert."""
+
+    id: str
+    query: str
+    includedType: NotRequired[str]
+    minRating: NotRequired[float]
+    openNow: NotRequired[bool]
+    priceLevels: NotRequired[list[str]]
+    durationMinutes: NotRequired[int]
 
 
 class Mission(TypedDict):
@@ -46,6 +92,11 @@ class Mission(TypedDict):
     type: Literal["shared", "gift"]
     invitedSpriteIds: list[str]
     recipientId: NotRequired[str]
+    shoppingSlots: NotRequired[list[ShoppingSlot]]
+    kind: NotRequired[Literal["shopping", "plan"]]
+    location: NotRequired[PlanLocation]
+    when: NotRequired[str]
+    planSlots: NotRequired[list[PlanSlot]]
 
 
 class SpriteOpinion(TypedDict):
@@ -56,6 +107,17 @@ class SpriteOpinion(TypedDict):
     hardRules: list[HouseRule]
     wishes: list[str]
     vetoes: list[str]
+
+
+class SpriteDeliberation(TypedDict):
+    """One sprite's public response to the council's published opinions."""
+
+    spriteId: str
+    say: str
+    replyToSpriteIds: list[str]
+    agreements: list[str]
+    concerns: list[str]
+    compromiseWishes: list[str]
 
 
 class WeightedWish(TypedDict):
@@ -83,16 +145,36 @@ class ConstraintSet(TypedDict):
 
 
 class CatalogItem(TypedDict):
-    """One curated product or intentional decoy in the local catalog."""
+    """A normalized product from the local catalog or Shopify UCP."""
 
     id: str
-    slot: Literal["tree", "lights", "ornaments", "topper", "decoy"]
+    slot: str
     name: str
     price: float
     tags: list[str]
     heightIn: NotRequired[float]
     model: NotRequired[str]
     ornamentAnchors: NotRequired[int]
+    provider: NotRequired[Literal["local", "shopify_ucp"]]
+    productId: NotRequired[str]
+    variantId: NotRequired[str]
+    merchantName: NotRequired[str]
+    merchantDomain: NotRequired[str]
+    checkoutUrl: NotRequired[str]
+    productUrl: NotRequired[str]
+    imageUrl: NotRequired[str]
+    currency: NotRequired[str]
+    quantity: NotRequired[int]
+    selectedBecause: NotRequired[list[str]]
+
+
+class RejectedAlternative(TypedDict):
+    """Candidate omitted from a proposal and the inspectable reason why."""
+
+    id: str
+    slot: str
+    name: str
+    reason: str
 
 
 class Bundle(TypedDict):
@@ -101,6 +183,52 @@ class Bundle(TypedDict):
     items: list[CatalogItem]
     total: float
     serves: dict[str, list[str]]
+    source: NotRequired[Literal["local", "shopify_ucp"]]
+    warnings: NotRequired[list[str]]
+    rejectedAlternatives: NotRequired[list[RejectedAlternative]]
+
+
+class PlaceCandidate(TypedDict):
+    """A Google Places result normalized for planning and UI display."""
+
+    id: str
+    slot: str
+    name: str
+    address: str
+    tags: list[str]
+    rating: NotRequired[float]
+    userRatingCount: NotRequired[int]
+    priceLevel: NotRequired[str]
+    googleMapsUri: NotRequired[str]
+    websiteUri: NotRequired[str]
+    latitude: NotRequired[float]
+    longitude: NotRequired[float]
+    openNow: NotRequired[bool]
+    reservable: NotRequired[bool]
+    durationMinutes: NotRequired[int]
+    selectedBecause: NotRequired[list[str]]
+
+
+class Plan(TypedDict):
+    """A reviewed itinerary assembled from one place per required slot."""
+
+    stops: list[PlaceCandidate]
+    location: str
+    serves: dict[str, list[str]]
+    source: Literal["google_places"]
+    when: NotRequired[str]
+    warnings: NotRequired[list[str]]
+    rejectedAlternatives: NotRequired[list[RejectedAlternative]]
+
+
+class CommerceCart(TypedDict):
+    """A merchant cart created only after the mandate is approved."""
+
+    merchantDomain: str
+    cartId: str
+    checkoutUrl: str
+    total: NotRequired[float]
+    currency: NotRequired[str]
 
 
 class SpriteScore(TypedDict):
@@ -115,9 +243,20 @@ class SpriteScore(TypedDict):
 class MandateDecision(TypedDict):
     """Payload expected when the frontend resumes the mandate interrupt."""
 
-    approve: bool
+    action: NotRequired[Literal["approve", "reject", "replace_agent"]]
+    approve: NotRequired[bool]
     signature: NotRequired[str]
     itemId: NotRequired[str]
+    prompt: NotRequired[str]
+
+
+class ProposalRepair(TypedDict):
+    """Human-requested replacement for one rejected proposal candidate."""
+
+    itemId: str
+    slotId: str
+    prompt: str
+    autonomous: bool
 
 
 class Receipt(TypedDict):
@@ -125,9 +264,21 @@ class Receipt(TypedDict):
 
     status: Literal["approved", "rejected"]
     threadId: str
-    total: float
+    total: NotRequired[float]
     signature: NotRequired[str]
     rejectedItemId: NotRequired[str]
+
+
+class NotificationDelivery(TypedDict):
+    """Result of one post-approval participant notification."""
+
+    spriteId: str
+    name: str
+    email: str
+    channel: Literal["email"]
+    status: Literal["sent", "simulated", "failed"]
+    messageId: NotRequired[str]
+    error: NotRequired[str]
 
 
 def merge_by_sprite(
@@ -161,14 +312,23 @@ class CouncilState(TypedDict, total=False):
     profiles: dict[str, FamilyProfile]
     catalog: list[CatalogItem]
     opinions: Annotated[list[SpriteOpinion], merge_by_sprite]
+    deliberations: Annotated[list[SpriteDeliberation], merge_by_sprite]
     constraints: ConstraintSet
+    searchPlan: SearchPlan
     bundle: Bundle
+    plan: Plan
     scores: Annotated[list[SpriteScore], merge_by_sprite]
     revisionConstraints: Annotated[list[str], add]
     revisionCount: int
     route: Literal["revise", "mandate"]
     mandateDecision: MandateDecision
+    repairRequest: ProposalRepair | None
+    rejectedCandidateIds: list[str]
+    preflightChanges: list[str]
+    preflightStatus: Literal["ready", "changed", "repair"]
     receipt: Receipt
+    carts: list[CommerceCart]
+    notifications: list[NotificationDelivery]
 
 
 class SpriteTask(TypedDict):
@@ -183,4 +343,13 @@ class ScoreTask(TypedDict):
 
     mission: Mission
     profile: FamilyProfile
-    bundle: Bundle
+    proposal: Bundle | Plan
+
+
+class DeliberationTask(TypedDict):
+    """Private profile plus public council context for one response turn."""
+
+    mission: Mission
+    profile: FamilyProfile
+    publicOpinions: list[SpriteOpinion]
+    constraints: ConstraintSet

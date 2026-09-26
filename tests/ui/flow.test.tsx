@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { createMockApi } from "../../frontend/src/services/mockApi";
+import { createMockApi } from "@/lib/mission/services/mockApi";
 import {
   appScreen,
   captureVoiceDemoTranscript,

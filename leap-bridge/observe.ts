@@ -4,7 +4,7 @@
 // object identity, applied force, comfort, pain, or accessibility — those all require context this
 // module doesn't have. Keep any new rule here just as literal and inspectable as the ones below.
 
-import type { UseObservation } from "../frontend/src/services/contracts";
+import type { UseObservation } from "@/lib/mission/services/contracts";
 import type { CompactFrame, CompactHand, Vec3 } from "./types";
 
 /** A hand counts as "engaged" (actively gripping or pinching) in a frame at this threshold. */

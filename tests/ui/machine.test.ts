@@ -7,8 +7,8 @@ import {
   SCREENS,
   type Screen,
   TRANSITIONS,
-} from "../../frontend/src/state/machine";
-import type { VoiceIntent } from "../../frontend/src/services/contracts";
+} from "@/lib/mission/state/machine";
+import type { VoiceIntent } from "@/lib/mission/services/contracts";
 
 function intent(
   name: VoiceIntent["intent"],

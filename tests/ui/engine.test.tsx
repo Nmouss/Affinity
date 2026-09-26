@@ -4,8 +4,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { AffinityCoreService } from "@/backend/service";
-import { createEngineApi, createLocalTransport } from "../../frontend/src/services/engineApi";
-import { CABIN_TRANSCRIPT } from "../../frontend/src/mocks/mission";
+import { createEngineApi, createLocalTransport } from "@/lib/mission/services/engineApi";
+import { CABIN_TRANSCRIPT } from "@/lib/mission/mocks/mission";
 import { appScreen, renderApp, waitForScreen } from "./helpers";
 
 const engineApi = async () => createEngineApi(await createLocalTransport(), "core");

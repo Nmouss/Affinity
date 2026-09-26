@@ -2,6 +2,12 @@
 
 Branch: `feature/affinity-experience` · Owner: Frontend & Experience Lead · Last updated: 2026-09-26
 
+> **Update (2026-09-26):** the experience no longer ships as a separate Vite app. It runs inside the
+> Next app at `/mission`: UI in `components/mission/`, state and adapters in `lib/mission/`, the HTTP
+> adapter in `app/api/core/[...path]/route.ts`, and smoke scripts in `scripts/mission/`. The mission
+> table is now the Hearth living room with People Maker characters. Paths below that start with
+> `frontend/` refer to the old layout.
+
 Terminal 2 owns `frontend/**`, `leap-bridge/**`, `public/models/**`, `public/demo-assets/**`, and `tests/ui/**`. No backend or shared-contract files have been modified.
 
 ## Current screen/state implemented

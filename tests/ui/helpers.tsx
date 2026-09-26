@@ -1,13 +1,13 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { expect } from "vitest";
-import App from "../../frontend/src/App";
-import type { AffinityApi } from "../../frontend/src/services/affinityApi";
-import { createMockApi } from "../../frontend/src/services/mockApi";
-import type { Screen } from "../../frontend/src/state/machine";
+import App from "@/components/mission/MissionApp";
+import type { AffinityApi } from "@/lib/mission/services/affinityApi";
+import { createMockApi } from "@/lib/mission/services/mockApi";
+import type { Screen } from "@/lib/mission/state/machine";
 
 /** A plausible cabin-trip prompt. Any text that isn't a "holiday"/"apartment" keyword parses to
- * the fixed cabin draft (frontend/src/mocks/mission.ts mockParse), so wording beyond that doesn't
+ * the fixed cabin draft (lib/mission/mocks/mission.ts mockParse), so wording beyond that doesn't
  * matter for these tests. */
 export const DEFAULT_MISSION_TEXT = "Plan a weekend cabin trip with my friends.";
 
@@ -132,7 +132,7 @@ export async function goToProfileConfirmation(
 
 /**
  * HOME through MISSION_SPACE. Keeps the shopper's default "no_fragile_glass" rule, so the group
- * decision changes from Premium to Balanced (frontend/src/mocks/recommendation.ts recommendationAfterJudge).
+ * decision changes from Premium to Balanced (lib/mission/mocks/recommendation.ts recommendationAfterJudge).
  */
 export async function goToMissionSpace(user: UserEvent) {
   await goToProfileConfirmation(user);

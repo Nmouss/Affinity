@@ -8,10 +8,8 @@ import {
 } from "../../leap-bridge";
 import type { CompactFrame, CompactHand, Vec3 } from "../../leap-bridge";
 
-// NOTE: this file lives outside the frontend package, so its "vitest" import resolves to a
-// different physical copy of the package than frontend/src does. That duplicate-install makes
-// `expect(...).not` fail to type-check here (a tsc artifact, not a runtime issue) even though
-// vitest itself runs the assertions fine. Assertions below avoid `.not` for that reason.
+// NOTE: written when the mission app was a separate Vite package with its own vitest install, where
+// `expect(...).not` failed to type-check from this directory. Assertions below still avoid `.not`.
 function didNotThrow(fn: () => void): boolean {
   try {
     fn();

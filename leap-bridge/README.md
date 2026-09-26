@@ -21,7 +21,7 @@ for demos and tests.
   or garbage).
 - `observe.ts` — `observeSession(frames)` and `createObserver()`: reduce a sequence of
   `CompactFrame`s to a `UseObservation` (imported from
-  `frontend/src/services/contracts.ts`). See "Observation rules" below.
+  `lib/mission/services/contracts.ts`). See "Observation rules" below.
 - `client.ts` — `connectLeap({ url?, onFrame, onStatus })`: opens
   `ws://127.0.0.1:6437/v6.json`, sends the two control messages the server requires
   (`{"background":true}`, `{"focused":true}`), and streams `CompactFrame`s. Never throws — if
@@ -65,7 +65,7 @@ single-hand, so we pick one rather than average across two different hands.
 This module intentionally stops at hand geometry. It does not and should not attempt to identify
 what object (if any) is being held, estimate grip force, or infer comfort, pain, or accessibility
 — none of those are recoverable from palm/finger positions and velocities alone. Downstream
-consumers (see `UseObservationInput` in `frontend/src/services/contracts.ts`) are expected to
+consumers (see `UseObservationInput` in `lib/mission/services/contracts.ts`) are expected to
 combine this bounded observation with human judgment (a `classification` of
 `required`/`preferred`/`incidental`), not treat it as a verdict on its own.
 

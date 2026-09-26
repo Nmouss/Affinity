@@ -1,17 +1,30 @@
 import { describe, expect, it, vi } from "vitest";
-import { BODY_PRESETS } from "@/types/character";
+import { BODY_PRESETS, EYE_COLORS, SKIN_TONES } from "@/types/character";
 import { STARTER_LOOKS } from "@/lib/people/starters";
 import type { NewPerson, PersonPatch } from "@/lib/people/roster";
-import { flowReducer, initialMakerState, type FlowDeps, type MakerState } from "@/components/maker/flow";
+import {
+  contrastRatio,
+  flowReducer,
+  initialMakerState,
+  MIN_EYE_CONTRAST,
+  pickEyeColor,
+  randomLook,
+  sanitizeName,
+  toTitleCase,
+  type FlowDeps,
+  type MakerState,
+} from "@/components/maker/flow";
 
 function harness() {
   const addPerson = vi.fn<(person: NewPerson) => string | null>(() => "new-id");
   const updatePerson = vi.fn<(id: string, patch: PersonPatch) => void>();
-  const deps: FlowDeps = { addPerson, updatePerson };
+  const removePerson = vi.fn<(id: string) => void>();
+  const deps: FlowDeps = { addPerson, updatePerson, removePerson };
   let state: MakerState = initialMakerState;
   return {
     addPerson,
     updatePerson,
+    removePerson,
     get state() {
       return state;
     },
@@ -215,5 +228,117 @@ describe("flowReducer", () => {
     h.dispatch({ type: "back" });
     expect(h.state.step).toBe("plaza");
     expect(h.state.draft).toBeNull();
+  });
+
+  it("the on-screen keyboard's uppercase keycaps still type Title Case names", () => {
+    const h = harness();
+    h.dispatch({ type: "newPerson" });
+    h.dispatch({ type: "pickCircle", circle: "family" });
+    h.dispatch({ type: "pickSize", size: "grownup" });
+    h.dispatch({ type: "startScratch" });
+
+    // KEYBOARD_ROWS in EditorTabs are literal uppercase keycaps ("QWERTYUIOP"), so every
+    // dispatched typeChar is an uppercase letter — sanitizeName must still produce "Sam Ann".
+    for (const char of "SAM") h.dispatch({ type: "typeChar", char });
+    h.dispatch({ type: "typeChar", char: " " });
+    for (const char of "ANN") h.dispatch({ type: "typeChar", char });
+
+    expect(h.state.draft?.name).toBe("Sam Ann");
+  });
+
+  it("setName (the free-text field) also normalizes to Title Case", () => {
+    const h = harness();
+    h.dispatch({ type: "newPerson" });
+    h.dispatch({ type: "pickCircle", circle: "family" });
+    h.dispatch({ type: "pickSize", size: "grownup" });
+    h.dispatch({ type: "startScratch" });
+
+    h.dispatch({ type: "setName", name: "mcKENZIE" });
+    expect(h.state.draft?.name).toBe("Mckenzie");
+  });
+
+  it("save() normalizes the name to Title Case even if the draft got one another way", () => {
+    const h = harness();
+    h.dispatch({
+      type: "editPerson",
+      id: "son",
+      name: "leo garcia", // e.g. data saved before this feature existed
+      circle: "family",
+      relationship: "kid",
+      look: STARTER_LOOKS.son!,
+    });
+    h.dispatch({ type: "save" });
+
+    expect(h.updatePerson).toHaveBeenCalledTimes(1);
+    const [, patch] = h.updatePerson.mock.calls[0]!;
+    expect(patch.name).toBe("Leo Garcia");
+  });
+
+  it("toTitleCase capitalizes each word and lowercases the rest", () => {
+    expect(toTitleCase("SAM")).toBe("Sam");
+    expect(toTitleCase("mary ann")).toBe("Mary Ann");
+    expect(toTitleCase("")).toBe("");
+  });
+
+  it("sanitizeName strips non-letters, clamps length, and Title Cases", () => {
+    expect(sanitizeName("sa4m!!")).toBe("Sam");
+    expect(sanitizeName("ABCDEFGHIJKLMNOP")).toBe("Abcdefghijkl"); // clamped to MAX_NAME_LENGTH (12) first
+  });
+
+  it("requestRemove opens the plaza confirm dialog; confirmRemove removes and clears it", () => {
+    const h = harness();
+    h.dispatch({ type: "requestRemove", id: "wife" });
+    expect(h.state.plazaConfirmRemoveId).toBe("wife");
+    expect(h.removePerson).not.toHaveBeenCalled();
+
+    h.dispatch({ type: "confirmRemove" });
+    expect(h.removePerson).toHaveBeenCalledWith("wife");
+    expect(h.state.plazaConfirmRemoveId).toBeNull();
+  });
+
+  it("cancelRemove closes the dialog without removing anyone", () => {
+    const h = harness();
+    h.dispatch({ type: "requestRemove", id: "wife" });
+    h.dispatch({ type: "cancelRemove" });
+    expect(h.state.plazaConfirmRemoveId).toBeNull();
+    expect(h.removePerson).not.toHaveBeenCalled();
+  });
+
+  it("confirmRemove with nothing pending is a no-op", () => {
+    const h = harness();
+    h.dispatch({ type: "confirmRemove" });
+    expect(h.removePerson).not.toHaveBeenCalled();
+  });
+
+  it("leaving the plaza (newPerson/editPerson) clears any pending remove confirmation", () => {
+    const h = harness();
+    h.dispatch({ type: "requestRemove", id: "wife" });
+    h.dispatch({ type: "newPerson" });
+    expect(h.state.plazaConfirmRemoveId).toBeNull();
+  });
+});
+
+describe("pickEyeColor / randomLook eye contrast", () => {
+  it("picks an eye color that reads against every skin tone, across many random seeds", () => {
+    for (const skin of SKIN_TONES) {
+      const bestPossible = Math.max(...EYE_COLORS.map((color) => contrastRatio(color, skin)));
+      for (let seed = 0; seed < 200; seed += 1) {
+        const eye = pickEyeColor(skin, Math.random);
+        const ratio = contrastRatio(eye, skin);
+        // Either it clears the legibility bar outright, or (for the darkest skin tones, where no
+        // EYE_COLORS option clears it) it's the best the fixed palette can do for this skin tone.
+        expect(ratio >= MIN_EYE_CONTRAST || Math.abs(ratio - bestPossible) < 1e-9).toBe(true);
+      }
+    }
+  });
+
+  it("randomLook's eyes always come from EYE_COLORS and stay legible against the chosen skin", () => {
+    for (let seed = 0; seed < 100; seed += 1) {
+      const look = randomLook({ height: 1, build: 0.5 }, Math.random);
+      expect(EYE_COLORS).toContain(look.eyes.color);
+      const bestPossible = Math.max(...EYE_COLORS.map((color) => contrastRatio(color, look.skin)));
+      const ratio = contrastRatio(look.eyes.color, look.skin);
+      expect(ratio >= MIN_EYE_CONTRAST || Math.abs(ratio - bestPossible) < 1e-9).toBe(true);
+    }
   });
 });

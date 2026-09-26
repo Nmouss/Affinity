@@ -70,6 +70,8 @@ export interface MakerState {
   draft: DraftPerson | null;
   /** True right after a Save with an empty name; cleared the moment the name becomes non-empty. */
   nameError: boolean;
+  /** Set while the plaza's Remove confirm dialog is open (rail click or Delete key), for this id. */
+  plazaConfirmRemoveId: string | null;
 }
 
 export const initialMakerState: MakerState = {
@@ -77,6 +79,7 @@ export const initialMakerState: MakerState = {
   tab: "body",
   draft: null,
   nameError: false,
+  plazaConfirmRemoveId: null,
 };
 
 export type MakerAction =
@@ -103,11 +106,15 @@ export type MakerAction =
   | { type: "quit" }
   | { type: "quitWithoutSaving" }
   | { type: "cancelDialog" }
-  | { type: "back" };
+  | { type: "back" }
+  | { type: "requestRemove"; id: string }
+  | { type: "confirmRemove" }
+  | { type: "cancelRemove" };
 
 export interface FlowDeps {
   addPerson: (person: NewPerson) => string | null;
   updatePerson: (id: string, patch: PersonPatch) => void;
+  removePerson: (id: string) => void;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -118,8 +125,17 @@ function clampAdjust(value: number): number {
   return clamp(value, ADJUST.min, ADJUST.max);
 }
 
+/** First letter of each word upper case, the rest lower — Mii-channel-style names ("Sam", not
+ * "SAM" or "sam"), regardless of how the caller typed or dispatched the raw characters. */
+export function toTitleCase(raw: string): string {
+  return raw
+    .split(" ")
+    .map((word) => (word.length === 0 ? word : word[0]!.toUpperCase() + word.slice(1).toLowerCase()))
+    .join(" ");
+}
+
 export function sanitizeName(raw: string): string {
-  return raw.replace(/[^A-Za-z ]/g, "").slice(0, MAX_NAME_LENGTH);
+  return toTitleCase(raw.replace(/[^A-Za-z ]/g, "").slice(0, MAX_NAME_LENGTH));
 }
 
 function pick<T>(options: readonly T[], random: () => number): T {
@@ -127,14 +143,46 @@ function pick<T>(options: readonly T[], random: () => number): T {
   return options[index]!;
 }
 
+/** WCAG relative luminance of a #rrggbb hex color, 0 (black) to 1 (white). */
+export function relativeLuminance(hex: string): number {
+  const clean = hex.replace("#", "");
+  const channel = (value: number) => (value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4));
+  const r = channel(parseInt(clean.slice(0, 2), 16) / 255);
+  const g = channel(parseInt(clean.slice(2, 4), 16) / 255);
+  const b = channel(parseInt(clean.slice(4, 6), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** WCAG contrast ratio between two colors: 1 (identical) to 21 (black on white). */
+export function contrastRatio(a: string, b: string): number {
+  const l1 = relativeLuminance(a);
+  const l2 = relativeLuminance(b);
+  const hi = Math.max(l1, l2);
+  const lo = Math.min(l1, l2);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/** Eyes need to read against the face they sit on. EYE_COLORS has no eye that's light on every
+ * skin tone, so a plain random pick can land a near-black eye on near-black skin; this keeps the
+ * random pick everywhere it already reads fine, and only swaps in the most legible option in
+ * EYE_COLORS on the skin tones where it wouldn't. */
+export const MIN_EYE_CONTRAST = 3;
+
+export function pickEyeColor(skin: string, random: () => number): string {
+  const candidate = pick(EYE_COLORS, random);
+  if (contrastRatio(candidate, skin) >= MIN_EYE_CONTRAST) return candidate;
+  return EYE_COLORS.reduce((best, color) => (contrastRatio(color, skin) > contrastRatio(best, skin) ? color : best));
+}
+
 /** A fresh, fully random look (body kept as given: it was already set by the who-size pick). */
 export function randomLook(body: { height: number; build: number }, random: () => number = Math.random): CharacterLook {
+  const skin = pick(SKIN_TONES, random);
   return {
     body,
     bodyColor: pick(FAVORITE_COLORS, random),
     accent: pick(FAVORITE_COLORS, random),
-    skin: pick(SKIN_TONES, random),
-    eyes: { type: pick(EYE_TYPES, random), color: pick(EYE_COLORS, random), size: 0, spacing: 0, height: 0 },
+    skin,
+    eyes: { type: pick(EYE_TYPES, random), color: pickEyeColor(skin, random), size: 0, spacing: 0, height: 0 },
     brows: { type: pick(BROW_TYPES, random), height: 0 },
     mouth: { type: pick(MOUTH_TYPES, random) },
     cheeks: { on: true, color: pick(FAVORITE_COLORS, random) },
@@ -179,6 +227,7 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
         step: "who-circle",
         tab: "body",
         nameError: false,
+        plazaConfirmRemoveId: null,
         draft: {
           name: "",
           circle: "family",
@@ -196,6 +245,7 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
         step: "editor",
         tab: "body",
         nameError: false,
+        plazaConfirmRemoveId: null,
         draft: {
           name: action.name,
           circle: action.circle,
@@ -335,7 +385,7 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
 
     case "save": {
       if ((state.step !== "editor" && state.step !== "quit-dialog") || !state.draft) return state;
-      const name = state.draft.name.trim();
+      const name = sanitizeName(state.draft.name).trim();
       if (!name) return { ...state, step: "editor", tab: "name", nameError: true };
       const person: NewPerson = { name, circle: state.draft.circle, relationship: state.draft.relationship, look: state.draft.look };
       if (state.draft.editingId) deps.updatePerson(state.draft.editingId, person);
@@ -373,6 +423,22 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
         default:
           return state;
       }
+    }
+
+    case "requestRemove": {
+      if (state.step !== "plaza") return state;
+      return { ...state, plazaConfirmRemoveId: action.id };
+    }
+
+    case "confirmRemove": {
+      if (state.step !== "plaza" || !state.plazaConfirmRemoveId) return state;
+      deps.removePerson(state.plazaConfirmRemoveId);
+      return { ...state, plazaConfirmRemoveId: null };
+    }
+
+    case "cancelRemove": {
+      if (state.step !== "plaza") return state;
+      return { ...state, plazaConfirmRemoveId: null };
     }
 
     default:

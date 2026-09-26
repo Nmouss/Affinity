@@ -1,0 +1,35 @@
+[
+  {
+    "id": "wife",
+    "name": "Maya",
+    "relationship": "wife",
+    "look": "sprite_03",
+    "colors": ["#fff4d6", "#c9a227"],
+    "personality": ["calm", "tidy", "practical"],
+    "loves": ["white and gold decor", "warm lights", "minimal design"],
+    "avoids": ["clutter", "loud colors"],
+    "houseRules": [{ "type": "maxHeight", "inches": 48, "why": "The living room is small." }]
+  },
+  {
+    "id": "daughter",
+    "name": "Ava",
+    "relationship": "daughter",
+    "look": "sprite_07",
+    "colors": ["#ff8fcf", "#ffe5f5"],
+    "personality": ["bright", "creative", "sparkly"],
+    "loves": ["dolls", "pink", "sparkle"],
+    "avoids": ["plain decor", "dark colors"],
+    "houseRules": []
+  },
+  {
+    "id": "son",
+    "name": "Leo",
+    "relationship": "son",
+    "look": "sprite_11",
+    "colors": ["#45d483", "#2474ff"],
+    "personality": ["excited", "adventurous", "silly"],
+    "loves": ["dinosaurs", "color-changing lights", "giant inflatable T-rex"],
+    "avoids": ["boring ornaments"],
+    "houseRules": []
+  }
+]

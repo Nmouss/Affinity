@@ -1,0 +1,18 @@
+[
+  { "id": "tree-3ft", "slot": "tree", "name": "3 ft tabletop tree", "price": 59, "heightIn": 36, "tags": ["compact", "warm white"], "model": "/models/tree3.glb", "ornamentAnchors": 8 },
+  { "id": "tree-4ft", "slot": "tree", "name": "4 ft pre-lit tree", "price": 89, "heightIn": 48, "tags": ["compact", "warm white", "pre-lit"], "model": "/models/tree4.glb", "ornamentAnchors": 12 },
+  { "id": "tree-6ft", "slot": "tree", "name": "6 ft classic tree", "price": 119, "heightIn": 72, "tags": ["classic", "full"], "model": "/models/tree6.glb", "ornamentAnchors": 18 },
+  { "id": "tree-75ft", "slot": "tree", "name": "7.5 ft grand tree", "price": 159, "heightIn": 90, "tags": ["grand", "full"], "model": "/models/tree75.glb", "ornamentAnchors": 24 },
+  { "id": "lights-warm", "slot": "lights", "name": "Warm white lights", "price": 18, "tags": ["warm lights", "minimal design"] },
+  { "id": "lights-color", "slot": "lights", "name": "Color-changing lights", "price": 24, "tags": ["color-changing lights", "bright"] },
+  { "id": "lights-globe", "slot": "lights", "name": "Soft globe lights", "price": 22, "tags": ["warm lights", "cozy"] },
+  { "id": "orn-doll", "slot": "ornaments", "name": "Doll ornament set", "price": 26, "tags": ["dolls", "pink", "sparkle"] },
+  { "id": "orn-dino", "slot": "ornaments", "name": "Dinosaur ornament set", "price": 28, "tags": ["dinosaurs", "green"] },
+  { "id": "orn-gold", "slot": "ornaments", "name": "White and gold ornament set", "price": 24, "tags": ["white and gold decor", "minimal design"] },
+  { "id": "orn-glass", "slot": "ornaments", "name": "Glass ornament set", "price": 32, "tags": ["classic", "sparkle"] },
+  { "id": "topper-star", "slot": "topper", "name": "Gold star topper", "price": 15, "tags": ["white and gold decor", "sparkle"] },
+  { "id": "topper-bow", "slot": "topper", "name": "Pink bow topper", "price": 13, "tags": ["pink", "dolls"] },
+  { "id": "topper-dino", "slot": "topper", "name": "Dinosaur topper", "price": 17, "tags": ["dinosaurs", "silly"] },
+  { "id": "inflatable-trex", "slot": "decoy", "name": "8 ft inflatable T-rex", "price": 54, "heightIn": 96, "tags": ["dinosaurs", "giant", "inflatable"] },
+  { "id": "inflatable-santa", "slot": "decoy", "name": "6 ft inflatable Santa", "price": 49, "heightIn": 72, "tags": ["giant", "inflatable", "classic"] }
+]

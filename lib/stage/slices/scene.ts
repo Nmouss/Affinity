@@ -48,8 +48,8 @@ export interface SceneSlice {
 /** Azimuth swing either side of the base view, and the elevation band, both in radians. */
 export const ORBIT_LIMITS = {
   azimuth: (70 * Math.PI) / 180,
-  polarMin: (-14 * Math.PI) / 180,
-  polarMax: (24 * Math.PI) / 180,
+  polarMin: (-8 * Math.PI) / 180,
+  polarMax: (30 * Math.PI) / 180,
 } as const;
 
 /**

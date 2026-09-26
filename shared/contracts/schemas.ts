@@ -9,6 +9,7 @@ import type {
   Recommendation,
   ShopperProfile,
   SubstitutionEvaluation,
+  SubstitutionAction,
   SubstitutionEvaluationRequest,
   UseObservationResult,
   VoiceIntent,
@@ -147,10 +148,19 @@ export const substitutionEvaluationRequestSchema: z.ZodType<SubstitutionEvaluati
   overrideApproved: z.boolean().optional(),
 });
 
+const askShopperActionSchema = z.custom<`ask_${string}`>(
+  (value) => typeof value === "string" && /^ask_[a-z0-9_-]+$/.test(value),
+);
+
 export const substitutionEvaluationSchema: z.ZodType<SubstitutionEvaluation> = z.strictObject({
   decision: z.enum(["allow", "pause"]),
   affectedShopperId: z.string().min(1).optional(),
   violatedRequirement: z.string().min(1).optional(),
   message: z.string().min(1),
-  actions: z.array(z.enum(["choose_alternative", "ask_shopper", "override_with_approval"])),
+  actions: z.array(
+    z.union([
+      z.enum(["choose_alternative", "override_with_approval"]),
+      askShopperActionSchema,
+    ]),
+  ) as z.ZodType<SubstitutionAction[]>,
 });

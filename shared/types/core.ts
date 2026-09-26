@@ -136,10 +136,15 @@ export interface SubstitutionEvaluationRequest {
   overrideApproved?: boolean;
 }
 
+export type SubstitutionAction =
+  | "choose_alternative"
+  | "override_with_approval"
+  | `ask_${string}`;
+
 export interface SubstitutionEvaluation {
   decision: "allow" | "pause";
   affectedShopperId?: string;
   violatedRequirement?: string;
   message: string;
-  actions: Array<"choose_alternative" | "ask_shopper" | "override_with_approval">;
+  actions: SubstitutionAction[];
 }

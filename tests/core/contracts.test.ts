@@ -105,7 +105,7 @@ describe("shared contract schemas", () => {
         affectedShopperId: "maya",
         violatedRequirement: "oneHandUse",
         message: "Paused because the replacement does not support one-hand use for Maya.",
-        actions: ["choose_alternative", "ask_shopper"],
+        actions: ["choose_alternative", "ask_maya"],
       }),
     ).toMatchObject({ decision: "pause", affectedShopperId: "maya", violatedRequirement: "oneHandUse" });
   });

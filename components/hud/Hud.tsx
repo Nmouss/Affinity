@@ -60,9 +60,6 @@ export function Hud() {
   const profileOpenId = useStage((state) => state.profileOpenId);
   const councilSource = useStage((state) => state.councilSource);
   const error = useStage((state) => state.error);
-  const handSource = useStage((state) => state.hand.source);
-  const handPresent = useStage((state) => state.hand.present);
-  const hoverTarget = useStage((state) => state.hand.hoverTarget);
 
   useEffect(() => {
     if (!error) return;
@@ -92,7 +89,7 @@ export function Hud() {
         )}
         {flags?.cut90 && <span className={styles.badge}>90 s cut</span>}
         <span className={styles.gesture}>
-          <GestureStatus connected={handPresent && handSource !== "keyboard"} gesture={hoverTarget ?? undefined} />
+          <GestureStatus />
         </span>
       </header>
 

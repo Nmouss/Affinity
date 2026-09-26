@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getDemoTranscript } from "@/lib/demo/transcript";
+import { emitGesture } from "@/lib/stage/bus";
 import { FAMILY } from "@/lib/stage/slices/council";
 import { useStage } from "@/lib/stage/store";
 import styles from "./EventStepper.module.css";
@@ -38,10 +39,8 @@ export function EventStepper() {
     nextIndex.current = 0;
     setCursor(0);
     setPlaying(false);
-    const state = useStage.getState();
-    state.resetCouncil();
-    state.resetHand();
-    state.resetScene();
+    // Through the bus so the director also clears its beat queue and aborts a running council.
+    emitGesture({ type: "reset" });
   };
 
   const done = cursor >= events.length;

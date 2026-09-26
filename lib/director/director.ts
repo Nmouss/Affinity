@@ -3,6 +3,7 @@ import { signMandate } from "@/lib/crypto/sign";
 import { emitGesture, onGesture, setArmingPolicy } from "@/lib/stage/bus";
 import { COUNCIL_RING } from "@/lib/stage/layout";
 import type { StageStore } from "@/lib/stage/store";
+import { createVoiceStubs, type Recognizer, type Speaker, type VoiceStatus } from "@/lib/voice/types";
 import type { Bundle, CartMandate, Mission } from "@/types/domain";
 import type { GestureEvent } from "@/types/stage";
 import { isGestureArmed, type ArmingContext } from "./arming";
@@ -25,12 +26,16 @@ export interface DirectorOptions {
   stallMs?: number;
   sign?: (mission: Mission, bundle: Bundle) => Promise<CartMandate>;
   log?: (message: string, detail?: unknown) => void;
+  /** Same injection pattern as fetchImpl/sign. Defaults to no-op stubs until Track B's engines land. */
+  voice?: { recognizer: Recognizer; speaker: Speaker };
 }
 
 export interface Director {
   /** Overrides individual beat durations (leva tuning in /lab). */
   tuneBeats: (patch: Partial<BeatDurations>) => void;
   readonly beats: BeatDurations;
+  /** Unlocks speechSynthesis from a user activation (click/key press). Safe to call more than once. */
+  unlockVoice: () => void;
   dispose: () => void;
 }
 
@@ -61,10 +66,14 @@ export function createDirector(options: DirectorOptions): Director {
   const log = options.log ?? ((message: string, detail?: unknown) => console.info(`[director] ${message}`, detail ?? ""));
   const beats: BeatDurations = { ...(options.cut90 ? CUT90_BEATS : DEFAULT_BEATS) };
   const get = () => store.getState();
+  const { recognizer, speaker } = options.voice ?? createVoiceStubs();
 
   // Bumped on every reset so async work from an older run can tell it has been superseded.
   let run = 0;
   let council: AbortController | null = null;
+
+  const initialVoiceStatus: VoiceStatus = !recognizer.supported ? "unsupported" : speaker.unlocked ? "idle" : "locked";
+  get().setVoiceStatus(initialVoiceStatus);
 
   const applyBeat = (beat: Beat) => {
     if (beat.kind === "streamEnd") {
@@ -74,9 +83,20 @@ export function createDirector(options: DirectorOptions): Director {
     get().applyCouncilEvent(beat.event);
   };
 
+  /** Speaks opinions and scores in the sprite's own voice; everything else (or muted/locked) is silent. */
+  const voiceForBeat = (beat: Beat): Promise<void> | null => {
+    if (beat.kind !== "event") return null;
+    if (beat.event.type !== "opinion" && beat.event.type !== "score") return null;
+    if (options.cut90 || get().voiceMuted || !speaker.supported || !speaker.unlocked) return null;
+    const { spriteId, say } = beat.event.payload;
+    if (!say?.trim()) return null;
+    return speaker.speak(spriteId, say);
+  };
+
   const queue = new BeatQueue({
     apply: applyBeat,
     durations: () => beats,
+    voice: voiceForBeat,
     onBeatEnd: (beat) => {
       if (beat.kind === "event" && beat.event.type === "opinion") {
         const id = beat.event.payload.spriteId;
@@ -155,10 +175,18 @@ export function createDirector(options: DirectorOptions): Director {
     council?.abort();
     council = null;
     queue.clear();
+    recognizer.abort();
+    speaker.cancel();
     const state = get();
     state.resetCouncil();
     state.resetHand();
     state.resetScene();
+    state.resetVoiceSession();
+  }
+
+  function unlockVoice() {
+    speaker.unlock();
+    if (get().voiceStatus === "locked") get().setVoiceStatus("idle");
   }
 
   function nextFreeSeat(): number | null {
@@ -229,11 +257,55 @@ export function createDirector(options: DirectorOptions): Director {
         // No agent endpoint for swapping items yet; this is where a revise request would go.
         log("swipe (no-op)", event.itemId);
         return;
-      case "talkStart":
-      case "talkEnd":
-      case "toggleVoiceMute":
-        // Voice wiring lands with the director voice track.
+      case "talkStart": {
+        if (state.voiceStatus === "unsupported" || state.voiceStatus === "listening") return;
+        state.openProfile(null);
+        state.setError(null);
+        state.setVoiceStatus("listening");
+        const talkRun = run; // a reset() between now and onFinal bumps `run`, dropping the result
+        recognizer.start({
+          onInterim: (text) => {
+            state.setMissionText(text);
+            state.setVoiceInterim(text);
+          },
+          onFinal: (text) => {
+            if (talkRun !== run) return;
+            const heard = text.trim();
+            if (!heard) {
+              get().setError("I didn't catch that — hold your palm up and try again.");
+              return;
+            }
+            get().setMissionText(heard);
+            if (!emitGesture({ type: "convene" })) {
+              get().setError("Seat at least one sprite in the council ring first.");
+            }
+          },
+          onError: (code) => {
+            if (code === "no-speech" || code === "aborted") return;
+            if (code === "not-allowed" || code === "service-not-allowed") {
+              get().setError("Voice needs microphone access — allow it for this page and try again.");
+            } else if (code === "network") {
+              get().setError("Voice needs a steady connection — try typing on this Wi-Fi instead.");
+            } else if (code === "language-not-supported") {
+              get().setError("This browser can't recognize that language here — try typing instead.");
+            }
+          },
+        });
         return;
+      }
+      case "talkEnd": {
+        if (state.voiceStatus !== "listening") return;
+        recognizer.stop();
+        state.setVoiceInterim("");
+        state.setVoiceStatus(speaker.unlocked ? "idle" : "locked");
+        return;
+      }
+      case "toggleVoiceMute": {
+        const muted = !state.voiceMuted;
+        state.setVoiceMuted(muted);
+        if (muted) speaker.cancel();
+        return;
+      }
       case "hover":
       case "orbit":
       case "handshakeProgress":
@@ -250,12 +322,15 @@ export function createDirector(options: DirectorOptions): Director {
     tuneBeats: (patch) => {
       Object.assign(beats, patch);
     },
+    unlockVoice,
     dispose: () => {
       unsubscribe();
       restorePolicy();
       run += 1;
       council?.abort();
       queue.clear();
+      recognizer.abort();
+      speaker.cancel();
     },
   };
 }

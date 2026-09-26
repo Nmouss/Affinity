@@ -17,4 +17,13 @@ describe("buildMission", () => {
     expect(parseBudget("a lamp under 80")).toBe(80);
     expect(parseBudget("something cozy")).toBe(200);
   });
+
+  // Spoken missions come through Web Speech transcripts as digits, not "$", so "under 200 dollars"
+  // must parse the same as typed "under $200" (the bare "under <number>" branch already covers this;
+  // these guard it explicitly since spoken budgets are a voice-feature requirement).
+  it("parses spoken-style budgets without a dollar sign", () => {
+    expect(parseBudget("Find Christmas decorations under $200")).toBe(200);
+    expect(parseBudget("Find Christmas decorations under 200 dollars")).toBe(200);
+    expect(parseBudget("ornaments under 150 dollars for the tree")).toBe(150);
+  });
 });

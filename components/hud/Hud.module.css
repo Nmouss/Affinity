@@ -75,6 +75,19 @@
   border-radius: 999px;
 }
 
+.voiceChip {
+  composes: badge;
+  background: rgba(255, 209, 138, 0.15);
+  color: #ffe9c2;
+  cursor: pointer;
+}
+
+.voiceChip:hover,
+.voiceChip:focus-visible {
+  background: rgba(255, 209, 138, 0.32);
+  outline: none;
+}
+
 .gesture {
   font-size: 0.72rem;
   color: #b9a494;

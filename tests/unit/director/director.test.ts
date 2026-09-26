@@ -6,9 +6,50 @@ import { CUT90_BEATS, DEFAULT_BEATS } from "@/lib/director/beats";
 import { createDirector, type Director, type DirectorOptions } from "@/lib/director/director";
 import { emitGesture } from "@/lib/stage/bus";
 import { useStage } from "@/lib/stage/store";
+import type { Recognizer, RecognizerHandlers, Speaker } from "@/lib/voice/types";
 import type { CouncilEvent } from "@/types/domain";
 
 const state = () => useStage.getState();
+
+/** A controllable fake Recognizer: tests fire onInterim/onFinal/onError by hand instead of using SpeechRecognition. */
+function createFakeRecognizer(supported = true) {
+  let handlers: RecognizerHandlers | null = null;
+  const start = vi.fn((h: RecognizerHandlers) => {
+    handlers = h;
+  });
+  const stop = vi.fn();
+  const abort = vi.fn();
+  const recognizer: Recognizer = { supported, start, stop, abort };
+  return {
+    recognizer,
+    start,
+    stop,
+    abort,
+    emitInterim: (text: string) => handlers?.onInterim?.(text),
+    emitFinal: (text: string) => handlers?.onFinal(text),
+    emitError: (code: string) => handlers?.onError?.(code),
+  };
+}
+
+/** A controllable fake Speaker. speak() resolves immediately unless a test overrides it. */
+function createFakeSpeaker(unlocked = false) {
+  const box = { unlocked };
+  const speak = vi.fn(() => Promise.resolve());
+  const cancel = vi.fn();
+  const unlock = vi.fn(() => {
+    box.unlocked = true;
+  });
+  const speaker: Speaker = {
+    supported: true,
+    get unlocked() {
+      return box.unlocked;
+    },
+    unlock,
+    speak,
+    cancel,
+  };
+  return { speaker, speak, cancel, unlock };
+}
 
 function sse(events: CouncilEvent[]): Response {
   const body = events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`).join("");
@@ -50,6 +91,9 @@ beforeEach(() => {
   vi.useFakeTimers();
   state().resetCouncil();
   state().resetHand();
+  // voiceStatus is recomputed by every start(); mute/interim are session facts that outlive it.
+  state().setVoiceMuted(false);
+  state().setVoiceInterim("");
 });
 
 afterEach(() => {
@@ -266,5 +310,225 @@ describe("intents", () => {
     start().dispose();
     director = null;
     expect(emitGesture({ type: "handshakeComplete" })).toBe(true);
+  });
+});
+
+describe("voice", () => {
+  it("computes the initial status from recognizer support and speaker unlock", () => {
+    start({ voice: { recognizer: createFakeRecognizer(false).recognizer, speaker: createFakeSpeaker(true).speaker } });
+    expect(state().voiceStatus).toBe("unsupported");
+  });
+
+  it("starts locked when supported but not yet unlocked", () => {
+    start({ voice: { recognizer: createFakeRecognizer(true).recognizer, speaker: createFakeSpeaker(false).speaker } });
+    expect(state().voiceStatus).toBe("locked");
+  });
+
+  it("starts idle when the speaker is already unlocked", () => {
+    start({ voice: { recognizer: createFakeRecognizer(true).recognizer, speaker: createFakeSpeaker(true).speaker } });
+    expect(state().voiceStatus).toBe("idle");
+  });
+
+  it("unlockVoice flips locked to idle and unlocks the speaker", () => {
+    const sp = createFakeSpeaker(false);
+    const d = start({ voice: { recognizer: createFakeRecognizer(true).recognizer, speaker: sp.speaker } });
+    expect(state().voiceStatus).toBe("locked");
+    d.unlockVoice();
+    expect(sp.unlock).toHaveBeenCalledTimes(1);
+    expect(state().voiceStatus).toBe("idle");
+  });
+
+  it("ignores talkStart when the recognizer is unsupported, even though the gesture is armed", () => {
+    const rec = createFakeRecognizer(false);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    expect(emitGesture({ type: "talkStart" })).toBe(true);
+    expect(state().voiceStatus).toBe("unsupported");
+    expect(rec.start).not.toHaveBeenCalled();
+  });
+
+  it("talkStart listens and mirrors interim text into the mission box; talkEnd stops it", () => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    emitGesture({ type: "talkStart" });
+    expect(state().voiceStatus).toBe("listening");
+    expect(rec.start).toHaveBeenCalledTimes(1);
+
+    rec.emitInterim("find orn");
+    expect(state().missionText).toBe("find orn");
+    expect(state().voiceInterim).toBe("find orn");
+
+    emitGesture({ type: "talkEnd" });
+    expect(rec.stop).toHaveBeenCalledTimes(1);
+    expect(state().voiceStatus).toBe("idle");
+  });
+
+  it("talkEnd falls back to locked when the speaker still isn't unlocked", () => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(false).speaker } });
+    expect(state().voiceStatus).toBe("locked");
+    emitGesture({ type: "talkStart" });
+    emitGesture({ type: "talkEnd" });
+    expect(state().voiceStatus).toBe("locked");
+  });
+
+  it("a second talkStart while already listening is ignored", () => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    emitGesture({ type: "talkStart" });
+    emitGesture({ type: "talkStart" });
+    expect(rec.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("talkEnd is a no-op when not listening", () => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    expect(emitGesture({ type: "talkEnd" })).toBe(true); // armed in every phase
+    expect(rec.stop).not.toHaveBeenCalled();
+  });
+
+  it("convenes on a final transcript when a sprite is seated", () => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    emitGesture({ type: "seat", spriteId: "son" });
+    emitGesture({ type: "talkStart" });
+    rec.emitFinal("Find ornaments under $200");
+    expect(state().missionText).toBe("Find ornaments under $200");
+    expect(state().phase).toBe("convening");
+    expect(state().error).toBeNull();
+  });
+
+  it("errors instead of convening when the final transcript arrives with no one seated", () => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    emitGesture({ type: "talkStart" });
+    rec.emitFinal("Find ornaments");
+    expect(state().phase).toBe("lobby");
+    expect(state().error).toMatch(/Seat at least one/);
+  });
+
+  it("gives a friendly error on an empty transcript", () => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    emitGesture({ type: "seat", spriteId: "son" });
+    emitGesture({ type: "talkStart" });
+    rec.emitFinal("   ");
+    expect(state().error).toMatch(/didn't catch that/);
+    expect(state().phase).toBe("lobby");
+  });
+
+  it.each([
+    ["not-allowed", /microphone/i],
+    ["service-not-allowed", /microphone/i],
+    ["network", /wi-fi/i],
+    ["language-not-supported", /language/i],
+  ])("surfaces a friendly error for the %s recognizer error", (code, expected) => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    emitGesture({ type: "talkStart" });
+    rec.emitError(code);
+    expect(state().error).toMatch(expected);
+  });
+
+  it("ignores no-speech and aborted recognizer errors", () => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    emitGesture({ type: "talkStart" });
+    rec.emitError("no-speech");
+    rec.emitError("aborted");
+    expect(state().error).toBeNull();
+  });
+
+  it("drops a final transcript that arrives after a reset", () => {
+    const rec = createFakeRecognizer(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: createFakeSpeaker(true).speaker } });
+    emitGesture({ type: "seat", spriteId: "son" });
+    emitGesture({ type: "talkStart" });
+    expect(emitGesture({ type: "reset" })).toBe(true);
+    rec.emitFinal("Find ornaments under $200");
+    expect(state().missionText).not.toBe("Find ornaments under $200");
+    expect(state().phase).toBe("lobby");
+  });
+
+  it("toggleVoiceMute cancels speech and suppresses later opinion beats", async () => {
+    const sp = createFakeSpeaker(true);
+    start({ fetchImpl: fakeFetch(async () => sse(STAGE_TRANSCRIPT)), voice: { recognizer: createFakeRecognizer(true).recognizer, speaker: sp.speaker } });
+    expect(emitGesture({ type: "toggleVoiceMute" })).toBe(true);
+    expect(state().voiceMuted).toBe(true);
+    expect(sp.cancel).toHaveBeenCalledTimes(1);
+
+    seatAllAndConvene();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(sp.speak).not.toHaveBeenCalled();
+
+    expect(emitGesture({ type: "toggleVoiceMute" })).toBe(true);
+    expect(state().voiceMuted).toBe(false);
+  });
+
+  it("speaks opinion beats through the speaker in the sprite's voice", async () => {
+    const sp = createFakeSpeaker(true);
+    start({ fetchImpl: fakeFetch(async () => sse(STAGE_TRANSCRIPT)), voice: { recognizer: createFakeRecognizer(true).recognizer, speaker: sp.speaker } });
+    seatAllAndConvene();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sp.speak).toHaveBeenCalledWith("wife", expect.stringContaining("Warm and elegant"));
+  });
+
+  it("never speaks when unsupported, locked, or in the 90-second cut", async () => {
+    const unsupported = createFakeSpeaker(true);
+    Object.defineProperty(unsupported.speaker, "supported", { value: false });
+    const d1 = start({ fetchImpl: fakeFetch(async () => sse(STAGE_TRANSCRIPT)), voice: { recognizer: createFakeRecognizer(true).recognizer, speaker: unsupported.speaker } });
+    seatAllAndConvene();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(unsupported.speak).not.toHaveBeenCalled();
+    d1.dispose();
+    director = null;
+    state().resetCouncil();
+
+    const locked = createFakeSpeaker(false);
+    const d2 = start({ fetchImpl: fakeFetch(async () => sse(STAGE_TRANSCRIPT)), voice: { recognizer: createFakeRecognizer(true).recognizer, speaker: locked.speaker } });
+    seatAllAndConvene();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(locked.speak).not.toHaveBeenCalled();
+    d2.dispose();
+    director = null;
+    state().resetCouncil();
+
+    const cut = createFakeSpeaker(true);
+    start({ cut90: true, fetchImpl: fakeFetch(async () => sse(STAGE_TRANSCRIPT)), voice: { recognizer: createFakeRecognizer(true).recognizer, speaker: cut.speaker } });
+    seatAllAndConvene();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(cut.speak).not.toHaveBeenCalled();
+  });
+
+  it("reset() aborts the recognizer and cancels speech", () => {
+    const rec = createFakeRecognizer(true);
+    const sp = createFakeSpeaker(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: sp.speaker } });
+    expect(emitGesture({ type: "reset" })).toBe(true);
+    expect(rec.abort).toHaveBeenCalledTimes(1);
+    expect(sp.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("dispose() aborts the recognizer and cancels speech", () => {
+    const rec = createFakeRecognizer(true);
+    const sp = createFakeSpeaker(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: sp.speaker } }).dispose();
+    director = null;
+    expect(rec.abort).toHaveBeenCalledTimes(1);
+    expect(sp.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("reset clears the interim caption and returns listening to idle, but keeps mute/unlock facts", () => {
+    const rec = createFakeRecognizer(true);
+    const sp = createFakeSpeaker(true);
+    start({ voice: { recognizer: rec.recognizer, speaker: sp.speaker } });
+    emitGesture({ type: "toggleVoiceMute" });
+    emitGesture({ type: "talkStart" });
+    rec.emitInterim("find orn");
+    expect(state().voiceInterim).toBe("find orn");
+
+    expect(emitGesture({ type: "reset" })).toBe(true);
+    expect(state().voiceInterim).toBe("");
+    expect(state().voiceStatus).toBe("idle");
+    expect(state().voiceMuted).toBe(true); // a session fact, not cleared by reset
   });
 });

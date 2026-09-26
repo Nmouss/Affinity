@@ -12,6 +12,7 @@ import { getTargetWorldPosition, registerTarget } from "@/lib/stage/targets";
 import type { FamilyProfile } from "@/types/domain";
 import type { SpriteMood } from "@/types/stage";
 import { CharacterModel } from "./CharacterModel";
+import { characterFor, characterHeight, characterTuning, createMotion } from "./characterPose";
 import { IconMesh } from "./IconMesh";
 import { iconsForProfile } from "./icons";
 import { createAuraMaterial } from "./materials";
@@ -22,38 +23,26 @@ import styles from "./SpriteToken.module.css";
 import { typingDuration } from "./typewriter";
 
 // One family member's sprite. Discrete store fields (bubble, mood, phase) re-render it; everything
-// per-frame (hand pose, glide, mood dials) is read with getState() and applied to refs in useFrame.
+// per-frame (hand pose, walk, mood dials) is read with getState() and applied to refs in useFrame.
+// The character itself stands on the floor (see characterPose.ts); this file only steers it between
+// home/seat/hand, faces it the right way, and drives the stage dials (aura, orbit, trail, sparkles).
 
 const VETO_RED = new Color("#ff2a2a");
 const ORBIT_RADIUS = 1.05;
 const DRAG_LIFT = 0.5;
-const BUBBLE_Y = SPRITE_FLOAT_HEIGHT + 1.2;
-const LABEL_Y = SPRITE_FLOAT_HEIGHT - 1.05;
+/** Just below/in front of the feet so the name tag never overlaps the body. */
+const LABEL_Y = -0.35;
+const LABEL_Z = 0.5;
+
+/** Walking toward a goal: accelerate, then ease off inside the slow radius, then snap. */
+const WALK_ACCEL = 6;
+const WALK_SLOW_RADIUS = 1.5;
+const WALK_STOP_EPS = 0.03;
+/** Below this planar speed the character isn't considered to be walking (for facing). */
+const WALK_FACING_SPEED = 0.4;
 
 /** Numeric MoodStyle dials that are damped every frame. */
-const DIALS = [
-  "distort",
-  "speed",
-  "scale",
-  "bounce",
-  "saturation",
-  "brightness",
-  "orbitSpeed",
-  "pulse",
-  "droop",
-  "wobble",
-  "jump",
-  "lean",
-  "wave",
-  "rimFlash",
-  "aura",
-] as const satisfies ReadonlyArray<keyof MoodStyle>;
-
-function hashSeed(id: string): number {
-  let hash = 0;
-  for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) % 997;
-  return hash;
-}
+const DIALS = ["scale", "orbitSpeed", "rimFlash", "aura"] as const satisfies ReadonlyArray<keyof MoodStyle>;
 
 /** Side seats grow their bubbles outward (as seen from the camera) so seated bubbles don't overlap. */
 function bubbleSide(seat: number | null): "left" | "center" | "right" {
@@ -68,7 +57,9 @@ export interface SpriteTokenProps {
 export function SpriteToken({ profile }: SpriteTokenProps) {
   const { id, name, colors } = profile;
   const targetId = `sprite:${id}` as const;
+  const character = useMemo(() => characterFor(id), [id]);
   const icons = useMemo(() => iconsForProfile(profile), [profile]);
+  const bubbleY = useMemo(() => characterHeight(id) + 0.5, [id]);
   const palette = useMemo(() => {
     const core = new Color(coreColor(colors));
     return {
@@ -88,12 +79,14 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
   );
 
   const root = useRef<Group>(null);
-  const float = useRef<Group>(null);
+  const lift = useRef<Group>(null);
   const body = useRef<Group>(null);
+  const chest = useRef<Group>(null);
   const orbit = useRef<Group>(null);
   const emitting = useRef(false);
   const characterMood = useRef<SpriteMood>("idle");
   const characterGaze = useRef({ x: 0, y: 0 });
+  const motion = useRef(createMotion());
 
   const bubble = useStage((state) => state.sprites[id]?.bubble ?? null);
   const thinking = useStage((state) => state.sprites[id]?.mood === "thinking");
@@ -112,29 +105,20 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
       style: { ...moodStyle("idle") },
       goal: new Vector3(),
       look: new Vector3(),
-      seed: hashSeed(id),
+      /** Planar walk velocity, ft/s. Reused every frame so nothing allocates. */
+      velocity: new Vector3(),
     }),
-    [id],
+    [],
   );
   const anim = useRef({
     ...Object.fromEntries(DIALS.map((dial) => [dial, moodStyle("idle")[dial]])),
-    time: 0,
-    bouncePhase: 0,
-    jumpPhase: 0,
-    hop: 0,
     lift: 0,
-    blinkAt: 1 + (hashSeed(id) % 30) / 10,
-    blinkEnd: 0,
     prevMood: "idle",
+    prevHeld: false,
   } as Record<(typeof DIALS)[number], number> & {
-    time: number;
-    bouncePhase: number;
-    jumpPhase: number;
-    hop: number;
     lift: number;
-    blinkAt: number;
-    blinkEnd: number;
     prevMood: string;
+    prevHeld: boolean;
   });
 
   // Start at home instead of gliding in from the origin.
@@ -143,13 +127,13 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
     root.current?.position.set(x, 0, z);
   }, [id]);
 
-  useEffect(() => (float.current ? registerTarget(targetId, float.current, 0.9) : undefined), [targetId]);
+  useEffect(() => (chest.current ? registerTarget(targetId, chest.current, 0.9) : undefined), [targetId]);
 
   useFrame(({ clock, camera }, rawDelta) => {
     const group = root.current;
-    const floatGroup = float.current;
+    const liftGroup = lift.current;
     const bodyGroup = body.current;
-    if (!group || !floatGroup || !bodyGroup) return;
+    if (!group || !liftGroup || !bodyGroup) return;
 
     const delta = Math.min(rawDelta, 0.1);
     const t = clock.elapsedTime;
@@ -167,35 +151,83 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
     characterGaze.current.y = hand.present ? hand.pointer[1] : 0;
     const a = anim.current;
 
-    // Perk up with a hop when the conflict resolves (a bundle arrived) or the party starts.
-    if ((a.prevMood === "conceding" && mood !== "conceding") || (mood === "celebrating" && a.prevMood !== mood)) a.hop = 1;
+    // Perk up with a jump when the conflict resolves (a bundle arrived) or the party starts.
+    if ((a.prevMood === "conceding" && mood !== "conceding") || (mood === "celebrating" && a.prevMood !== mood)) {
+      motion.current.jumpAt = t;
+    }
     a.prevMood = mood;
+    // A landing plays out the moment a hold releases.
+    if (a.prevHeld && !held) motion.current.landAt = t;
+    a.prevHeld = held;
 
     for (const dial of DIALS) easing.damp(a, dial, style[dial], dial === "scale" ? 0.18 : 0.3, delta);
     easing.damp(a, "lift", held ? DRAG_LIFT : 0, 0.15, delta);
-    a.time += delta * a.speed;
-    a.bouncePhase += delta * Math.PI * style.bounceRate;
-    a.jumpPhase += delta * Math.PI * 1.4;
-    a.hop = Math.max(0, a.hop - delta * 1.6);
+    liftGroup.position.y = a.lift;
 
-    // Glide: the hand while dragged, else the ring seat, else home.
+    // Move: the hand while dragged, else walk toward the ring seat or home.
     const seatIndex = sprite?.seat ?? null;
-    const [gx, , gz] =
-      held && hand.floorPoint ? hand.floorPoint : seatIndex !== null ? seatPosition(seatIndex) : homePosition(id);
-    easing.damp3(group.position, scratch.goal.set(gx, 0, gz), held ? 0.07 : 0.45, delta);
+    const oldX = group.position.x;
+    const oldZ = group.position.z;
+    if (held && hand.floorPoint) {
+      scratch.goal.set(hand.floorPoint[0], 0, hand.floorPoint[2]);
+      easing.damp3(group.position, scratch.goal, 0.07, delta);
+    } else {
+      const [gx, , gz] = seatIndex !== null ? seatPosition(seatIndex) : homePosition(id);
+      scratch.goal.set(gx, 0, gz);
+      const toGoalX = scratch.goal.x - group.position.x;
+      const toGoalZ = scratch.goal.z - group.position.z;
+      const dist = Math.hypot(toGoalX, toGoalZ);
+      if (dist < WALK_STOP_EPS) {
+        group.position.x = scratch.goal.x;
+        group.position.z = scratch.goal.z;
+        scratch.velocity.set(0, 0, 0);
+      } else {
+        const maxSpeed = character.walkSpeed * characterTuning.walkSpeed;
+        const desiredSpeed = dist < WALK_SLOW_RADIUS ? (maxSpeed * dist) / WALK_SLOW_RADIUS : maxSpeed;
+        const dirX = toGoalX / dist;
+        const dirZ = toGoalZ / dist;
+        const currentSpeed = scratch.velocity.length();
+        const nextSpeed =
+          currentSpeed < desiredSpeed
+            ? Math.min(desiredSpeed, currentSpeed + WALK_ACCEL * delta)
+            : Math.max(desiredSpeed, currentSpeed - WALK_ACCEL * delta);
+        scratch.velocity.set(dirX * nextSpeed, 0, dirZ * nextSpeed);
+        group.position.x += scratch.velocity.x * delta;
+        group.position.z += scratch.velocity.z * delta;
+        if (Math.hypot(scratch.goal.x - group.position.x, scratch.goal.z - group.position.z) < WALK_STOP_EPS) {
+          group.position.x = scratch.goal.x;
+          group.position.z = scratch.goal.z;
+        }
+      }
+    }
 
-    floatGroup.position.y =
-      SPRITE_FLOAT_HEIGHT +
-      a.lift +
-      Math.sin(t * 1.3 + scratch.seed) * 0.08 +
-      Math.sin(a.hop * Math.PI) * 0.7 -
-      a.droop * 0.35;
+    // Feed CharacterModel's walk/jump/land animation from how far the sprite actually moved.
+    const movedX = group.position.x - oldX;
+    const movedZ = group.position.z - oldZ;
+    const moveDist = Math.hypot(movedX, movedZ);
+    const motionState = motion.current;
+    motionState.speed = moveDist / delta;
+    motionState.gaitPhase += (moveDist / character.stride) * Math.PI * 2;
+    if (held) {
+      const yaw = bodyGroup.rotation.y;
+      const axisX = Math.cos(yaw);
+      const axisZ = -Math.sin(yaw);
+      const velX = movedX / delta;
+      const velZ = movedZ / delta;
+      motionState.dragVelocityX = Math.max(-8, Math.min(8, velX * axisX + velZ * axisZ));
+    } else {
+      motionState.dragVelocityX = 0;
+    }
 
     // Seated characters stay three-quarter visible to the audience. Vetoes still turn toward the
-    // disputed item, while unseated/speaking characters face the room camera.
+    // disputed item, unseated/speaking characters face the room camera, and a walking character
+    // faces where it's going.
     const look = scratch.look;
+    const walking = !held && motionState.speed > WALK_FACING_SPEED;
     let facingAngle: number;
-    if (style.facing === "hearth" && seatIndex !== null) {
+    if (walking) {
+      facingAngle = Math.atan2(movedX, movedZ);
+    } else if (style.facing === "hearth" && seatIndex !== null) {
       facingAngle = -(COUNCIL_RING.seatAngles[seatIndex] ?? 0) * 0.8;
     } else {
       if (!(style.facing === "item" && stage.conflict?.itemId && getTargetWorldPosition(`item:${stage.conflict.itemId}`, look))) {
@@ -203,7 +235,7 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
       }
       facingAngle = Math.atan2(look.x - group.position.x, look.z - group.position.z);
     }
-    easing.dampAngle(bodyGroup.rotation, "y", facingAngle, 0.35, delta);
+    easing.dampAngle(bodyGroup.rotation, "y", facingAngle, walking ? 0.2 : 0.35, delta);
     bodyGroup.scale.setScalar(a.scale);
 
     const flash = a.rimFlash * (0.5 + 0.5 * Math.sin(t * 14));
@@ -232,28 +264,30 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
           <circleGeometry args={[1.4, 40]} />
         </mesh>
 
-        <group ref={float} position-y={SPRITE_FLOAT_HEIGHT}>
+        <group ref={lift}>
           <group ref={body} rotation-order="YXZ">
-            <CharacterModel profile={profile} mood={characterMood} gaze={characterGaze} />
+            <CharacterModel profile={profile} mood={characterMood} gaze={characterGaze} motion={motion} />
           </group>
 
-          <group ref={orbit}>
-            {icons.map((icon, index) => (
-              <group key={`${icon.kind}-${index}`} scale={0.24}>
-                <IconMesh icon={icon} />
-              </group>
-            ))}
-          </group>
+          <group ref={chest} position-y={SPRITE_FLOAT_HEIGHT}>
+            <group ref={orbit}>
+              {icons.map((icon, index) => (
+                <group key={`${icon.kind}-${index}`} scale={0.24}>
+                  <IconMesh icon={icon} />
+                </group>
+              ))}
+            </group>
 
-          {celebrating && (
-            <Sparkles count={48} scale={3.2} size={7} speed={1.4} noise={1.5} color={palette.rim} />
-          )}
+            {celebrating && (
+              <Sparkles count={48} scale={3.2} size={7} speed={1.4} noise={1.5} color={palette.rim} />
+            )}
+          </group>
         </group>
 
-        <Html position={[0, BUBBLE_Y, 0]} zIndexRange={[0, 0]} pointerEvents="none">
+        <Html position={[0, bubbleY, 0]} zIndexRange={[0, 0]} pointerEvents="none">
           <SpeechBubble speaker={name} text={bubble} thinking={thinking} accent={palette.accent} align={bubbleAlign} />
         </Html>
-        <Html position={[0, LABEL_Y, 0]} zIndexRange={[0, 0]} pointerEvents="none">
+        <Html position={[0, LABEL_Y, LABEL_Z]} zIndexRange={[0, 0]} pointerEvents="none">
           <div className={styles.label} style={{ "--accent": palette.accent, "--core": palette.core } as CSSProperties}>
             <span className={styles.dot} />
             {name}
@@ -261,7 +295,7 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
         </Html>
       </group>
 
-      <SparkleTrail source={float} emitting={emitting} color={palette.rim} />
+      <SparkleTrail source={chest} emitting={emitting} color={palette.rim} />
     </>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { FamilyProfile } from "@/types/domain";
+import type { CharacterLook } from "@/types/character";
 import type { SpriteMood } from "@/types/stage";
 import {
   characterFor,
@@ -223,6 +224,8 @@ export interface CharacterModelProps {
   gaze: MutableRefObject<{ x: number; y: number }>;
   /** Locomotion from SpriteToken (walk speed, gait, jump and landing times). */
   motion?: MutableRefObject<CharacterMotion>;
+  /** How the person looks (People Maker). Not read yet: the look track renders from it. */
+  look?: CharacterLook;
 }
 
 /** The model origin sits at the soles, so the character stands on whatever y it is placed at. */

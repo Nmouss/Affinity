@@ -25,6 +25,10 @@ interface Press {
   atMs: number;
   ndcX: number;
   ndcY: number;
+  /** Last pointer seen during the press. The release clears the store's pointer (the canvas loses
+   * pointer capture) before this frame runs, so the drop hit-tests here instead. */
+  lastX: number;
+  lastY: number;
 }
 
 export function PlazaPointer() {
@@ -57,15 +61,21 @@ export function PlazaPointer() {
     const current = press.current;
 
     if (store.grabbing && !current) {
-      press.current = { id: store.hoveredId, atMs: nowMs, ndcX: pointer?.[0] ?? 0, ndcY: pointer?.[1] ?? 0 };
-    } else if (store.grabbing && current && store.draggingId === null && current.id) {
+      const x = pointer?.[0] ?? 0;
+      const y = pointer?.[1] ?? 0;
+      press.current = { id: store.hoveredId, atMs: nowMs, ndcX: x, ndcY: y, lastX: x, lastY: y };
+    } else if (store.grabbing && current && pointer) {
+      current.lastX = pointer[0];
+      current.lastY = pointer[1];
+    }
+    if (store.grabbing && current && store.draggingId === null && current.id) {
       const movedNdc = pointer ? Math.hypot(pointer[0] - current.ndcX, pointer[1] - current.ndcY) : 0;
       if (shouldStartDrag(nowMs - current.atMs, movedNdc)) store.setDragging(current.id);
     } else if (!store.grabbing && current) {
       if (store.draggingId !== null) {
         const draggedId = store.draggingId;
-        const px = pointer?.[0] ?? current.ndcX;
-        const py = pointer?.[1] ?? current.ndcY;
+        const px = pointer?.[0] ?? current.lastX;
+        const py = pointer?.[1] ?? current.lastY;
         const [cx, cy] = ndcToClientPx([px, py], size.width, size.height);
         const el = typeof document !== "undefined" ? document.elementFromPoint(cx, cy) : null;
         const dropTarget = el?.closest(`[${PLAZA_DROP_ATTR}]`) as HTMLElement | null;

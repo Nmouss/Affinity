@@ -51,3 +51,6 @@ export const usePlaza = create<PlazaState>()((set) => ({
   requestDrop: (action, personId) => set({ dropAction: { action, personId, at: Date.now() } }),
   clearDrop: () => set({ dropAction: null }),
 }));
+
+// Read-only handle for browser checks (the headless walkthrough watches drags and drops through it).
+if (typeof window !== "undefined") (window as unknown as { __affinityPlaza?: typeof usePlaza }).__affinityPlaza = usePlaza;

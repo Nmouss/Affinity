@@ -146,9 +146,21 @@ export default function MakerCanvas({ step, draft }: MakerCanvasProps) {
     ? undefined
     : {
         onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => usePlaza.getState().setPointer(eventToNdc(event), "mouse"),
-        onPointerLeave: () => usePlaza.getState().setPointer(null, null),
-        onPointerDown: () => usePlaza.getState().setGrabbing(true),
-        onPointerUp: () => usePlaza.getState().setGrabbing(false),
+        onPointerLeave: () => {
+          if (!usePlaza.getState().grabbing) usePlaza.getState().setPointer(null, null);
+        },
+        // Capture the press so a person dragged over the DOM rails keeps reporting moves and the
+        // release lands here (the scene then hit-tests the rail icon under the pointer for the drop).
+        onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          usePlaza.getState().setPointer(eventToNdc(event), "mouse");
+          usePlaza.getState().setGrabbing(true);
+        },
+        onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => {
+          usePlaza.getState().setPointer(eventToNdc(event), "mouse");
+          usePlaza.getState().setGrabbing(false);
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+        },
         onPointerCancel: () => usePlaza.getState().setGrabbing(false),
       };
 

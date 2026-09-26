@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createGestureMachine, type MachineContext, type MachineHand } from "@/lib/gestures/detector";
+import { createGestureMachine, isTalkPose, type MachineContext, type MachineHand } from "@/lib/gestures/detector";
 import type { GestureEvent, TargetId } from "@/types/stage";
 
 const MAYA: [number, number] = [-0.6, 0];
@@ -28,6 +28,8 @@ const relaxed = { pinch: 0.3, grab: 0.3, rollRadians: 0, velocityX: 0 };
 const pinched = { pinch: 0.95, grab: 0.2, rollRadians: 0, velocityX: 0 };
 const open = { pinch: 0.1, grab: 0.05, rollRadians: 0, velocityX: 0 };
 const shake = { pinch: 0.9, grab: 1, rollRadians: -Math.PI / 2, velocityX: 0 };
+/** Open hand, palm up: the talk pose. */
+const palmUp = { pinch: 0.1, grab: 0.05, rollRadians: Math.PI, velocityX: 0 };
 
 function harness() {
   const events: GestureEvent[] = [];
@@ -215,6 +217,98 @@ describe("handshake", () => {
     const h = harness();
     h.run(1600, null, [0, 0], true);
     expect(h.of("handshakeComplete")).toHaveLength(1);
+  });
+});
+
+describe("isTalkPose", () => {
+  it("true at roll ±π with an open hand", () => {
+    expect(isTalkPose(Math.PI, 0.1, 0.05)).toBe(true);
+    expect(isTalkPose(-Math.PI, 0.1, 0.05)).toBe(true);
+  });
+
+  it("false palm-down", () => {
+    expect(isTalkPose(0, 0.1, 0.05)).toBe(false);
+  });
+
+  it("false for a sideways fist (handshake)", () => {
+    expect(isTalkPose(-Math.PI / 2, 0.9, 1)).toBe(false);
+  });
+
+  it("false when pinching", () => {
+    expect(isTalkPose(Math.PI, 0.95, 0.05)).toBe(false);
+  });
+});
+
+describe("talk", () => {
+  it("holding the pose under 250 ms emits nothing", () => {
+    const h = harness();
+    h.run(200, palmUp, EMPTY);
+    expect(h.of("talkStart")).toHaveLength(0);
+  });
+
+  it("holding the pose for 250 ms emits exactly one talkStart", () => {
+    const h = harness();
+    h.run(400, palmUp, EMPTY);
+    expect(h.of("talkStart")).toHaveLength(1);
+    h.run(200, palmUp, EMPTY);
+    expect(h.of("talkStart")).toHaveLength(1);
+  });
+
+  it("a brief wobble out of the pose (under 350 ms) does not end the talk", () => {
+    const h = harness();
+    h.run(400, palmUp, EMPTY);
+    expect(h.of("talkStart")).toHaveLength(1);
+    h.run(200, relaxed, EMPTY);
+    expect(h.of("talkEnd")).toHaveLength(0);
+    h.run(400, palmUp, EMPTY);
+    expect(h.of("talkStart")).toHaveLength(1);
+    expect(h.of("talkEnd")).toHaveLength(0);
+  });
+
+  it("leaving the pose for 350 ms emits one talkEnd", () => {
+    const h = harness();
+    h.run(400, palmUp, EMPTY);
+    expect(h.of("talkStart")).toHaveLength(1);
+    h.run(400, relaxed, EMPTY);
+    expect(h.of("talkEnd")).toHaveLength(1);
+    h.run(400, relaxed, EMPTY);
+    expect(h.of("talkEnd")).toHaveLength(1);
+  });
+
+  it("a hand dropout while talking ends it immediately, without waiting for the release timer", () => {
+    const h = harness();
+    h.run(400, palmUp, EMPTY);
+    expect(h.of("talkStart")).toHaveLength(1);
+    const snapshot = h.run(16, null, EMPTY);
+    expect(h.of("talkEnd")).toHaveLength(1);
+    expect(snapshot.talking).toBe(false);
+  });
+
+  it("each start is paired with exactly one end", () => {
+    const h = harness();
+    h.run(400, palmUp, EMPTY);
+    h.run(400, relaxed, EMPTY);
+    h.run(400, palmUp, EMPTY);
+    h.run(400, relaxed, EMPTY);
+    expect(h.of("talkStart")).toHaveLength(2);
+    expect(h.of("talkEnd")).toHaveLength(2);
+  });
+
+  it("reset while talking emits nothing", () => {
+    const h = harness();
+    h.run(400, palmUp, EMPTY);
+    expect(h.of("talkStart")).toHaveLength(1);
+    const count = h.events.length;
+    h.machine.reset();
+    expect(h.events).toHaveLength(count);
+    expect(h.machine.snapshot().talking).toBe(false);
+  });
+
+  it("palm-up also satisfies isOpenPalm, so orbiting is unaffected", () => {
+    const h = harness();
+    h.run(50, palmUp, [0, 0]);
+    h.run(50, palmUp, [0.2, 0.1]);
+    expect(h.of("orbit").length).toBeGreaterThan(0);
   });
 });
 

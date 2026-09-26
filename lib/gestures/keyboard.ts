@@ -58,8 +58,12 @@ export function shouldPreventDefault(code: string): boolean {
 }
 
 export function mapKey(event: KeyLike, phase: "down" | "up"): KeyAction | null {
-  // Releasing Space always ends the hold, even if focus moved into a field meanwhile.
-  if (phase === "up") return event.code === "Space" ? { kind: "handshake", held: false } : null;
+  // Releasing Space or V always ends the hold, even if focus moved into a field meanwhile.
+  if (phase === "up") {
+    if (event.code === "Space") return { kind: "handshake", held: false };
+    if (event.code === "KeyV") return { kind: "emit", event: { type: "talkEnd" } };
+    return null;
+  }
   if (isTypingTarget(event.target) || event.metaKey || event.ctrlKey || event.altKey) return null;
 
   const orbit = ORBIT_KEYS[event.code];
@@ -72,6 +76,10 @@ export function mapKey(event: KeyLike, phase: "down" | "up"): KeyAction | null {
   switch (event.code) {
     case "Space":
       return { kind: "handshake", held: true };
+    case "KeyV":
+      return { kind: "emit", event: { type: "talkStart" } };
+    case "KeyM":
+      return { kind: "emit", event: { type: "toggleVoiceMute" } };
     case "KeyP":
       return { kind: "tapHover" };
     case "KeyX":
@@ -120,8 +128,11 @@ export function attachKeyboard({ onAction }: KeyboardHandlers, target: Window = 
   };
   const down = handle("down");
   const up = handle("up");
-  // Losing focus mid-hold would otherwise leave Space stuck down.
-  const blur = () => onAction({ kind: "handshake", held: false });
+  // Losing focus mid-hold would otherwise leave Space or V stuck down (a stuck V leaves the mic open).
+  const blur = () => {
+    onAction({ kind: "handshake", held: false });
+    onAction({ kind: "emit", event: { type: "talkEnd" } });
+  };
   target.addEventListener("keydown", down);
   target.addEventListener("keyup", up);
   target.addEventListener("blur", blur);

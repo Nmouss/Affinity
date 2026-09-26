@@ -36,6 +36,12 @@ export const GESTURE_CONFIG = {
   swipeHoverGraceMs: 250,
   /** Longer gaps between steps (a background tab) are clamped so timers don't jump. */
   maxStepMs: 100,
+  /** Palm-up (roll ≈ ±180°) with an open hand is the talk pose. */
+  talkMinRollDeg: 150,
+  /** How long the pose must be held before talkStart fires. */
+  talkHoldMs: 250,
+  /** How long the pose must be absent before talkEnd fires (hand dropout ends it immediately instead). */
+  talkReleaseMs: 350,
 };
 
 export type GestureConfig = typeof GESTURE_CONFIG;
@@ -72,6 +78,7 @@ export interface MachineSnapshot {
   draggingSpriteId: string | null;
   handshakeProgress: number;
   handshakeHeld: boolean;
+  talking: boolean;
 }
 
 export interface GestureMachine {
@@ -96,6 +103,17 @@ export function isPinchStart(pinch: number, grab: number, config: GestureConfig 
 
 export function isOpenPalm(pinch: number, grab: number, config: GestureConfig = GESTURE_CONFIG): boolean {
   return grab < config.openMaxGrab && pinch < config.openMaxPinch;
+}
+
+/** Palm facing up, open hand: push-to-talk. Distinct from orbit (palm down) and the handshake (sideways). */
+export function isTalkPose(
+  rollRadians: number,
+  pinch: number,
+  grab: number,
+  config: GestureConfig = GESTURE_CONFIG,
+): boolean {
+  const roll = Math.abs(rollRadians * DEG);
+  return roll >= config.talkMinRollDeg && isOpenPalm(pinch, grab, config);
 }
 
 export function isHandshakePose(
@@ -130,6 +148,9 @@ export function createGestureMachine(
   let emittedProgress = 0;
   let handshakeHeld = false;
   let completed = false;
+  let talking = false;
+  let talkPoseHeldMs = 0;
+  let talkAbsentMs = 0;
 
   const snapshot = (): MachineSnapshot => ({
     hover,
@@ -137,6 +158,7 @@ export function createGestureMachine(
     draggingSpriteId: pinch?.dragSpriteId ?? null,
     handshakeProgress: progress,
     handshakeHeld,
+    talking,
   });
 
   const setHover = (next: TargetId | null) => {
@@ -233,6 +255,37 @@ export function createGestureMachine(
     }
   };
 
+  /** Hand is gone: forget the pose immediately, and end a talk in progress right away (no release timer). */
+  const dropTalk = () => {
+    talkPoseHeldMs = 0;
+    talkAbsentMs = 0;
+    if (!talking) return;
+    talking = false;
+    emit({ type: "talkEnd" });
+  };
+
+  const updateTalk = (posing: boolean, dtMs: number) => {
+    if (posing) {
+      talkAbsentMs = 0;
+      if (talking) return;
+      talkPoseHeldMs += dtMs;
+      if (talkPoseHeldMs >= config.talkHoldMs) {
+        talkPoseHeldMs = 0;
+        talking = true;
+        emit({ type: "talkStart" });
+      }
+      return;
+    }
+    talkPoseHeldMs = 0;
+    if (!talking) return;
+    talkAbsentMs += dtMs;
+    if (talkAbsentMs >= config.talkReleaseMs) {
+      talkAbsentMs = 0;
+      talking = false;
+      emit({ type: "talkEnd" });
+    }
+  };
+
   return {
     snapshot,
 
@@ -247,6 +300,9 @@ export function createGestureMachine(
       emittedProgress = 0;
       handshakeHeld = false;
       completed = false;
+      talking = false;
+      talkPoseHeldMs = 0;
+      talkAbsentMs = 0;
     },
 
     step({ t, hand, handshakeAssist = false }, context) {
@@ -258,6 +314,7 @@ export function createGestureMachine(
         orbitFrom = null;
         setHover(null);
         updateHandshake(handshakeAssist, dtMs);
+        dropTalk();
         return snapshot();
       }
 
@@ -270,6 +327,7 @@ export function createGestureMachine(
       updateOpenPalm(hand, t);
       const posing = isHandshakePose(hand.rollRadians, hand.grab, handshakeHeld, config);
       updateHandshake(posing || handshakeAssist, dtMs);
+      updateTalk(isTalkPose(hand.rollRadians, hand.pinch, hand.grab, config), dtMs);
       return snapshot();
     },
   };

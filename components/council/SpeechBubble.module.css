@@ -1,0 +1,124 @@
+/* Anchored at its bottom-center point by drei <Html>, so the tail points down at the sprite. */
+.anchor {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform: translate(-50%, 0);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Side seats grow their bubbles outward so three seated sprites never cover each other. */
+.left {
+  transform: translate(calc(-100% + 2.5rem), 0);
+}
+
+.right {
+  transform: translate(-2.5rem, 0);
+}
+
+.left .bubble::after {
+  left: calc(100% - 2.5rem);
+}
+
+.right .bubble::after {
+  left: 2.5rem;
+}
+
+.bubble {
+  position: relative;
+  width: max-content;
+  max-width: 17rem;
+  padding: 0.6rem 0.9rem 0.7rem;
+  border: 3px solid var(--accent, #c9a227);
+  border-radius: 1.1rem;
+  background: #fff7e8;
+  color: #3a2418;
+  box-shadow:
+    0 0.5rem 1.4rem rgba(20, 8, 2, 0.45),
+    0 0 0 4px rgba(255, 214, 150, 0.18);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.3;
+  animation: pop 220ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+.bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.75rem;
+  width: 1.1rem;
+  height: 1.1rem;
+  transform: translateX(-50%) rotate(45deg);
+  border-right: 3px solid var(--accent, #c9a227);
+  border-bottom: 3px solid var(--accent, #c9a227);
+  background: #fff7e8;
+}
+
+.speaker {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--accent, #c9a227);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* The untyped remainder keeps its space so the bubble never reflows while typing. */
+.rest {
+  visibility: hidden;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 0.3rem;
+  padding: 0.35rem 0.1rem 0.15rem;
+}
+
+.dots span {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--accent, #c9a227);
+  animation: dot 1s ease-in-out infinite;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6) translateY(0.6rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dot {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-0.25rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble,
+  .dots span {
+    animation: none;
+  }
+}

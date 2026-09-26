@@ -3,6 +3,8 @@
 import type { FormEvent, KeyboardEvent } from "react";
 import { emitGesture } from "@/lib/stage/bus";
 import { useStage } from "@/lib/stage/store";
+import { usePeople } from "@/lib/people/roster";
+import { MAX_SEATS } from "@/lib/stage/layout";
 import styles from "./MissionForm.module.css";
 
 /** The mission (AP2 intent). Submitting convenes through the bus, so the same arming applies. */
@@ -10,6 +12,9 @@ export function MissionForm() {
   const missionText = useStage((state) => state.missionText);
   const setMissionText = useStage((state) => state.setMissionText);
   const seatedCount = useStage((state) => Object.values(state.sprites).filter((sprite) => sprite.seat !== null).length);
+  // Number keys seat people in roster order, so the hint grows with the roster (max 6 seats).
+  const peopleCount = usePeople().length;
+  const numberKeys = Array.from({ length: Math.min(peopleCount, MAX_SEATS) }, (_, i) => i + 1).join(" · ");
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -46,7 +51,7 @@ export function MissionForm() {
       </div>
       <p className={styles.hint}>
         {seatedCount === 0
-          ? "Pinch-drag sprites into the ring (or press 1 · 2 · 3), then pinch the hearth."
+          ? `Pinch-drag sprites into the ring (or press ${numberKeys}), then pinch the hearth.`
           : `${seatedCount} seated. Pinch the hearth or press Enter to convene.`}
       </p>
     </form>

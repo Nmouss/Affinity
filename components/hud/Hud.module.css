@@ -196,6 +196,30 @@
   margin-top: 0.6rem;
 }
 
+.makerRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.makerLink {
+  composes: button from "./Panel.module.css";
+  padding: 0.3rem 0.8rem;
+  font-size: 0.78rem;
+  text-decoration: none;
+}
+
+.hint {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 209, 138, 0.14);
+  color: #ffe9c2;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  animation: fadeIn 400ms ease-out;
+}
+
 @keyframes pulse {
   50% {
     opacity: 0.45;

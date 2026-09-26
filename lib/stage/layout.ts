@@ -69,8 +69,20 @@ export function seatAngles(count: number): number[] {
   return Array.from({ length: n }, (_, index) => -span / 2 + (span * index) / (n - 1));
 }
 
-export function seatPosition(index: number): Vec3 {
-  const angle = COUNCIL_RING.seatAngles[index] ?? 0;
+/** How many seats the ring shows: at least 3 (today's demo), growing with the party, capped at MAX_SEATS. */
+export function activeSeatCount(seatedCount: number): number {
+  return Math.min(MAX_SEATS, Math.max(3, Math.floor(seatedCount)));
+}
+
+/**
+ * World position of seat `index` once `activeCount` seats are spread around the ring. Seat indices
+ * stay put as people join or leave (nextFreeSeat always takes the lowest free one); only the spread
+ * of the whole ring grows with `activeCount`. Defaults to 3 seats, so old callers (and the three
+ * starters) get exactly today's positions.
+ */
+export function seatPosition(index: number, activeCount = 3): Vec3 {
+  const angles = seatAngles(activeCount);
+  const angle = angles[Math.min(Math.max(0, index), angles.length - 1)] ?? 0;
   const [cx, cy, cz] = COUNCIL_RING.center;
   return [cx + Math.sin(angle) * COUNCIL_RING.radius, cy, cz + Math.cos(angle) * COUNCIL_RING.radius];
 }

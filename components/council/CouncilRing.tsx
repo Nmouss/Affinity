@@ -5,7 +5,8 @@ import { useFrame } from "@react-three/fiber";
 import { easing } from "maath";
 import { AdditiveBlending, Color, MeshBasicMaterial, RingGeometry, type Group, type Mesh } from "three";
 import { createAuraMaterial } from "@/components/sprites/materials";
-import { COUNCIL_RING, seatPosition } from "@/lib/stage/layout";
+import { activeSeatCount, COUNCIL_RING, seatPosition } from "@/lib/stage/layout";
+import { seatedCount } from "@/lib/stage/slices/council";
 import { useStage } from "@/lib/stage/store";
 import { registerTarget } from "@/lib/stage/targets";
 
@@ -38,14 +39,14 @@ function glowMaterial(opacity: number) {
   });
 }
 
-function Seat({ index }: { index: number }) {
+function Seat({ index, activeCount }: { index: number; activeCount: number }) {
   const group = useRef<Group>(null);
   const ring = useRef<Mesh>(null);
   const occupied = useStage((state) => Object.values(state.sprites).some((sprite) => sprite.seat === index));
   const geometries = sharedRingGeometries();
   const materials = useMemo(() => ({ ring: glowMaterial(0.35), glow: createAuraMaterial(RING_COLOR, 0.15) }), []);
   const anim = useRef({ glow: 0.15, pulse: 0 });
-  const position = useMemo(() => seatPosition(index), [index]);
+  const position = useMemo(() => seatPosition(index, activeCount), [index, activeCount]);
 
   useEffect(() => (group.current ? registerTarget(`seat:${index}`, group.current, 1.1) : undefined), [index]);
   useEffect(
@@ -90,6 +91,8 @@ export function CouncilRing() {
   const geometries = sharedRingGeometries();
   const material = useMemo(() => glowMaterial(0.28), []);
   const phase = useStage((state) => state.phase);
+  const seatedTotal = useStage((state) => seatedCount(state.sprites));
+  const activeCount = activeSeatCount(seatedTotal);
   const colors = useMemo(() => ({ idle: new Color(RING_COLOR), active: new Color("#ffc16b") }), []);
 
   useEffect(() => () => material.dispose(), [material]);
@@ -111,8 +114,8 @@ export function CouncilRing() {
         position-y={0.015}
         rotation-x={-Math.PI / 2}
       />
-      {COUNCIL_RING.seatAngles.map((_, index) => (
-        <Seat key={index} index={index} />
+      {Array.from({ length: activeCount }, (_, index) => (
+        <Seat key={index} index={index} activeCount={activeCount} />
       ))}
     </group>
   );

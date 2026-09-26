@@ -1,8 +1,17 @@
+.rows {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+
 .chips {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
-  margin: 0 0 0.6rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }

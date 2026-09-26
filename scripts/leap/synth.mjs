@@ -62,10 +62,15 @@ const at = {
 // Poses: pinch / grab strengths and the palm normal.
 const DOWN = [0, -1, 0];
 const SIDE = [-1, 0, 0]; // right hand, palm facing left: roll ≈ -90°
+const UP = [0, 1, 0];
 const relaxed = { pinch: 0.35, grab: 0.25, normal: DOWN };
 const pinched = { pinch: 0.96, grab: 0.2, normal: DOWN };
 const open = { pinch: 0.08, grab: 0.04, normal: DOWN };
 const shake = { pinch: 0.92, grab: 1.0, normal: SIDE };
+// Rotating the wrist from palm-down through sideways avoids lerping straight between antiparallel
+// normals (which would pass through a degenerate zero vector at the midpoint).
+const openSide = { pinch: 0.08, grab: 0.04, normal: SIDE };
+const palmUp = { pinch: 0.08, grab: 0.04, normal: UP }; // isTalkPose: open hand, roll ≈ 180°
 
 // [time s, pointer NDC | null (no hand), pose]. Values ease between keys.
 const sweep = [];
@@ -98,9 +103,18 @@ const KEYS = [
   [17.0, at.tree, shake],
   [19.0, at.tree, shake],
   [19.6, at.tree, relaxed],
-  [20.6, at.low, relaxed],
-  [20.61, null, relaxed],
-  [25, null, relaxed],
+  // Hold your palm up to talk: rotate through sideways (like the handshake) so the palm normal
+  // never lerps straight between antiparallel vectors, then hold palm-up well past talkHoldMs.
+  [20.0, at.center, relaxed],
+  [20.15, at.center, open],
+  [20.35, at.center, openSide],
+  [20.55, at.center, palmUp],
+  [21.55, at.center, palmUp],
+  [21.75, at.center, openSide],
+  [21.95, at.center, relaxed],
+  [22.6, at.low, relaxed],
+  [22.61, null, relaxed],
+  [27, null, relaxed],
 ];
 
 const ease = (t) => t * t * (3 - 2 * t);

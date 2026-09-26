@@ -67,13 +67,17 @@ it("the synthetic session taps Maya, seats her, taps the hearth, orbits and shak
     );
   }
 
-  const semantic = events.filter((event) => ["pinchTap", "dragStart", "dragEnd", "handshakeComplete"].includes(event.type));
+  const semantic = events.filter((event) =>
+    ["pinchTap", "dragStart", "dragEnd", "handshakeComplete", "talkStart", "talkEnd"].includes(event.type),
+  );
   expect(semantic).toEqual([
     { type: "pinchTap", target: "sprite:wife" },
     { type: "dragStart", spriteId: "wife" },
     { type: "dragEnd", spriteId: "wife", seat: 0 },
     { type: "pinchTap", target: "hearth" },
     { type: "handshakeComplete" },
+    { type: "talkStart" },
+    { type: "talkEnd" },
   ]);
   expect(events.some((event) => event.type === "orbit")).toBe(true);
   expect(events.filter((event) => event.type === "hover").map((event) => event.target)).toContain("sprite:wife");

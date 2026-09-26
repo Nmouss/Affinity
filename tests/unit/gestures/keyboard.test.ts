@@ -28,6 +28,24 @@ describe("mapKey", () => {
     expect(mapKey({ code: "KeyR" }, "up")).toBeNull();
   });
 
+  it("holds talk on V down, ends on V up, and M toggles voice mute", () => {
+    expect(mapKey({ code: "KeyV" }, "down")).toEqual({ kind: "emit", event: { type: "talkStart" } });
+    expect(mapKey({ code: "KeyV" }, "up")).toEqual({ kind: "emit", event: { type: "talkEnd" } });
+    expect(mapKey({ code: "KeyM" }, "down")).toEqual({ kind: "emit", event: { type: "toggleVoiceMute" } });
+  });
+
+  it("ignores V auto-repeat and V typed into a form field", () => {
+    expect(mapKey({ code: "KeyV", repeat: true }, "down")).toBeNull();
+    expect(mapKey({ code: "KeyV", target: { tagName: "INPUT" } }, "down")).toBeNull();
+  });
+
+  it("still ends talk on V up if focus moved into a field mid-hold", () => {
+    expect(mapKey({ code: "KeyV", target: { tagName: "INPUT" } }, "up")).toEqual({
+      kind: "emit",
+      event: { type: "talkEnd" },
+    });
+  });
+
   it("ignores typing in inputs, textareas, selects and contenteditable", () => {
     for (const target of [
       { tagName: "INPUT" },
@@ -35,7 +53,7 @@ describe("mapKey", () => {
       { tagName: "SELECT" },
       { tagName: "DIV", isContentEditable: true },
     ]) {
-      for (const code of ["KeyR", "KeyD", "Digit1", "Space", "Enter", "Tab", "ArrowLeft", "KeyP"]) {
+      for (const code of ["KeyR", "KeyD", "Digit1", "Space", "Enter", "Tab", "ArrowLeft", "KeyP", "KeyV", "KeyM"]) {
         expect(mapKey({ code, target }, "down")).toBeNull();
       }
     }

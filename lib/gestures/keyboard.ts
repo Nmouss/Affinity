@@ -1,16 +1,24 @@
+import { orderedRoster } from "@/lib/people/roster";
 import type { GestureEvent, TargetId } from "@/types/stage";
 
-// Keyboard fallbacks for every gesture. mapKey is pure so it can be tested without a DOM;
-// attachKeyboard wires it to window events.
+// Keyboard fallbacks for every gesture. mapKey is pure so it can be tested without a DOM (it reads
+// the roster at call time rather than closing over a fixed id map); attachKeyboard wires it to
+// window events.
 
-/** 1/2/3 seat Maya, Ava and Leo (family.json ids). */
-export const SEAT_KEYS: Record<string, string> = {
-  Digit1: "wife",
-  Digit2: "daughter",
-  Digit3: "son",
-  Numpad1: "wife",
-  Numpad2: "daughter",
-  Numpad3: "son",
+/** Digit1..6 (and the numpad's) seat the first six chips in roster order: family first, then friends. */
+const DIGIT_SEAT_INDEX: Record<string, number> = {
+  Digit1: 0,
+  Digit2: 1,
+  Digit3: 2,
+  Digit4: 3,
+  Digit5: 4,
+  Digit6: 5,
+  Numpad1: 0,
+  Numpad2: 1,
+  Numpad3: 2,
+  Numpad4: 3,
+  Numpad5: 4,
+  Numpad6: 5,
 };
 
 /** Orbit per arrow press (or key repeat), in NDC like the open-palm deltas. */
@@ -67,8 +75,11 @@ export function mapKey(event: KeyLike, phase: "down" | "up"): KeyAction | null {
   if (event.code === "Tab") return { kind: "cycleHover", step: event.shiftKey ? -1 : 1 };
   if (event.repeat) return null;
 
-  const spriteId = SEAT_KEYS[event.code];
-  if (spriteId) return { kind: "emit", event: { type: "seat", spriteId } };
+  const seatIndex = DIGIT_SEAT_INDEX[event.code];
+  if (seatIndex !== undefined) {
+    const spriteId = orderedRoster()[seatIndex]?.id;
+    if (spriteId) return { kind: "emit", event: { type: "seat", spriteId } };
+  }
   switch (event.code) {
     case "Space":
       return { kind: "handshake", held: true };

@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { hoverCycle, isTypingTarget, mapKey, nextInCycle, shouldPreventDefault } from "@/lib/gestures/keyboard";
+import { useRoster } from "@/lib/people/roster";
+import { BLANK_LOOK } from "@/lib/people/starters";
 
 const stage = { tagName: "BODY" };
 
@@ -89,4 +91,47 @@ it("prevents browser defaults only for stage keys", () => {
   expect(shouldPreventDefault("Space")).toBe(true);
   expect(shouldPreventDefault("ArrowUp")).toBe(true);
   expect(shouldPreventDefault("KeyR")).toBe(false);
+});
+
+describe("number keys across both circles", () => {
+  afterEach(() => useRoster.getState().resetToStarters());
+
+  it("seat the starters (all family) in roster order by default", () => {
+    expect(mapKey({ code: "Digit1" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "wife" } });
+    expect(mapKey({ code: "Digit2" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "daughter" } });
+    expect(mapKey({ code: "Digit3" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "son" } });
+    expect(mapKey({ code: "Digit4" }, "down")).toBeNull();
+  });
+
+  it("seats family first, then friends, once a friend joins the roster", () => {
+    const friendId = useRoster.getState().addPerson({
+      name: "Friend",
+      circle: "friend",
+      relationship: "friend",
+      look: BLANK_LOOK,
+    });
+    expect(mapKey({ code: "Digit1" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "wife" } });
+    expect(mapKey({ code: "Digit2" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "daughter" } });
+    expect(mapKey({ code: "Digit3" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "son" } });
+    // The friend comes after all three family starters, even though they were added most recently.
+    expect(mapKey({ code: "Digit4" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: friendId } });
+    expect(mapKey({ code: "Numpad4" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: friendId } });
+  });
+
+  it("a new family member still seats before an existing friend", () => {
+    const friendId = useRoster.getState().addPerson({
+      name: "Friend",
+      circle: "friend",
+      relationship: "friend",
+      look: BLANK_LOOK,
+    });
+    const familyId = useRoster.getState().addPerson({
+      name: "New Kid",
+      circle: "family",
+      relationship: "kid",
+      look: BLANK_LOOK,
+    });
+    expect(mapKey({ code: "Digit4" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: familyId } });
+    expect(mapKey({ code: "Digit5" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: friendId } });
+  });
 });

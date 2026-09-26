@@ -1,0 +1,121 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.subheading {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #8a5a36;
+}
+
+.hint {
+  margin: 0;
+  color: #8a5a36;
+  font-size: 0.85rem;
+}
+
+.adjustRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.toggle {
+  align-self: flex-start;
+  min-height: 3rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  border: none;
+  background: #fff3e0;
+  color: #6b4a2b;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.toggleOn {
+  background: #ffb347;
+  color: #402503;
+}
+
+.toggle:focus-visible {
+  outline: 3px solid #ffb347;
+  outline-offset: 2px;
+}
+
+.nameFieldLabel {
+  font-weight: 700;
+  color: #6b4a2b;
+}
+
+.nameField {
+  font-size: 1.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 0.75rem;
+  border: 2px solid #e8c79a;
+  background: #fffaf1;
+  color: #402503;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nameField:focus-visible {
+  outline: 3px solid #ffb347;
+  outline-offset: 2px;
+}
+
+.nameFieldError {
+  border-color: #d64545;
+}
+
+.nameError {
+  margin: 0;
+  color: #d64545;
+  font-weight: 600;
+}
+
+.keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.keyboardRow {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: center;
+}
+
+.key {
+  min-width: 2.6rem;
+  min-height: 2.6rem;
+  border-radius: 0.6rem;
+  border: none;
+  background: #fff3e0;
+  color: #6b4a2b;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.key:hover,
+.key[data-hand-hover] {
+  background: #ffe3bd;
+}
+
+.key:focus-visible {
+  outline: 3px solid #ffb347;
+  outline-offset: 2px;
+}
+
+.keySpace {
+  min-width: 10rem;
+}
+
+.keyWide {
+  min-width: 5rem;
+}

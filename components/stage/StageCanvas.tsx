@@ -16,7 +16,7 @@ export default function StageCanvas({ lab = false }: { lab?: boolean }) {
       <Leva hidden={!lab} collapsed />
       <Canvas
         shadows
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
         camera={{ position: CAMERA.position, fov: CAMERA.fov, near: 0.1, far: 200 }}
         onCreated={({ camera }) => camera.lookAt(...CAMERA.target)}
       >

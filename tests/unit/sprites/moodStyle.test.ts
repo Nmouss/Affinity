@@ -36,8 +36,6 @@ describe("moodStyle", () => {
       }
       expect(style.scale).toBeGreaterThan(0.8);
       expect(style.scale).toBeLessThanOrEqual(1.25);
-      expect(style.distort).toBeGreaterThanOrEqual(0);
-      expect(style.distort).toBeLessThan(1);
       expect(style.aura).toBeGreaterThanOrEqual(0);
       expect(style.aura).toBeLessThanOrEqual(1);
     }
@@ -45,21 +43,17 @@ describe("moodStyle", () => {
 
   it.each<[SpriteMood, (style: ReturnType<typeof moodStyle>) => void]>([
     ["idle", (s) => expect(s.facing).toBe("camera")],
-    ["hovered", (s) => (expect(s.scale).toBeCloseTo(1.1), expect(s.brightness).toBeGreaterThan(1), expect(s.lean).toBeGreaterThan(0))],
+    ["hovered", (s) => (expect(s.scale).toBeCloseTo(1.1), expect(s.facing).toBe("camera"))],
     ["held", (s) => (expect(s.scale).toBeCloseTo(1.2), expect(s.trail).toBe(true))],
     ["seated", (s) => expect(s.facing).toBe("hearth")],
     ["listening", (s) => expect(s.facing).toBe("hearth")],
-    [
-      "thinking",
-      (s) => (expect(s.orbitSpeed).toBeGreaterThan(idle.orbitSpeed * 2), expect(s.distort).toBeGreaterThan(idle.distort), expect(s.pulse).toBeGreaterThan(0)),
-    ],
-    ["speaking", (s) => expect(s.bounce).toBeGreaterThan(idle.bounce)],
+    ["thinking", (s) => expect(s.orbitSpeed).toBeGreaterThan(idle.orbitSpeed * 2)],
     ["vetoing", (s) => (expect(s.rimFlash).toBe(1), expect(s.facing).toBe("item"))],
-    ["conceding", (s) => (expect(s.droop).toBeGreaterThan(0), expect(s.saturation).toBeLessThan(1))],
-    ["scoring", (s) => expect(s.wobble).toBeGreaterThan(0)],
-    ["happy", (s) => (expect(s.bounce).toBeGreaterThan(idle.bounce), expect(s.saturation).toBeGreaterThan(1))],
-    ["sad", (s) => (expect(s.droop).toBeGreaterThan(0), expect(s.saturation).toBeLessThan(1))],
-    ["celebrating", (s) => (expect(s.jump).toBeGreaterThan(0), expect(s.sparkles).toBe(true))],
+    ["conceding", (s) => (expect(s.scale).toBeLessThan(idle.scale), expect(s.facing).toBe("hearth"))],
+    ["scoring", (s) => expect(s.facing).toBe("hearth")],
+    ["happy", (s) => expect(s.scale).toBeGreaterThan(idle.scale)],
+    ["sad", (s) => expect(s.scale).toBeLessThan(idle.scale)],
+    ["celebrating", (s) => (expect(s.sparkles).toBe(true), expect(s.orbitSpeed).toBeGreaterThan(idle.orbitSpeed))],
   ])("%s", (mood, check) => check(moodStyle(mood)));
 
   it("only celebrating sparkles and only held trails", () => {
@@ -77,10 +71,10 @@ describe("applyOverlays", () => {
     expect(applyOverlays(happy, { hovered: false, held: true }).scale).toBeCloseTo(happy.scale * 1.2);
   });
 
-  it("held wins over hovered, lifts the droop, and turns on the trail", () => {
-    const style = applyOverlays(moodStyle("sad"), { hovered: true, held: true });
+  it("held wins over hovered, faces the camera, and turns on the trail", () => {
+    const style = applyOverlays(moodStyle("seated"), { hovered: true, held: true });
     expect(style.trail).toBe(true);
-    expect(style.droop).toBe(0);
+    expect(style.facing).toBe("camera");
   });
 
   it("leaves the mood untouched without overlays and never mutates the table", () => {

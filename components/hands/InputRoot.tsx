@@ -12,8 +12,8 @@ import {
   requestInputReset,
   setHandshakeAssist,
 } from "@/lib/gestures/live";
+import { orderedRoster } from "@/lib/people/roster";
 import { emitGesture, onGesture } from "@/lib/stage/bus";
-import { FAMILY } from "@/lib/stage/slices/council";
 import type { HandPose } from "@/lib/stage/slices/hand";
 import { useStage } from "@/lib/stage/store";
 import { listTargets } from "@/lib/stage/targets";
@@ -46,7 +46,7 @@ function handleKey(action: KeyAction) {
     case "cycleHover": {
       const cycle = hoverCycle(
         listTargets().map(([id]) => id),
-        FAMILY.map((profile) => profile.id),
+        orderedRoster().map((profile) => profile.id),
       );
       const next = nextInCycle(cycle, hand.hoverTarget, action.step);
       if (next === hand.hoverTarget) return;

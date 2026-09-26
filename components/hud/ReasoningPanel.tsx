@@ -1,6 +1,6 @@
 "use client";
 
-import { FAMILY } from "@/lib/stage/slices/council";
+import { usePeople } from "@/lib/people/roster";
 import { useStage } from "@/lib/stage/store";
 import styles from "./ReasoningPanel.module.css";
 
@@ -8,6 +8,7 @@ const json = (value: unknown) => JSON.stringify(value, null, 2);
 
 /** "Show reasoning" (D): each sprite's raw structured output, the deterministic merge, and the scores. */
 export function ReasoningPanel() {
+  const people = usePeople();
   const opinions = useStage((state) => state.opinions);
   const constraints = useStage((state) => state.constraints);
   const conflict = useStage((state) => state.conflict);
@@ -15,7 +16,7 @@ export function ReasoningPanel() {
   const focusId = useStage((state) => state.reasoningFocusId);
   const mission = useStage((state) => state.mission);
 
-  const name = (id: string) => FAMILY.find((profile) => profile.id === id)?.name ?? id;
+  const name = (id: string) => people.find((profile) => profile.id === id)?.name ?? id;
   const opinionEntries = Object.values(opinions);
   const scoreEntries = Object.values(scores);
   const empty = opinionEntries.length === 0 && !constraints && scoreEntries.length === 0;

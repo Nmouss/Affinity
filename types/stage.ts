@@ -38,7 +38,9 @@ export type TargetId =
   | "hearth"
   | "tree"
   | `item:${string}`
-  | `anchor:${number}`;
+  | `anchor:${number}`
+  /** A DOM control the hand can point at (People Maker buttons); see data-hand-target. */
+  | `ui:${string}`;
 
 export type InputSource = "leap" | "replay" | "mediapipe" | "keyboard";
 

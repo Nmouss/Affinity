@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getDemoTranscript } from "@/lib/demo/transcript";
+import { orderedRoster } from "@/lib/people/roster";
 import { emitGesture } from "@/lib/stage/bus";
-import { FAMILY } from "@/lib/stage/slices/council";
+import { MAX_SEATS } from "@/lib/stage/layout";
 import { useStage } from "@/lib/stage/store";
 import styles from "./EventStepper.module.css";
 
@@ -33,7 +34,10 @@ export function EventStepper() {
     return () => window.clearInterval(timer);
   }, [playing, step]);
 
-  const seatAll = () => FAMILY.forEach((profile, seat) => useStage.getState().seatSprite(profile.id, seat));
+  const seatAll = () =>
+    orderedRoster()
+      .slice(0, MAX_SEATS)
+      .forEach((profile, seat) => useStage.getState().seatSprite(profile.id, seat));
 
   const reset = () => {
     nextIndex.current = 0;

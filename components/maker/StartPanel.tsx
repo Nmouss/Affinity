@@ -1,0 +1,55 @@
+"use client";
+
+import { PRESET_KEYS, PRESET_LABELS, type MakerAction } from "./flow";
+import { playBlip } from "./sound";
+import styles from "./WhoPanel.module.css";
+import startStyles from "./StartPanel.module.css";
+
+export function StartPanel({ dispatch }: { dispatch: (action: MakerAction) => void }) {
+  return (
+    <div className={styles.card}>
+      <h2 className={styles.title}>Start from scratch, or a look-alike?</h2>
+      <div className={startStyles.grid}>
+        <button
+          type="button"
+          data-hand-target="start:scratch"
+          className={startStyles.tile}
+          onClick={() => {
+            playBlip("select");
+            dispatch({ type: "startScratch" });
+          }}
+        >
+          Start from scratch
+        </button>
+        {PRESET_KEYS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            data-hand-target={`start:preset:${key}`}
+            className={startStyles.tile}
+            onClick={() => {
+              playBlip("select");
+              dispatch({ type: "startPreset", key });
+            }}
+          >
+            {PRESET_LABELS[key]}
+          </button>
+        ))}
+        <button
+          type="button"
+          data-hand-target="start:random"
+          className={`${startStyles.tile} ${startStyles.random}`}
+          onClick={() => {
+            playBlip("select");
+            dispatch({ type: "startRandom" });
+          }}
+        >
+          🎲 Random
+        </button>
+      </div>
+      <button type="button" data-hand-target="who-back" className={styles.back} onClick={() => dispatch({ type: "back" })}>
+        Back
+      </button>
+    </div>
+  );
+}

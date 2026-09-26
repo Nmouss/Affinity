@@ -1,0 +1,44 @@
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.label {
+  font-weight: 600;
+  color: #6b4a2b;
+}
+
+.buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.button {
+  min-width: 3.25rem;
+  min-height: 3.25rem;
+  border-radius: 0.9rem;
+  border: none;
+  background: #fff3e0;
+  color: #6b4a2b;
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.button:hover,
+.button[data-hand-hover] {
+  background: #ffe3bd;
+}
+
+.button:focus-visible {
+  outline: 3px solid #ffb347;
+  outline-offset: 2px;
+}
+
+.button:active {
+  transform: translateY(1px);
+}

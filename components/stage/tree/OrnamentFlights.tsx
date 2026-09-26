@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, ExtrudeGeometry, MeshStandardMaterial, Object3D, Shape, Vector3, type Group } from "three";
-import { SPRITE_FLOAT_HEIGHT, TREE, homePosition } from "@/lib/stage/layout";
+import { lobbySpot } from "@/lib/people/roster";
+import { SPRITE_FLOAT_HEIGHT, TREE } from "@/lib/stage/layout";
 import { useStage } from "@/lib/stage/store";
 import { getTarget, getTargetWorldPosition, registerTarget } from "@/lib/stage/targets";
 import type { Bundle, CatalogItem } from "@/types/domain";
@@ -22,7 +23,7 @@ function launchOrigin(spriteId: string | null, boxItemId: string | null, out: Ve
   if (boxItemId && getTargetWorldPosition(`item:${boxItemId}`, out)) return out.setY(out.y + 0.6);
   if (spriteId && getTargetWorldPosition(`sprite:${spriteId}`, out)) return out;
   if (spriteId) {
-    const [x, , z] = homePosition(spriteId);
+    const [x, , z] = lobbySpot(spriteId);
     return out.set(x, SPRITE_FLOAT_HEIGHT, z);
   }
   return out.set(TREE.position[0] + 3, 6, TREE.position[2] + 4);

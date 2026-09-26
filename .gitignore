@@ -8,4 +8,5 @@ out/
 __pycache__/
 *.py[cod]
 .pytest_cache/
-/docs 
+/docs
+!/docs/AGENTS.md

@@ -3,6 +3,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { BufferAttribute, Points } from "three";
+import { ROOM } from "@/lib/stage/layout";
 import { flakeTexture } from "./textures";
 
 const COUNT = 520;
@@ -29,9 +30,12 @@ export function Snow() {
     return { positions, speeds };
   }, []);
 
-  useFrame(({ clock }, delta) => {
+  useFrame(({ clock, camera }, delta) => {
     const attribute = points.current?.geometry.attributes.position as BufferAttribute | undefined;
-    if (!attribute) return;
+    if (!attribute || !points.current) return;
+    // When the orbit swings the camera out past the left wall, it would be standing in the snow.
+    points.current.visible = camera.position.x > ROOM.leftWallX;
+    if (!points.current.visible) return;
     const dt = Math.min(delta, 0.1);
     const time = clock.elapsedTime;
     for (let i = 0; i < COUNT; i += 1) {

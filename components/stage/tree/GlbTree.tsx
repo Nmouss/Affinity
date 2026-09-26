@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useLayoutEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import { Box3, Vector3 } from "three";
 
@@ -14,9 +14,10 @@ export function treeModelFor(model: string | undefined): string | null {
   return model && AVAILABLE_TREE_MODELS.has(model) ? model : null;
 }
 
-/** A tree GLB scaled to its catalog height and set on the floor. */
-export function GlbTree({ url, heightFt }: { url: string; heightFt: number }) {
-  const { scene } = useGLTF(url);
+/** A tree GLB scaled to its catalog height and set on the floor. `onReady` fires once it is mounted. */
+export function GlbTree({ url, heightFt, onReady }: { url: string; heightFt: number; onReady: () => void }) {
+  // Draco off: its decoder is fetched from a CDN. Compress with meshopt instead (decoder is bundled).
+  const { scene } = useGLTF(url, false);
   const { model, scale, offsetY } = useMemo(() => {
     const model = scene.clone(true);
     const box = new Box3().setFromObject(model);
@@ -24,6 +25,7 @@ export function GlbTree({ url, heightFt }: { url: string; heightFt: number }) {
     const scale = size.y > 0 ? heightFt / size.y : 1;
     return { model, scale, offsetY: -box.min.y * scale };
   }, [scene, heightFt]);
+  useLayoutEffect(onReady, [model, onReady]);
 
   return (
     <group position-y={offsetY} scale={scale}>

@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { useControls } from "leva";
+import { button, useControls } from "leva";
 import { easing } from "maath";
 import { Vector3 } from "three";
 import { TIMING } from "@/components/stage/tree/timing";
-import { onGesture } from "@/lib/stage/bus";
+import { emitGesture, onGesture } from "@/lib/stage/bus";
 import { CAMERA } from "@/lib/stage/layout";
 import { useStage } from "@/lib/stage/store";
 
@@ -28,6 +28,10 @@ export function CameraRig() {
     radius: { value: 12.5, min: 5, max: 20 },
     baseAzimuth: { value: -0.05, min: -1.2, max: 1.4 },
     baseElevation: { value: 0.16, min: -0.2, max: 1.2 },
+    // Lab stand-ins for the open-palm gesture; they go through the bus and its arming policy.
+    "orbit ◀": button(() => emitGesture({ type: "orbit", dx: -0.2, dy: 0 })),
+    "orbit ▶": button(() => emitGesture({ type: "orbit", dx: 0.2, dy: 0 })),
+    "orbit ▲": button(() => emitGesture({ type: "orbit", dx: 0, dy: 0.15 })),
   });
 
   useEffect(

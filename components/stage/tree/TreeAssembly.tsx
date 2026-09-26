@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import type { Group, PointLight } from "three";
 import { TREE } from "@/lib/stage/layout";
@@ -24,6 +24,9 @@ function AssembledTree({ tree, items }: { tree: CatalogItem; items: CatalogItem[
   const lights = lightsStyle(items);
   const lightsId = items.find((item) => item.slot === "lights")?.id ?? null;
   const model = treeModelFor(tree.model ?? findCatalogItem(tree.id)?.model);
+  // Bumped when a GLB replaces its Suspense fallback, so anchors re-register on the real nodes.
+  const [modelVersion, setModelVersion] = useState(0);
+  const onModelReady = useCallback(() => setModelVersion((version) => version + 1), []);
 
   useEffect(() => {
     useStage.getState().setScene({ inspectTarget: [TREE.position[0] + 0.8, heightFt * 0.55, TREE.position[2] + 0.4] });
@@ -40,7 +43,7 @@ function AssembledTree({ tree, items }: { tree: CatalogItem; items: CatalogItem[
       if (node) cleanups.push(registerTarget(`anchor:${anchor}`, node, 0.35));
     }
     return () => cleanups.forEach((cleanup) => cleanup());
-  }, [heightFt, tree.id, lightsId, model]);
+  }, [heightFt, tree.id, lightsId, model, modelVersion]);
 
   useFrame(() => {
     const grow = easeOutBack(progress(performance.now(), mountedAt, TIMING.treeGrow), 1.4);
@@ -52,7 +55,7 @@ function AssembledTree({ tree, items }: { tree: CatalogItem; items: CatalogItem[
     <group ref={group} position={TREE.position}>
       {model ? (
         <Suspense fallback={<ProceduralTree heightFt={heightFt} lights={lights} />}>
-          <GlbTree url={model} heightFt={heightFt} />
+          <GlbTree url={model} heightFt={heightFt} onReady={onModelReady} />
         </Suspense>
       ) : (
         <ProceduralTree heightFt={heightFt} lights={lights} />

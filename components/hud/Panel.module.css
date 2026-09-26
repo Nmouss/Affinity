@@ -1,0 +1,51 @@
+/* Shared warm panel look; other HUD modules `composes` these. */
+
+.panel {
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 209, 138, 0.18);
+  border-radius: 0.9rem;
+  background: rgba(30, 19, 15, 0.8);
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  color: #fff8eb;
+}
+
+.title {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #ffd18a;
+}
+
+.muted {
+  color: #dcc8b7;
+}
+
+.kbd {
+  display: inline-block;
+  min-width: 1.3em;
+  padding: 0 0.3em;
+  border: 1px solid rgba(255, 209, 138, 0.35);
+  border-radius: 0.3rem;
+  font-size: 0.75em;
+  line-height: 1.4;
+  text-align: center;
+  color: #ffd18a;
+}
+
+.button {
+  padding: 0.45rem 0.8rem;
+  border: 1px solid rgba(255, 209, 138, 0.35);
+  border-radius: 999px;
+  background: rgba(122, 52, 29, 0.55);
+  color: #fff8eb;
+  cursor: pointer;
+}
+
+.button:hover,
+.button:focus-visible {
+  background: rgba(160, 72, 38, 0.8);
+  outline: none;
+}

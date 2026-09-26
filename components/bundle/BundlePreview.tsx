@@ -1,5 +1,49 @@
-import type { Bundle } from "@/types/domain";
+import type { Bundle, FamilyProfile } from "@/types/domain";
+import styles from "./Bundle.module.css";
 
-export function BundlePreview({ bundle }: { bundle: Bundle }) {
-  return <section><h2>Proposed bundle</h2><p>${bundle.total.toFixed(2)}</p></section>;
+const money = (value: number) => `$${Number.isInteger(value) ? value : value.toFixed(2)}`;
+
+/** The proposed cart as a budget bar (total vs budget) plus who each item serves. */
+export function BundlePreview({ bundle, budget, family }: { bundle: Bundle; budget: number; family: FamilyProfile[] }) {
+  const ratio = budget > 0 ? bundle.total / budget : 1;
+  const over = bundle.total > budget;
+  const servedBy = (itemId: string) =>
+    Object.entries(bundle.serves)
+      .filter(([, items]) => items.includes(itemId))
+      .map(([id]) => family.find((member) => member.id === id))
+      .filter((member): member is FamilyProfile => Boolean(member));
+
+  return (
+    <section className={styles.bundle} aria-label="Proposed bundle">
+      <div className={styles.budgetHead}>
+        <span className={styles.total}>{money(bundle.total)}</span>
+        <span className={styles.budget}>/ {money(budget)}</span>
+        <span className={over ? styles.over : styles.under}>
+          {over ? `${money(bundle.total - budget)} over` : `${money(budget - bundle.total)} left`}
+        </span>
+      </div>
+      <div className={styles.budgetTrack} role="meter" aria-valuemin={0} aria-valuemax={budget} aria-valuenow={bundle.total}>
+        <div className={over ? styles.budgetFillOver : styles.budgetFill} style={{ width: `${Math.min(1, ratio) * 100}%` }} />
+      </div>
+      <ul className={styles.items}>
+        {bundle.items.map((item) => (
+          <li key={item.id} className={styles.item}>
+            <span className={styles.itemName}>{item.name}</span>
+            <span className={styles.servedBy}>
+              {servedBy(item.id).map((member) => (
+                <span
+                  key={member.id}
+                  className={styles.dot}
+                  style={{ background: member.colors[0] }}
+                  title={member.name}
+                  aria-label={member.name}
+                />
+              ))}
+            </span>
+            <span className={styles.price}>{money(item.price)}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }

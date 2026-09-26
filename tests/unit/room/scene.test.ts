@@ -4,8 +4,8 @@ import { ORBIT_LIMITS, applyOrbitDelta, clampOrbit } from "@/lib/stage/slices/sc
 describe("orbit clamping", () => {
   it("accumulates gesture deltas", () => {
     const orbit = applyOrbitDelta({ azimuth: 0, polar: 0 }, 0.1, 0.05);
-    expect(orbit.azimuth).toBeCloseTo(0.16);
-    expect(orbit.polar).toBeCloseTo(0.045);
+    expect(orbit.azimuth).toBeCloseTo(0.08);
+    expect(orbit.polar).toBeCloseTo(0.0225);
   });
 
   it("clamps azimuth to about ±70 degrees", () => {

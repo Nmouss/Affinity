@@ -53,10 +53,10 @@ export const ORBIT_LIMITS = {
 } as const;
 
 /**
- * Radians per unit of gesture delta. Orbit deltas are treated as normalized screen travel, so a
- * full-width palm sweep (dx = 1) turns about 90 degrees.
+ * Radians per unit of gesture delta. The hands track sends pointer deltas in NDC (-1..1), so a
+ * full-width palm sweep (dx = 2) turns about 90 degrees.
  */
-export const ORBIT_GAIN = { azimuth: 1.6, polar: 0.9 } as const;
+export const ORBIT_GAIN = { azimuth: 0.8, polar: 0.45 } as const;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));

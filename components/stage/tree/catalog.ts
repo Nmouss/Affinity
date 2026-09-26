@@ -102,6 +102,20 @@ export function matchResolutionItem(catalog: CatalogItem[], resolution: string):
   return bestTextMatch(resolution, catalog.filter((item) => item.slot === "ornaments"));
 }
 
+/** The sprite whose wishes best match a vetoed item (Leo for the T-rex), for attribution labels. */
+export function wishAuthor(opinions: Record<string, SpriteOpinion>, item: CatalogItem): string | null {
+  let best: string | null = null;
+  let bestScore = 0;
+  for (const opinion of Object.values(opinions)) {
+    const score = overlapScore(opinion.wishes.join(" "), item);
+    if (score > bestScore) {
+      best = opinion.spriteId;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
 export interface VetoSubject {
   itemId: string;
   resolvedItemId: string;
@@ -145,7 +159,7 @@ export interface OrnamentStyle {
 export function ornamentStyle(item: CatalogItem): OrnamentStyle {
   const text = describe(item);
   if (isDinoItem(item)) {
-    return { kind: "dino", colors: ["#3fbf5a", "#8fdc4f"], metalness: 0.1, roughness: 0.45, opacity: 1, glow: 0.15 };
+    return { kind: "dino", colors: ["#8dff5a", "#4aa3ff"], metalness: 0.1, roughness: 0.45, opacity: 1, glow: 0.45 };
   }
   if (text.includes("glass")) {
     return { kind: "bauble", colors: ["#dff4ff", "#f4fbff"], metalness: 0.2, roughness: 0.05, opacity: 0.45, glow: 0.1 };

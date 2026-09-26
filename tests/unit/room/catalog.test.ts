@@ -15,6 +15,7 @@ import {
   resolveVetoSubject,
   topperKind,
   treeHeightFt,
+  wishAuthor,
 } from "@/components/stage/tree/catalog";
 import type { CouncilEvent, HouseRule, SpriteOpinion } from "@/types/domain";
 
@@ -84,6 +85,11 @@ describe("veto matching", () => {
 
   it("matches the resolution to the dinosaur ornament set", () => {
     expect(matchResolutionItem(CATALOG, veto.resolution)?.id).toBe("orn-dino");
+  });
+
+  it("attributes the vetoed wish to Leo", () => {
+    expect(wishAuthor(opinions, findCatalogItem("inflatable-trex")!)).toBe("son");
+    expect(wishAuthor({}, findCatalogItem("inflatable-trex")!)).toBeNull();
   });
 
   it("prefers director attribution and falls back to text matching", () => {

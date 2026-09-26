@@ -4,9 +4,11 @@ import {
   ANCHOR_COUNT,
   allocateAnchors,
   anchorName,
-  foliageRadiusAt,
+  bulbPositions,
   proceduralAnchorPositions,
+  surfaceRadiusAt,
   treeProfile,
+  treeTiers,
 } from "@/components/stage/tree/anchors";
 import { CATALOG, findCatalogItem } from "@/components/stage/tree/catalog";
 import type { Bundle, CouncilEvent } from "@/types/domain";
@@ -81,7 +83,19 @@ describe("procedural anchors", () => {
     for (const [x, y, z] of anchors) {
       expect(y).toBeGreaterThan(profile.foliageBottom);
       expect(y).toBeLessThan(profile.foliageTop);
-      expect(Math.hypot(x, z)).toBeLessThanOrEqual(foliageRadiusAt(profile, y) + 0.1);
+      expect(Math.hypot(x, z)).toBeLessThanOrEqual(surfaceRadiusAt(treeTiers(heightFt), y));
+      expect(Math.hypot(x, z)).toBeGreaterThan(0);
     }
+  });
+
+  it("stacks tiers from the foliage bottom to the tip and wraps bulbs inside them", () => {
+    const tiers = treeTiers(4);
+    const profile = treeProfile(4);
+    expect(tiers[0].bottom).toBeCloseTo(profile.foliageBottom);
+    expect(tiers[tiers.length - 1].top).toBeCloseTo(profile.foliageTop);
+    expect(surfaceRadiusAt(tiers, profile.foliageTop + 0.1)).toBe(0);
+    const bulbs = bulbPositions(4, 40);
+    expect(bulbs).toHaveLength(40);
+    expect(bulbs.every(([, y]) => y < 4)).toBe(true);
   });
 });

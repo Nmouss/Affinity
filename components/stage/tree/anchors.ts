@@ -87,7 +87,40 @@ export function foliageRadiusAt(profile: TreeProfile, y: number): number {
   return profile.baseRadius * Math.min(1, Math.max(0, 1 - t));
 }
 
+export interface TreeTier {
+  bottom: number;
+  top: number;
+  radius: number;
+}
+
+const TIER_COUNT = 4;
+
+/** Overlapping cone tiers whose flared skirts give the procedural tree its layered silhouette. */
+export function treeTiers(heightFt: number): TreeTier[] {
+  const profile = treeProfile(heightFt);
+  const span = profile.foliageTop - profile.foliageBottom;
+  return Array.from({ length: TIER_COUNT }, (_, index) => {
+    const bottom = profile.foliageBottom + span * index * 0.2;
+    const top = profile.foliageBottom + span * (0.42 + (index * 0.58) / (TIER_COUNT - 1));
+    const radius = index === 0 ? profile.baseRadius : foliageRadiusAt(profile, bottom) * 1.18;
+    return { bottom, top, radius };
+  });
+}
+
+/** Outer radius of the tiered foliage at height y (0 above the tip). */
+export function surfaceRadiusAt(tiers: TreeTier[], y: number): number {
+  let radius = 0;
+  for (const tier of tiers) {
+    if (y < tier.bottom || y > tier.top) continue;
+    radius = Math.max(radius, (tier.radius * (tier.top - y)) / (tier.top - tier.bottom));
+  }
+  return radius;
+}
+
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+
+/** Angle that faces the room from the tree corner, so the first anchors and bulbs read on camera. */
+const FRONT_ANGLE = 0.6;
 
 /**
  * Anchor positions on the procedural tree's surface, in tree-local ft. A golden-angle spiral from
@@ -95,13 +128,28 @@ const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
  */
 export function proceduralAnchorPositions(heightFt: number, count = ANCHOR_COUNT): Array<[number, number, number]> {
   const profile = treeProfile(heightFt);
+  const tiers = treeTiers(heightFt);
   const span = profile.foliageTop - profile.foliageBottom;
-  const low = profile.foliageBottom + span * 0.1;
-  const high = profile.foliageBottom + span * 0.72;
+  const low = profile.foliageBottom + span * 0.12;
+  const high = profile.foliageBottom + span * 0.74;
   return Array.from({ length: count }, (_, index) => {
     const y = count === 1 ? low : low + ((high - low) * index) / (count - 1);
-    const radius = foliageRadiusAt(profile, y) * 0.92 + 0.05;
-    const angle = 0.6 + index * GOLDEN_ANGLE;
+    const radius = surfaceRadiusAt(tiers, y) * 0.96;
+    const angle = FRONT_ANGLE + index * GOLDEN_ANGLE;
+    return [Math.sin(angle) * radius, y, Math.cos(angle) * radius];
+  });
+}
+
+/** Bulb positions: a garland spiral wrapping the foliage a few times, in tree-local ft. */
+export function bulbPositions(heightFt: number, count: number, turns = 6): Array<[number, number, number]> {
+  const profile = treeProfile(heightFt);
+  const tiers = treeTiers(heightFt);
+  const span = profile.foliageTop - profile.foliageBottom;
+  return Array.from({ length: count }, (_, index) => {
+    const f = index / Math.max(1, count - 1);
+    const y = profile.foliageBottom + span * (0.04 + 0.86 * f);
+    const radius = surfaceRadiusAt(tiers, y) * 0.93 + 0.02;
+    const angle = FRONT_ANGLE + f * turns * Math.PI * 2;
     return [Math.sin(angle) * radius, y, Math.cos(angle) * radius];
   });
 }

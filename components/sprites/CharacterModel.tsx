@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { FamilyProfile } from "@/types/domain";
 import type { SpriteMood } from "@/types/stage";
+import { characterFor, type Accessory, type CharacterMotion } from "./characterPose";
 
 // Shared procedural geometry keeps the three characters lightweight: every instance reuses the
 // same GPU buffers, while profile color and accessories provide their individual silhouettes.
@@ -170,8 +171,6 @@ function Pebble({
   return <mesh geometry={sphere} material={material} position={position} scale={scale} />;
 }
 
-type Accessory = "scarf" | "bow" | "dinosaur";
-
 function Details({ accessory, accent }: { accessory: Accessory; accent: THREE.Material }) {
   if (accessory === "scarf") {
     return (
@@ -213,9 +212,12 @@ export interface CharacterModelProps {
   profile: FamilyProfile;
   mood: MutableRefObject<SpriteMood>;
   gaze: MutableRefObject<{ x: number; y: number }>;
+  /** Locomotion from SpriteToken (walk speed, gait, jump and landing times). */
+  motion?: MutableRefObject<CharacterMotion>;
 }
 
-const BASE_Y = -0.8;
+/** The model origin sits at the soles, so the character stands on whatever y it is placed at. */
+const BASE_Y = 0;
 
 export function CharacterModel({ profile, mood, gaze }: CharacterModelProps) {
   const actor = useRef<THREE.Group>(null);
@@ -240,11 +242,7 @@ export function CharacterModel({ profile, mood, gaze }: CharacterModelProps) {
     right: spring(0.28),
   });
 
-  const character = useMemo(() => {
-    if (profile.id === "wife") return { accessory: "scarf" as const, scale: 0.72, width: 1, energy: 0.72, phase: 0 };
-    if (profile.id === "son") return { accessory: "dinosaur" as const, scale: 0.63, width: 1.05, energy: 1.2, phase: 1.6 };
-    return { accessory: "bow" as const, scale: 0.64, width: 0.98, energy: 1, phase: 3.3 };
-  }, [profile.id]);
+  const character = characterFor(profile.id);
 
   const materials = useMemo(() => {
     const core = new THREE.Color(profile.colors[0] ?? "#ffffff");

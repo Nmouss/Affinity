@@ -229,6 +229,11 @@ export function createDirector(options: DirectorOptions): Director {
         // No agent endpoint for swapping items yet; this is where a revise request would go.
         log("swipe (no-op)", event.itemId);
         return;
+      case "talkStart":
+      case "talkEnd":
+      case "toggleVoiceMute":
+        // Voice wiring lands with the director voice track.
+        return;
       case "hover":
       case "orbit":
       case "handshakeProgress":

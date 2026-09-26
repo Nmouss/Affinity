@@ -55,7 +55,12 @@ export type GestureEvent =
   | { type: "handshakeComplete" }
   | { type: "convene" }
   | { type: "toggleReasoning" }
-  | { type: "reset" };
+  | { type: "reset" }
+  /** Push-to-talk: palm-up hold (or V) opens the mic; leaving the pose sends what was heard. */
+  | { type: "talkStart" }
+  | { type: "talkEnd" }
+  /** M: silences or restores the council's spoken lines. */
+  | { type: "toggleVoiceMute" };
 
 export type GestureType = GestureEvent["type"];
 

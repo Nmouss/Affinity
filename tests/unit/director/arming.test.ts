@@ -40,7 +40,10 @@ describe("arming table", () => {
         "reset",
         "seat",
         "swipe",
+        "talkEnd",
+        "talkStart",
         "toggleReasoning",
+        "toggleVoiceMute",
       ].sort(),
     );
   });
@@ -49,6 +52,9 @@ describe("arming table", () => {
     expect(armedPhases("hover")).toEqual(PHASES);
     expect(armedPhases("toggleReasoning")).toEqual(PHASES);
     expect(armedPhases("reset")).toEqual(PHASES);
+    expect(armedPhases("toggleVoiceMute")).toEqual(PHASES);
+    expect(armedPhases("talkStart")).toEqual(["lobby"]);
+    expect(armedPhases("talkEnd")).toEqual(PHASES);
     expect(armedPhases("pinchTap")).toEqual(PHASES.filter((phase) => phase !== "signing"));
     for (const type of ["dragStart", "dragEnd", "seat", "convene"] as const) expect(armedPhases(type)).toEqual(["lobby"]);
     expect(armedPhases("orbit")).toEqual(["bundle", "scoring", "awaitMandate"]);

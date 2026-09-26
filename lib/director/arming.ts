@@ -25,6 +25,10 @@ export const ARMING_TABLE: Record<GestureType, ArmingRule> = {
   hover: { phases: "all" },
   toggleReasoning: { phases: "all" },
   reset: { phases: "all" },
+  toggleVoiceMute: { phases: "all" },
+  talkStart: { phases: ["lobby"] },
+  // A release must always land, even if the phase moved on mid-sentence.
+  talkEnd: { phases: "all" },
   pinchTap: { phases: "all", except: ["signing"] },
   dragStart: { phases: ["lobby"] },
   dragEnd: { phases: ["lobby"] },

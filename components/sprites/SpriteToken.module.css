@@ -1,0 +1,29 @@
+/* Anchored at its top-center point by drei <Html>, just under the sprite. */
+.label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, 0);
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.2rem 0.7rem 0.2rem 0.45rem;
+  border: 2px solid var(--accent, #ffd18a);
+  border-radius: 999px;
+  background: rgba(30, 18, 12, 0.72);
+  color: #fff8eb;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--core, #fff);
+  box-shadow: 0 0 0.5rem var(--core, #fff);
+}

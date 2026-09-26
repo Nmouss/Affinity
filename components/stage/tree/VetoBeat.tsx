@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { Color, type Group, type Mesh, type MeshStandardMaterial } from "three";
+import { getPerson } from "@/lib/people/roster";
 import type { ConflictBeat } from "@/lib/stage/slices/scene";
-import { FAMILY } from "@/lib/stage/slices/council";
 import { useStage } from "@/lib/stage/store";
 import { registerTarget } from "@/lib/stage/targets";
 import type { Vec3 } from "@/lib/stage/layout";
@@ -59,7 +59,7 @@ function useBeatStage(beat: ConflictBeat): Stage {
 }
 
 function nameOf(spriteId: string | null): string | null {
-  return FAMILY.find((profile) => profile.id === spriteId)?.name ?? null;
+  return spriteId ? (getPerson(spriteId)?.name ?? null) : null;
 }
 
 /** A red-and-white inflatable for vetoed items that are not dinosaurs (the Santa decoy). */

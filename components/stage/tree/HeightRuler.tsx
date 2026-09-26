@@ -4,7 +4,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Html } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { Color, Object3D, type Group, type InstancedMesh, type MeshBasicMaterial } from "three";
-import { FAMILY } from "@/lib/stage/slices/council";
+import { usePeople } from "@/lib/people/roster";
 import { RULER } from "@/lib/stage/layout";
 import { useStage } from "@/lib/stage/store";
 import { effectiveHardRules, heightRuleAuthor, inchesToFeet, maxHeightInches } from "./catalog";
@@ -87,12 +87,13 @@ function RuleLine({ inches, author }: { inches: number; author: string | null })
 
 /** Growth-chart ruler on the back wall (0–8 ft), plus the house rule's height line. */
 export function HeightRuler() {
+  const people = usePeople();
   const constraints = useStage((state) => state.constraints);
   const opinions = useStage((state) => state.opinions);
   const conflict = useStage((state) => state.conflict);
   const inches = useMemo(() => maxHeightInches(effectiveHardRules(constraints, opinions)), [constraints, opinions]);
   const authorId = conflict?.ruleBy ?? heightRuleAuthor(opinions, inches);
-  const author = FAMILY.find((profile) => profile.id === authorId)?.name ?? null;
+  const author = people.find((profile) => profile.id === authorId)?.name ?? null;
   const [x, , z] = RULER.position;
 
   return (

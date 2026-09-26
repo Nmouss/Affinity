@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import cachedTranscript from "@/data/cached-transcript.json";
 import { attributeVeto, ruleTypeOf } from "@/lib/director/attribution";
 import { STAGE_TRANSCRIPT } from "@/lib/demo/stageTranscript";
-import { CATALOG, FAMILY } from "@/lib/stage/slices/council";
+import { getPeople } from "@/lib/people/roster";
+import { CATALOG } from "@/lib/stage/slices/council";
 import type { CouncilEvent, SpriteOpinion } from "@/types/domain";
 
+// The starter roster's family (wife/daughter/son) is what the cached transcript and stage
+// transcript were both written for.
+const FAMILY = getPeople();
 const events = cachedTranscript as CouncilEvent[];
 const opinions: Record<string, SpriteOpinion> = Object.fromEntries(
   events.flatMap((event) => (event.type === "opinion" ? [[event.payload.spriteId, event.payload]] : [])),

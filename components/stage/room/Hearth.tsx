@@ -14,8 +14,8 @@ import {
   type MeshBasicMaterial,
   type PointLight,
 } from "three";
+import { useCircle } from "@/lib/people/roster";
 import { HEARTH } from "@/lib/stage/layout";
-import { FAMILY } from "@/lib/stage/slices/council";
 import { useStage } from "@/lib/stage/store";
 import { registerTarget } from "@/lib/stage/targets";
 import { brickTexture } from "./textures";
@@ -163,6 +163,7 @@ function Candle({ x }: { x: number }) {
 }
 
 export function Hearth() {
+  const family = useCircle("family");
   const target = useRef<Group>(null);
   const light = useRef<PointLight>(null);
   const hoverRing = useRef<Mesh>(null);
@@ -248,12 +249,12 @@ export function Hearth() {
       <Garland />
       <Candle x={-2.4} />
       <Candle x={2.4} />
-      {FAMILY.map((profile, index) => (
+      {family.map((profile, index) => (
         <Stocking
           key={profile.id}
-          x={(index - 1) * 1.6}
+          x={(index - (family.length - 1) / 2) * 1.6}
           color={profile.id === "wife" ? "#b8322e" : (profile.colors[0] ?? "#b8322e")}
-          cuff={cuffs[index] ?? "#ffffff"}
+          cuff={cuffs[index % cuffs.length] ?? "#ffffff"}
         />
       ))}
     </group>

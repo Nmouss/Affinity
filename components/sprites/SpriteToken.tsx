@@ -6,7 +6,9 @@ import { Html, Sparkles } from "@react-three/drei";
 import { easing } from "maath";
 import { Color, Vector3, type Group } from "three";
 import { SpeechBubble } from "@/components/council/SpeechBubble";
-import { COUNCIL_RING, SPRITE_FLOAT_HEIGHT, homePosition, seatPosition } from "@/lib/stage/layout";
+import { lobbySpot, useLook } from "@/lib/people/roster";
+import { restSpot, seatedCount } from "@/lib/stage/slices/council";
+import { activeSeatCount, SPRITE_FLOAT_HEIGHT, seatAngles, seatPosition } from "@/lib/stage/layout";
 import { useStage } from "@/lib/stage/store";
 import { getTargetWorldPosition, registerTarget } from "@/lib/stage/targets";
 import type { FamilyProfile } from "@/types/domain";
@@ -45,8 +47,8 @@ const WALK_FACING_SPEED = 0.4;
 const DIALS = ["scale", "orbitSpeed", "rimFlash", "aura"] as const satisfies ReadonlyArray<keyof MoodStyle>;
 
 /** Side seats grow their bubbles outward (as seen from the camera) so seated bubbles don't overlap. */
-function bubbleSide(seat: number | null): "left" | "center" | "right" {
-  const angle = seat === null ? 0 : (COUNCIL_RING.seatAngles[seat] ?? 0);
+function bubbleSide(seat: number | null, activeCount: number): "left" | "center" | "right" {
+  const angle = seat === null ? 0 : (seatAngles(activeCount)[seat] ?? 0);
   return angle < -0.1 ? "left" : angle > 0.1 ? "right" : "center";
 }
 
@@ -88,11 +90,14 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
   const characterGaze = useRef({ x: 0, y: 0 });
   const motion = useRef(createMotion());
 
+  const characterLook = useLook(id);
   const bubble = useStage((state) => state.sprites[id]?.bubble ?? null);
   const thinking = useStage((state) => state.sprites[id]?.mood === "thinking");
   const celebrating = useStage((state) => state.phase === "receipt");
   const seat = useStage((state) => state.sprites[id]?.seat ?? null);
-  const bubbleAlign = bubbleSide(seat);
+  const seatedTotal = useStage((state) => seatedCount(state.sprites));
+  const activeCount = activeSeatCount(seatedTotal);
+  const bubbleAlign = bubbleSide(seat, activeCount);
 
   // When the current bubble started typing, so the sprite bounces only while it types.
   const bubbleTiming = useRef({ start: 0, duration: 0 });
@@ -121,9 +126,13 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
     prevHeld: boolean;
   });
 
-  // Start at home instead of gliding in from the origin.
+  // Start at home (family), or at the doorway (friends only ever mount once they start visiting,
+  // whether that's by walking in unseated or straight into a seat) instead of gliding in from the
+  // origin. Uses lobbySpot rather than restSpot: by the time this sprite mounts, seatSprite may
+  // already have added it to `visitors`, and restSpot would then place it at its guest spot instead
+  // of the doorway it should walk in from.
   useLayoutEffect(() => {
-    const [x, , z] = homePosition(id);
+    const [x, , z] = lobbySpot(id);
     root.current?.position.set(x, 0, z);
   }, [id]);
 
@@ -164,15 +173,16 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
     easing.damp(a, "lift", held ? DRAG_LIFT : 0, 0.15, delta);
     liftGroup.position.y = a.lift;
 
-    // Move: the hand while dragged, else walk toward the ring seat or home.
+    // Move: the hand while dragged, else walk toward the ring seat or home/guest spot.
     const seatIndex = sprite?.seat ?? null;
+    const frameActiveCount = activeSeatCount(seatedCount(stage.sprites));
     const oldX = group.position.x;
     const oldZ = group.position.z;
     if (held && hand.floorPoint) {
       scratch.goal.set(hand.floorPoint[0], 0, hand.floorPoint[2]);
       easing.damp3(group.position, scratch.goal, 0.07, delta);
     } else {
-      const [gx, , gz] = seatIndex !== null ? seatPosition(seatIndex) : homePosition(id);
+      const [gx, , gz] = seatIndex !== null ? seatPosition(seatIndex, frameActiveCount) : restSpot(id, stage.visitors);
       scratch.goal.set(gx, 0, gz);
       const toGoalX = scratch.goal.x - group.position.x;
       const toGoalZ = scratch.goal.z - group.position.z;
@@ -228,7 +238,7 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
     if (walking) {
       facingAngle = Math.atan2(movedX, movedZ);
     } else if (style.facing === "hearth" && seatIndex !== null) {
-      facingAngle = -(COUNCIL_RING.seatAngles[seatIndex] ?? 0) * 0.8;
+      facingAngle = -(seatAngles(frameActiveCount)[seatIndex] ?? 0) * 0.8;
     } else {
       if (!(style.facing === "item" && stage.conflict?.itemId && getTargetWorldPosition(`item:${stage.conflict.itemId}`, look))) {
         look.copy(camera.position);
@@ -266,7 +276,7 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
 
         <group ref={lift}>
           <group ref={body} rotation-order="YXZ">
-            <CharacterModel profile={profile} mood={characterMood} gaze={characterGaze} motion={motion} />
+            <CharacterModel profile={profile} mood={characterMood} gaze={characterGaze} motion={motion} look={characterLook} />
           </group>
 
           <group ref={chest} position-y={SPRITE_FLOAT_HEIGHT}>

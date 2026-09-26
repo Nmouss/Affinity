@@ -3,8 +3,8 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { button, folder, useControls } from "leva";
+import { getPeople } from "@/lib/people/roster";
 import { COUNCIL_RING } from "@/lib/stage/layout";
-import { FAMILY } from "@/lib/stage/slices/council";
 import { useStage } from "@/lib/stage/store";
 import type { SpriteMood } from "@/types/stage";
 import { characterTuning } from "./characterPose";
@@ -42,13 +42,13 @@ export function SpriteLab() {
       step: 0.05,
       onChange: (v: number) => void (characterTuning.walkSpeed = v),
     },
-    sprite: { value: "son", options: Object.fromEntries(FAMILY.map((profile) => [profile.name, profile.id])) },
+    sprite: { value: "son", options: Object.fromEntries(getPeople().map((profile) => [profile.name, profile.id])) },
     mood: { value: "thinking", options: [...SPRITE_MOODS] },
     "set mood": button(() => {
       const { sprite, mood } = selection.current;
       useStage.getState().setSpriteMood(sprite, mood);
     }),
-    "all thinking": button(() => FAMILY.forEach((profile) => useStage.getState().setSpriteMood(profile.id, "thinking"))),
+    "all thinking": button(() => getPeople().forEach((profile) => useStage.getState().setSpriteMood(profile.id, "thinking"))),
     "test bubble": button(() =>
       useStage.getState().applyCouncilEvent({
         type: "opinion",

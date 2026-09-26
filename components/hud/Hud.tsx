@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { BundlePreview } from "@/components/bundle/BundlePreview";
 import { HappinessMeter } from "@/components/bundle/HappinessMeter";
 import { ConstraintBoard } from "@/components/constraints/ConstraintBoard";
@@ -9,10 +10,11 @@ import { GestureStatus } from "@/components/controls/GestureStatus";
 import { MandateButton } from "@/components/controls/MandateButton";
 import { MissionForm } from "@/components/council/MissionForm";
 import { ProfileCard } from "@/components/sprites/ProfileCard";
+import { hasSavedRoster, usePeople, useRosterHydration } from "@/lib/people/roster";
 import { DEFAULT_BUDGET } from "@/lib/director/mission";
 import { useDirector } from "@/lib/director/useDirector";
 import { emitGesture } from "@/lib/stage/bus";
-import { CATALOG, FAMILY, participantIds } from "@/lib/stage/slices/council";
+import { CATALOG, participantIds } from "@/lib/stage/slices/council";
 import { useStage } from "@/lib/stage/store";
 import type { StagePhase } from "@/types/stage";
 import { InviteChips } from "./InviteChips";
@@ -44,7 +46,10 @@ const BeatTuner = dynamic(() => import("./BeatTuner").then((module) => module.Be
 // DOM overlay around the edges of the room: panels hug the sides so the council ring stays clear.
 // Mounting the Hud mounts the director.
 export function Hud() {
+  useRosterHydration();
   const { director, flags } = useDirector();
+  const people = usePeople();
+  const [showMakerHint, setShowMakerHint] = useState(false);
   const phase = useStage((state) => state.phase);
   const sprites = useStage((state) => state.sprites);
   const opinions = useStage((state) => state.opinions);
@@ -67,10 +72,13 @@ export function Hud() {
     return () => window.clearTimeout(timer);
   }, [error]);
 
+  // Nothing saved yet (a fresh browser): point new visitors at the People Maker once.
+  useEffect(() => setShowMakerHint(!hasSavedRoster()), []);
+
   const closeProfile = useCallback(() => useStage.getState().openProfile(null), []);
   const approve = useCallback(() => emitGesture({ type: "handshakeComplete" }), []);
 
-  const openProfile = FAMILY.find((profile) => profile.id === profileOpenId);
+  const openProfile = people.find((profile) => profile.id === profileOpenId);
   const participants = participantIds({ sprites, opinions, mission });
   const showBoard = phase !== "lobby" && phase !== "receipt" && (constraints !== null || Object.keys(opinions).length > 0);
   const caption = CAPTIONS[phase];
@@ -117,10 +125,10 @@ export function Hud() {
         {bundle && (
           <section className={styles.cart} aria-label="Cart and happiness">
             <h2 className={styles.title}>Cart</h2>
-            <BundlePreview bundle={bundle} budget={mission?.budget ?? DEFAULT_BUDGET} family={FAMILY} />
+            <BundlePreview bundle={bundle} budget={mission?.budget ?? DEFAULT_BUDGET} family={people} />
             <div className={styles.meters}>
               {participants.map((id) => {
-                const profile = FAMILY.find((member) => member.id === id);
+                const profile = people.find((member) => member.id === id);
                 return (
                   <HappinessMeter
                     key={id}
@@ -146,7 +154,7 @@ export function Hud() {
             opinions={opinions}
             veto={veto}
             conflict={conflict}
-            family={FAMILY}
+            family={people}
             catalog={CATALOG}
           />
         )}
@@ -156,6 +164,12 @@ export function Hud() {
       <div className={styles.bottom}>
         {phase === "lobby" && (
           <>
+            <div className={styles.makerRow}>
+              <Link href="/create" className={styles.makerLink}>
+                People Maker
+              </Link>
+              {showMakerHint && <span className={styles.hint}>Make your family and friends in the People Maker</span>}
+            </div>
             <InviteChips />
             <MissionForm />
           </>

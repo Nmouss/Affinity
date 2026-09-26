@@ -1,7 +1,7 @@
 import type { StoreApi } from "zustand";
 import { signMandate } from "@/lib/crypto/sign";
 import { emitGesture, onGesture, setArmingPolicy } from "@/lib/stage/bus";
-import { COUNCIL_RING } from "@/lib/stage/layout";
+import { MAX_SEATS } from "@/lib/stage/layout";
 import type { StageStore } from "@/lib/stage/store";
 import type { Bundle, CartMandate, Mission } from "@/types/domain";
 import type { GestureEvent } from "@/types/stage";
@@ -34,7 +34,9 @@ export interface Director {
   dispose: () => void;
 }
 
-const SEAT_COUNT = COUNCIL_RING.seatAngles.length;
+/** The ring's total capacity, not how many seats are currently spread out (see lib/stage/layout.ts's
+ *  activeSeatCount for that). */
+const SEAT_COUNT = MAX_SEATS;
 
 export function seatedInOrder(state: Pick<StageStore, "sprites">): string[] {
   return Object.entries(state.sprites)

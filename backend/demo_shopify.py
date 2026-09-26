@@ -79,6 +79,8 @@ async def run(*, approve: bool) -> None:
                     "price": item["price"],
                     "currency": item.get("currency", "USD"),
                     "merchant": item.get("merchantName"),
+                    "has3dModel": item.get("has3dModel", False),
+                    "models3d": item.get("models3d", []),
                 }
                 for item in paused["bundle"]["items"]
             ],

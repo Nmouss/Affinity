@@ -24,6 +24,14 @@ Credentials belong only on the Python server. The shop node normalizes search
 results and applies hard rules in code. Merchant carts are not created until an
 approved mandate resumes the graph.
 
+Catalog search and `get_product` use `SHOPIFY_UCP_MEDIA_AGENT_PROFILE_URL`,
+which defaults to Shopify's draft profile. This opts the catalog calls into the
+draft Global Catalog extension that returns `model_3d` media when a merchant
+has supplied it. Each normalized item exposes `has3dModel`; eligible products
+also expose grouped `models3d[].sources` entries with URL, format, MIME type,
+and optional file size. Image-only products remain valid and omit `models3d`.
+Merchant cart calls continue using the stable `SHOPIFY_UCP_AGENT_PROFILE_URL`.
+
 Shopify UCP returns eligible products from its participating catalog and
 merchant network; it does not search arbitrary non-participating retailers.
 

@@ -49,6 +49,8 @@ from .models import (
     NotificationDelivery,
     Plan,
     PlaceCandidate,
+    ProductModel3d,
+    ProductModel3dSource,
     ProposalRepair,
     ScoreTask,
     SpriteOpinion,
@@ -506,6 +508,125 @@ def _first_url(value: Any) -> str | None:
     return None
 
 
+def _media_type(value: dict[str, Any]) -> str:
+    """Normalize the media discriminator used across current UCP shapes."""
+    raw = (
+        value.get("type")
+        or value.get("media_type")
+        or value.get("mediaType")
+        or value.get("mediaContentType")
+        or value.get("content_type")
+        or ""
+    )
+    return re.sub(r"[^a-z0-9]", "", str(raw).casefold())
+
+
+def _source_format(source: dict[str, Any]) -> str:
+    """Return a lowercase 3D file format, deriving it from the URL if needed."""
+    declared = str(source.get("format") or "").casefold().lstrip(".")
+    if declared:
+        return declared
+    url = str(source.get("url") or source.get("src") or "")
+    path = urlparse(url).path
+    return path.rsplit(".", 1)[-1].casefold() if "." in path else ""
+
+
+def _is_model_source(source: dict[str, Any]) -> bool:
+    """Recognize Shopify GLB, glTF, and USDZ sources without trusting extension only."""
+    media_type = _media_type(source)
+    mime_type = str(source.get("mimeType") or source.get("mime_type") or "").casefold()
+    return (
+        "model" in media_type
+        or _source_format(source) in {"glb", "gltf", "usdz"}
+        or mime_type.startswith("model/")
+    )
+
+
+def _normalize_model_source(source: dict[str, Any]) -> ProductModel3dSource | None:
+    """Normalize one safe, remotely renderable Shopify model source."""
+    url = str(source.get("url") or source.get("src") or "").strip()
+    if not url.startswith("https://") or not _is_model_source(source):
+        return None
+    file_format = _source_format(source)
+    mime_type = str(source.get("mimeType") or source.get("mime_type") or "").strip()
+    if not mime_type:
+        mime_type = {
+            "glb": "model/gltf-binary",
+            "gltf": "model/gltf+json",
+            "usdz": "model/vnd.usdz+zip",
+        }.get(file_format, "model/unknown")
+    normalized: ProductModel3dSource = {
+        "url": url,
+        "format": file_format,
+        "mimeType": mime_type,
+    }
+    raw_size = source.get("filesize", source.get("fileSize", source.get("file_size")))
+    try:
+        if raw_size is not None:
+            normalized["filesize"] = int(raw_size)
+    except (TypeError, ValueError):
+        pass
+    return normalized
+
+
+def _model3d_assets(*media_values: Any) -> list[ProductModel3d]:
+    """Extract grouped Shopify 3D models from product and variant media arrays."""
+    entries: list[Any] = []
+    for value in media_values:
+        entries.extend(value if isinstance(value, list) else [value])
+
+    models: list[ProductModel3d] = []
+    seen_source_sets: set[tuple[str, ...]] = set()
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        raw_sources = entry.get("sources")
+        sources = raw_sources if isinstance(raw_sources, list) else [entry]
+        normalized_sources = [
+            normalized
+            for source in sources
+            if isinstance(source, dict)
+            and (normalized := _normalize_model_source(source)) is not None
+        ]
+        entry_is_model = "model" in _media_type(entry) or bool(normalized_sources)
+        if not entry_is_model or not normalized_sources:
+            continue
+        source_key = tuple(sorted(source["url"] for source in normalized_sources))
+        if source_key in seen_source_sets:
+            continue
+        seen_source_sets.add(source_key)
+        model: ProductModel3d = {"sources": normalized_sources}
+        if entry.get("id") is not None:
+            model["id"] = str(entry["id"])
+        if entry.get("alt"):
+            model["alt"] = str(entry["alt"])
+        preview = _first_url(entry.get("previewImage") or entry.get("preview_image"))
+        if preview:
+            model["previewImageUrl"] = preview
+        models.append(model)
+    return models
+
+
+def _first_image_url(*media_values: Any) -> str | None:
+    """Find an image URL without accidentally treating a GLB source as an image."""
+    for value in media_values:
+        entries = value if isinstance(value, list) else [value]
+        for entry in entries:
+            if isinstance(entry, dict) and (
+                "model" in _media_type(entry)
+                or any(
+                    _is_model_source(source)
+                    for source in entry.get("sources", [])
+                    if isinstance(source, dict)
+                )
+            ):
+                continue
+            image = _first_url(entry)
+            if image:
+                return image
+    return None
+
+
 def _height_inches(text: str) -> float | None:
     """Extract a conservative product height from common title formats."""
     feet = re.search(r"(\d+(?:\.\d+)?)\s*(?:ft|feet|foot|')\b", text, re.I)
@@ -577,6 +698,10 @@ def _normalize_shopify_product(product: dict[str, Any], slot: dict[str, Any]) ->
             "currency": currency,
             "quantity": int(slot.get("quantity", 1)),
         }
+        models3d = _model3d_assets(variant.get("media"), product.get("media"))
+        item["has3dModel"] = bool(models3d)
+        if models3d:
+            item["models3d"] = models3d
         height = _height_inches(variant_text)
         if height is not None:
             item["heightIn"] = height
@@ -584,7 +709,7 @@ def _normalize_shopify_product(product: dict[str, Any], slot: dict[str, Any]) ->
             item["checkoutUrl"] = checkout_url
         if product_url:
             item["productUrl"] = product_url
-        image = _first_url(variant.get("media")) or _first_url(product.get("media"))
+        image = _first_image_url(variant.get("media"), product.get("media"))
         if image:
             item["imageUrl"] = image
         results.append(item)
@@ -614,7 +739,7 @@ async def _shopify_candidate_bundles(state: CouncilState):
         if rule["type"] == "maxHeight" and "inches" in rule
     ]
     max_height = min(height_limits, default=None)
-    client = ShopifyUcpClient()
+    client = ShopifyUcpClient(rich_catalog_media=True)
     rejected_ids = set(state.get("rejectedCandidateIds", []))
 
     async def search_slot(slot: dict[str, Any]) -> list[CatalogItem]:
@@ -1225,7 +1350,7 @@ async def preflight_shopify_node(state: CouncilState) -> dict[str, Any]:
     if not shopify_items:
         return {"preflightStatus": "ready", "preflightChanges": []}
 
-    client = ShopifyUcpClient()
+    client = ShopifyUcpClient(rich_catalog_media=True)
     try:
         products = await asyncio.gather(
             *(client.get_product(item.get("productId", "")) for item in shopify_items)

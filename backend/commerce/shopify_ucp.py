@@ -42,16 +42,25 @@ class ShopifyUcpClient:
         client_id: str | None = None,
         client_secret: str | None = None,
         auth_mode: str | None = None,
+        rich_catalog_media: bool = False,
         timeout_seconds: float = 45.0,
     ) -> None:
         self.catalog_endpoint = catalog_endpoint or os.getenv(
             "SHOPIFY_UCP_CATALOG_ENDPOINT",
             "https://catalog.shopify.com/api/ucp/mcp",
         )
-        self.profile_url = profile_url or os.getenv(
-            "SHOPIFY_UCP_AGENT_PROFILE_URL",
-            "https://shopify.dev/ucp/agent-profiles/examples/2026-08-25/valid-with-capabilities.json",
-        )
+        if profile_url:
+            self.profile_url = profile_url
+        elif rich_catalog_media:
+            self.profile_url = os.getenv(
+                "SHOPIFY_UCP_MEDIA_AGENT_PROFILE_URL",
+                "https://shopify.dev/ucp/agent-profiles/draft/valid-with-capabilities.json",
+            )
+        else:
+            self.profile_url = os.getenv(
+                "SHOPIFY_UCP_AGENT_PROFILE_URL",
+                "https://shopify.dev/ucp/agent-profiles/2026-08-25/valid-with-capabilities.json",
+            )
         self.client_id = client_id if client_id is not None else os.getenv("SHOPIFY_UCP_CLIENT_ID")
         self.client_secret = (
             client_secret if client_secret is not None else os.getenv("SHOPIFY_UCP_CLIENT_SECRET")

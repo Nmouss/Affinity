@@ -144,6 +144,24 @@ class ConstraintSet(TypedDict):
     conflicts: list[Conflict]
 
 
+class ProductModel3dSource(TypedDict):
+    """One renderable file supplied for a Shopify-hosted 3D model."""
+
+    url: str
+    format: str
+    mimeType: str
+    filesize: NotRequired[int]
+
+
+class ProductModel3d(TypedDict):
+    """A Shopify product model and its web/AR source files."""
+
+    sources: list[ProductModel3dSource]
+    id: NotRequired[str]
+    alt: NotRequired[str]
+    previewImageUrl: NotRequired[str]
+
+
 class CatalogItem(TypedDict):
     """A normalized product from the local catalog or Shopify UCP."""
 
@@ -163,6 +181,8 @@ class CatalogItem(TypedDict):
     checkoutUrl: NotRequired[str]
     productUrl: NotRequired[str]
     imageUrl: NotRequired[str]
+    has3dModel: NotRequired[bool]
+    models3d: NotRequired[list[ProductModel3d]]
     currency: NotRequired[str]
     quantity: NotRequired[int]
     selectedBecause: NotRequired[list[str]]

@@ -391,6 +391,27 @@ Important fields:
       "merchantDomain": "sports.example",
       "productUrl": "https://...",
       "imageUrl": "https://...",
+      "has3dModel": true,
+      "models3d": [
+        {
+          "id": "shopify-model-id",
+          "alt": "Interactive product model",
+          "previewImageUrl": "https://cdn.shopify.com/.../preview.jpg",
+          "sources": [
+            {
+              "url": "https://cdn.shopify.com/.../product.glb",
+              "format": "glb",
+              "mimeType": "model/gltf-binary",
+              "filesize": 456000
+            },
+            {
+              "url": "https://cdn.shopify.com/.../product.usdz",
+              "format": "usdz",
+              "mimeType": "model/vnd.usdz+zip"
+            }
+          ]
+        }
+      ],
       "selectedBecause": [
         "Fills the ball slot at 18.99.",
         "Passed the budget and household-rule filters."
@@ -412,6 +433,13 @@ Important fields:
   ]
 }
 ```
+
+`has3dModel` is always present on normalized Shopify products. When true, the
+frontend can select a GLB/glTF source from `models3d[].sources` for web
+rendering or a USDZ source for compatible iOS AR. The backend passes through
+only merchant-supplied Shopify model assets; it does not synthesize a model
+from product images. Products without a model return `has3dModel: false` and
+omit `models3d`.
 
 Do not send users to checkout from an item's discovery-time `checkoutUrl`.
 After final approval, use only `state.carts[].checkoutUrl`, which comes from the
@@ -530,4 +558,3 @@ failure as approval or completion.
 | `places/google_places.py` | Google Places Text Search client. |
 | `notifications/smtp_email.py` | Post-approval plan email sender. |
 | `INTEGRATIONS.md` | Provider credentials and integration boundaries. |
-

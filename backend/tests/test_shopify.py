@@ -2,7 +2,14 @@
 
 import asyncio
 
-from backend.nodes import create_carts_node, preflight_shopify_node, route_after_preflight, shop_node
+from backend.commerce.shopify_ucp import ShopifyUcpClient
+from backend.nodes import (
+    _normalize_shopify_product,
+    create_carts_node,
+    preflight_shopify_node,
+    route_after_preflight,
+    shop_node,
+)
 
 
 def _state():
@@ -35,7 +42,28 @@ def test_shopify_search_builds_a_code_filtered_bundle(monkeypatch) -> None:
                 "title": "Durable Basketball",
                 "description": "Full-size indoor outdoor ball",
                 "metadata": {},
-                "media": [{"url": "https://cdn.example/ball.jpg"}],
+                "media": [
+                    {"type": "image", "url": "https://cdn.example/ball.jpg"},
+                    {
+                        "id": "model-1",
+                        "type": "model_3d",
+                        "alt": "Interactive basketball",
+                        "preview_image": {"url": "https://cdn.example/ball-preview.jpg"},
+                        "sources": [
+                            {
+                                "url": "https://cdn.example/ball.glb",
+                                "format": "glb",
+                                "mime_type": "model/gltf-binary",
+                                "file_size": 456000,
+                            },
+                            {
+                                "url": "https://cdn.example/ball.usdz",
+                                "format": "usdz",
+                                "mimeType": "model/vnd.usdz+zip",
+                            },
+                        ],
+                    },
+                ],
                 "variants": [
                     {
                         "id": "variant-1",
@@ -56,7 +84,46 @@ def test_shopify_search_builds_a_code_filtered_bundle(monkeypatch) -> None:
 
     assert result["bundle"]["source"] == "shopify_ucp"
     assert result["bundle"]["total"] == 18.99
-    assert result["bundle"]["items"][0]["merchantDomain"] == "sports.example"
+    item = result["bundle"]["items"][0]
+    assert item["merchantDomain"] == "sports.example"
+    assert item["imageUrl"] == "https://cdn.example/ball.jpg"
+    assert item["has3dModel"] is True
+    assert [source["format"] for source in item["models3d"][0]["sources"]] == ["glb", "usdz"]
+    assert item["models3d"][0]["sources"][0]["filesize"] == 456000
+
+
+def test_shopify_product_without_3d_media_exposes_false() -> None:
+    """Image-only products remain valid and do not invent model sources."""
+    products = _normalize_shopify_product(
+        {
+            "id": "product-image-only",
+            "title": "Image-only Basketball",
+            "media": [{"type": "image", "url": "https://cdn.example/ball.jpg"}],
+            "variants": [
+                {
+                    "id": "variant-image-only",
+                    "price": {"amount": 1500, "currency_code": "USD"},
+                    "eligible": True,
+                    "seller": {"domain": "sports.example"},
+                }
+            ],
+        },
+        {"id": "ball", "quantity": 1},
+    )
+
+    assert products[0]["has3dModel"] is False
+    assert "models3d" not in products[0]
+
+
+def test_rich_catalog_media_uses_shopify_draft_profile(monkeypatch) -> None:
+    """Catalog calls negotiate the extension that carries model_3d assets."""
+    monkeypatch.delenv("SHOPIFY_UCP_MEDIA_AGENT_PROFILE_URL", raising=False)
+
+    client = ShopifyUcpClient(rich_catalog_media=True)
+
+    assert client.profile_url == (
+        "https://shopify.dev/ucp/agent-profiles/draft/valid-with-capabilities.json"
+    )
 
 
 def test_approved_shopify_bundle_creates_a_merchant_cart(monkeypatch) -> None:

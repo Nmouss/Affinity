@@ -1,4 +1,4 @@
-# Hearth
+# Affinity
 
 HackGT 13 MVP for family-centered, agent-assisted shopping. Each family member is represented by a sprite agent; invited sprites form a council, resolve hard constraints versus wishes, score a catalog-backed bundle, and wait for a human-signed approval.
 

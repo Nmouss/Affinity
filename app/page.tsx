@@ -1,5 +1,5 @@
-import { HearthStage } from "@/components/stage/HearthStage";
+import { AffinityStage } from "@/components/stage/AffinityStage";
 
 export default function Home() {
-  return <main><HearthStage /></main>;
+  return <main><AffinityStage /></main>;
 }

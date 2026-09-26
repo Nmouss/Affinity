@@ -101,7 +101,7 @@ export function LeapCheckScreen({ state, actions }: ScreenProps) {
               Tracking was unstable, so nothing was observed. Play the recorded session or answer with the buttons below.
             </p>
           )}
-          <p>Hold your hand over the sensor and mime using the {product?.facts.control ?? "control"}. We only look at how many hands you use and how you approach it.</p>
+          <p>Hold your hand over the sensor and mime using the {String(product?.facts.control ?? product?.facts.controls ?? "control").replace(/_/g, " ")}. We only look at how many hands you use and how you approach it.</p>
           <div className="row">
             <button type="button" className="btn btn--primary btn--large" disabled={!liveReady} onClick={() => actions.leapCapturing("live")}>
               Start live check

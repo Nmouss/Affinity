@@ -13,6 +13,8 @@ import { ProfileScreen, QuickChoicesScreen } from "./screens/Taste";
 import { SceneSlot } from "./three/SceneSlot";
 import { speechSupported } from "./voice/speech";
 
+const MODE_LABEL = { mock: "Mock mode", core: "Engine: local", http: "Engine: HTTP" } as const;
+
 interface AppProps {
   api?: AffinityApi;
   /** Skip the Leap socket (tests, or presenters without hardware). */
@@ -21,11 +23,7 @@ interface AppProps {
 }
 
 export default function App({ api: injected, leap = true, initialState }: AppProps) {
-  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
-  const api = useMemo(
-    () => injected ?? createAffinityApi({ onFallback: (method) => setFallbackNotice(`Backend unavailable for ${method}; used the fixture response.`) }),
-    [injected],
-  );
+  const api = useMemo(() => injected ?? createAffinityApi(), [injected]);
   const { state, actions } = useAffinity(api, initialState);
   const [reducedMotion, setReducedMotion] = useState(() => Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches));
   const leapStatus = useLeapStatus();
@@ -73,7 +71,7 @@ export default function App({ api: injected, leap = true, initialState }: AppPro
       <header className="app__bar">
         <span className="brand">Affinity</span>
         <ul className="chips chips--status" aria-label="System status">
-          <li className={`chip chip--${api.mode === "mock" ? "info" : "ok"}`}>{api.mode === "mock" ? "Mock mode" : "Live backend"}</li>
+          <li className={`chip chip--${api.mode === "mock" ? "info" : "ok"}`}>{MODE_LABEL[api.mode]}</li>
           <li className="chip">{speechSupported() ? "Voice: push-to-talk" : "Voice: demo transcript"}</li>
           <li className={`chip${leapStatus === "open" ? " chip--ok" : ""}`}>Leap: {leapStatus === "open" ? "connected" : "not connected — buttons active"}</li>
         </ul>
@@ -87,7 +85,6 @@ export default function App({ api: injected, leap = true, initialState }: AppPro
 
       <main id="main" className="app__main">
         {state.error && <ErrorBanner message={state.error} onDismiss={actions.clearError} />}
-        {fallbackNotice && <ErrorBanner message={fallbackNotice} onDismiss={() => setFallbackNotice(null)} />}
         {screen}
         <Busy label={state.busy} />
       </main>

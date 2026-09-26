@@ -67,7 +67,10 @@ export const CATEGORY_LABELS: Record<string, string> = {
   shared_essentials: "Shared essentials",
 };
 
-export const categoryLabel = (id: string) => CATEGORY_LABELS[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
+export const categoryLabel = (id: string) => CATEGORY_LABELS[id] ?? (id.charAt(0).toUpperCase() + id.slice(1)).replace(/_/g, " ");
+
+/** Engine scores may be 0–1 or 0–100; show them on one 0–100 scale. Formatting only. */
+export const formatScore = (score: number) => Math.round(score <= 1 ? score * 100 : score);
 
 export const money = (value: number) => `$${Number.isInteger(value) ? value : value.toFixed(2)}`;
 

@@ -24,60 +24,64 @@ Every screen in the state machine is implemented and reachable (`frontend/src/st
 
 ## Mock mode status
 
-- On by default (`?api=mock`). The whole story runs with no network, microphone, backend, Leap, or external APIs.
-- Fixtures: `frontend/src/mocks/{mission,shoppers,products,recommendation,substitution}.ts`.
-- Verified in Chrome by `frontend/scripts/demo-smoke.mjs`: HOME → COMPLETE with every non-localhost request blocked. 0 external requests, 0 page errors (the only console errors are refused Leap socket connections, which is expected with no hardware).
-- The mock only picks between fixed fixtures. It never scores bundles. Its one arithmetic step copies the `applyComparison` reference from the Terminal 1 brief.
+- Three adapter modes, chosen with `?api=` (or `VITE_AFFINITY_API`):
+  - **`core` (default):** Terminal 1's real `AffinityCoreService` running in the page. No network, server, or API key.
+  - **`mock`:** offline fixtures in `frontend/src/mocks`, telling the brief's richer $380 five-category story.
+  - **`http`:** Terminal 1's endpoint map over fetch.
+- Verified in Chrome by `frontend/scripts/demo-smoke.mjs` in all three modes, HOME → COMPLETE, with every non-localhost request blocked: 0 external requests, 0 page errors.
+- `frontend/scripts/keyboard-smoke.mjs` passes in core and mock modes (Tab/Enter/arrow keys only).
 
 ## Backend endpoints connected
 
-None are verified yet: no Terminal 1 server exists on any branch. `frontend/src/services/httpApi.ts` implements every call against the Terminal 1 API surface and is selected with `?api=http`. Planned connection order: parse → shoppers → comparisons → recommend → voice → use-observations → substitutions.
+Integrated with Terminal 1's frozen contract (`aa84580`) and engine (`688b88d`, merged into this branch).
 
-| Adapter method | Endpoint | Status |
+- `frontend/src/services/engineApi.ts` implements `AffinityApi` over a `CoreTransport` that mirrors `AffinityCoreService` method-for-method.
+- Two transports share it: in-page (`core`) and HTTP (`http`).
+- Terminal 1's API.md asks Terminal 2 to own the HTTP layer. `frontend/vite.config.ts` mounts it at `/api/core` on the dev server, following `shared/contracts/api.ts`, with errors mapped to 400/404/409.
+
+| Adapter method | Engine call (HTTP route) | Status |
 |---|---|---|
-| parseMission | POST /missions/parse | Written; falls back to fixture on failure |
-| createMission | POST /missions | Written, untested |
-| resolveParticipants | POST /missions/:id/participants | Written, untested (response shape assumed) |
-| createShopper | POST /shoppers + POST /missions/:id/shoppers | Written, untested |
-| submitComparison | POST /shoppers/:id/comparisons | Written, untested |
-| confirmShopper | POST /shoppers/:id/confirm | Written, untested |
-| addShopperRule | POST /shoppers/:id/rules | Written, untested |
-| recommend | POST /missions/:id/recommend | Written, untested |
-| interpretVoice | POST /voice/interpret | Written; falls back to fixture on failure |
-| submitUseObservation | POST /shoppers/:id/use-observations, then /use-requirements | Written, untested |
-| evaluateSubstitution | POST /missions/:id/substitutions/evaluate | Written, untested |
-| getShoppers / getComparisonPairs / getCatalog | — | No endpoint; uses fixtures |
+| parseMission | parseMission (POST /missions/parse) | Connected, verified |
+| createMission | createMission (POST /missions) | Connected, verified |
+| resolveParticipants | getMission (GET /missions/:id), with names matched to profiles | Connected, verified |
+| createShopper | createShopper (POST /shoppers) | Connected, verified |
+| confirmShopper | addParticipant (POST /missions/:id/participants) | Connected; the guest joins the group on profile confirmation |
+| submitComparison | applyShopperComparison (POST /shoppers/:id/comparisons) | Connected, verified |
+| addShopperRule | addShopperRule (POST /shoppers/:id/rules) | Connected, verified |
+| recommend | recommend (POST /missions/:id/recommend) | Connected; Premium before → Balanced after verified |
+| interpretVoice | interpretVoice (POST /voice/interpret) | Connected (see parser gaps below) |
+| submitUseObservation | record + confirm (POST …/use-observations, …/use-requirements) | Connected, verified |
+| evaluateSubstitution | evaluateSubstitution (POST …/substitutions/evaluate), including `overrideApproved` | Connected; pause for Maya, compatible alternative, and override verified |
+| getShoppers / getComparisonPairs / getCatalog | `shared/data/*.json` (read-only) plus the profiles the engine returned | No endpoint; same fixtures the engine seeds from |
+
+Tests covering the integration:
+
+- `tests/ui/engine.test.tsx`: full UI story on the real engine, override round-trip, and command policy.
+- `tests/core`: Terminal 1's own 44 tests, still passing on the merged branch.
 
 ## Contract assumptions
 
-The shared contract isn't frozen yet. `frontend/src/services/contracts.ts` is a local copy, marked for replacement:
-
-- The mirrored types (`Mission`, `ShopperProfile`, `Product`, `Bundle`, `IndividualScore`, `Recommendation`, `VoiceIntent`) are copied verbatim from the Terminal 1 brief.
-- The frontend-defined shapes below are pending Terminal 1:
-  - `MissionDraft` (Deliverable 1 output plus optional `clarificationQuestion`)
-  - `ParticipantResolution { name, shopperId | null, status: "ready" | "missing" }`
-  - `CreateShopperInput { missionId, name, avatarId, category, rule | null }`
-  - `ComparisonPair` (Deliverable 4 plus a `difference` sentence for "Tell me the difference")
-  - `ComparisonInput { pairId, choice, rejectionReason? }`
-  - `UseObservation` (Deliverable 8)
-  - `UseObservationInput { productId, observation, classification, source }`
-  - `SubstitutionInput` / `SubstitutionResult` (Deliverable 9)
-- Before/after is obtained by calling `recommend` twice: once after the mission is created, and again after the judge's profile is confirmed.
-- Signal strength is presentation over `evidenceCounts`: 0 → Still unknown, 1 → Weak, ≥ 2 or |preference| ≥ 2 → Strong. With one comparison per axis, the judge's first read shows Weak signals. That's honest, but it differs from the brief's mock-up.
+- Types now come from `@/shared/types`; `frontend/src/services/contracts.ts` only aliases them and adds UI-side adapter shapes (`ParticipantResolution`, `CreateShopperInput`, `ComparisonInput`, `UseObservationInput`, `Catalog`).
+- `ComparisonPair` gets an optional UI-only `difference` sentence for "Tell me the difference".
+- The Leap bridge emits the frozen `LeapObservation` enums: `activeHand` includes `unknown`, and `spanBand` is `small | medium | large`.
+- The frontend creates the guest as shopper id `judge`, which replaces the engine's seeded judge profile. Evidence comes only from the guest's four choices.
+- Choice feedback direction ("Durability +1 signal" versus "Lower price") comes from which side of the pair has the higher value. Terminal 1's values are attribute levels, not ±1.
+- Scores are displayed on a 0–100 scale (the engine returns 0–1). This is formatting only.
+- Substitution candidates are same-category products cheaper than the current item. The engine decides every one; nothing is hard-coded to product IDs.
+- The frontend supplies images for Terminal 1's `imageUrl` paths (`public/demo-assets/*.png`) and maps products without a `modelUrl` to local GLBs by name, for presentation only.
 
 ## Requests for Terminal 1
 
-1. **Freeze the shapes above** in `shared/types`, especially `ParticipantResolution`, `CreateShopperInput`, and `UseObservationInput`. I'll switch imports as soon as the freeze commit lands.
-2. **Read endpoints needed by the UI:**
-   - `GET /missions/:id/shoppers`: profiles for names, avatars, and reactions.
-   - `GET /comparisons?category=cabin_supplies`: the four pairs.
-   - `GET /missions/:id/catalog`: products and bundles referenced by `Recommendation`.
-3. **Mission changes by voice:** `VoiceIntent.intent` has no value for changing budget or participants. Please add `modify_mission` with `entities.field` / `entities.value`, and an explicit `unknown` intent for unrecognized commands. Today the fixture uses `filter_products` with `missionField`, which the UI treats as needing confirmation.
-4. **Substitution source:** the UI currently asks about the demo pair (`easy_press` → `basic_pump`, saves $8). Please expose either a suggestion endpoint or `SubstitutionResult.alternativeProductId` for "Choose compatible alternative" (the fixture uses `compact_press`).
-5. **Generic ask action:** `actions: ["ask_maya"]` embeds a name. Could it be `ask_affected_shopper`? The UI handles any `ask_*` value today.
-6. **Fixture consistency:** in the brief's table, Maya scores Premium at 61. Under 0.6·min + 0.3·avg + 0.1·value, Premium can't win before the judge joins if Maya is at 61. The mock keeps Maya at 88 on Premium both before and after. Please pick fixture scores where Premium wins with only Maya and Alex, and Balanced wins once the judge's rule removes Premium.
-7. **Optional:** a per-axis signal strength on the profile response, so "Strong vs Weak" comes from the engine.
-8. **Use observation:** confirm whether the observation and the classification go in one call or two. The adapter sends two.
+1. **Voice parser gaps.** These are tracked as `it.fails` in `tests/ui/engine.test.tsx`; the tests flip when fixed:
+   - "Remove products with glass." parses as `modify_cart` / `remove`. It should be a glass exclusion (`excludedMaterial: "glass"`). The UI would offer the rule with confirmation.
+   - "Ask everyone for approval." falls through to `filter_products`. It should be `approve_action`: `\bapprove\b` doesn't match "approval".
+   - `navigate_category` and `explain_decision` carry no `category` / `shopperId` entities. The UI currently resolves on-screen names from the transcript as a fallback.
+2. **Jonathan has no shopper fixture.** The parser returns Jonathan as a participant (speaker), but `shared/data/shoppers.json` has only Maya, Alex, and Judge, so Jonathan shows "No shopper yet".
+3. **Catalog depth.** All six products are `cabin_supplies` coffee gear, so the cart is one category at $81 of $400. The brief's cart has Cooking / Safety / Comfort / Entertainment / Shared essentials at about $380. The "compatible alternative" for the Easy Press is a mug, because every product shares one category.
+4. **Comparison pairs** compare different products (for example, a mug versus a pump brewer) rather than near-identical pairs that differ only in the tested tradeoff, as the Terminal 2 brief asks.
+5. **Read endpoints** would let the HTTP mode stop importing fixtures: `GET /missions/:id/shoppers`, `GET /comparisons?category=`, `GET /catalog`.
+6. **Mission changes by voice:** budget changes parse as `create_mission` with `sharedBudget`, which the UI confirms. There's no update-mission method, so a confirmed change is acknowledged but not applied.
+7. **`/shoppers/:id/confirm`** is mapped to use-observation confirmation. The UI's "profile confirmed" step therefore has no engine call, beyond adding the guest to the mission.
 
 ## Voice/Leap fallback status
 
@@ -97,6 +101,9 @@ The UI never claims object recognition, force, comfort, pain, or accessibility. 
 
 ## UI test status
 
+- `tests/ui/engine.test.tsx`: Terminal 1 ↔ Terminal 2 integration (full story on the real engine, override, command policy, spec voice commands). 7 pass; 3 are expected-fail parser gaps.
+
 - `tests/ui/leap-observe.test.ts`: observation rules, parser, client without WebSocket (passing).
-- `tests/ui/flow.test.tsx`, `tests/ui/machine.test.ts`: the 14 required UI tests plus state-machine unit tests (see the latest run in the commit message).
-- `frontend/scripts/demo-smoke.mjs`: full story in real Chrome with external network blocked (passing).
+- `tests/ui/flow.test.tsx` (14 required UI tests) and `tests/ui/machine.test.ts` (10 state-machine tests): passing.
+- The suite totals 58 tests across 4 files, all passing (`cd frontend && npm test`); `npm run typecheck` is clean.
+- Browser smokes (`demo-smoke.mjs`, `keyboard-smoke.mjs`): passing in mock, core, and http modes.

@@ -2,11 +2,11 @@ import { Component, type ReactNode, Suspense, useCallback, useRef, useState } fr
 import type { CompactFrame } from "../../../leap-bridge";
 import { useLeapFrames, useLeapStatus } from "../leap/leapStore";
 import type { Product } from "../services/contracts";
-import type { Controller } from "../state/controller";
+import { type Controller, hasPhysicalControl } from "../state/controller";
 import { categoryLabel } from "../state/labels";
 import type { AppState } from "../state/machine";
 import { cartByCategory, cartProducts, reactionsFor } from "../screens/MissionSpace";
-import MissionTable, { type SceneShopper } from "./MissionTable";
+import MissionTable, { modelFor, type SceneShopper } from "./MissionTable";
 
 const SEAT_COLORS = ["#3f6b52", "#d9913b", "#9a5b8f", "#5b7fb0"];
 const ROTATE_STEP = Math.PI / 6;
@@ -44,8 +44,9 @@ function featuredProduct(state: AppState): Product | null {
   const products = state.catalog?.products ?? [];
   const byId = (id: string | null | undefined) => products.find((p) => p.id === id) ?? null;
   const selected = byId(state.selectedProductId);
-  if (selected?.modelUrl) return selected;
-  return cartProducts(state).find((p) => p.modelUrl) ?? selected;
+  if (modelFor(selected)) return selected;
+  const items = cartProducts(state);
+  return items.find((p) => hasPhysicalControl(p) && modelFor(p)) ?? items.find((p) => modelFor(p)) ?? selected;
 }
 
 export function SceneSlot({ state, actions, reducedMotion }: Props) {

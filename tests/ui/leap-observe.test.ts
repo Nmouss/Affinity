@@ -46,7 +46,7 @@ describe("observeSession", () => {
   it("returns the empty observation for no frames", () => {
     expect(observeSession([])).toEqual({
       handsUsed: 0,
-      activeHand: "none",
+      activeHand: "unknown",
       approachSide: "unknown",
       spanBand: "unknown",
       regraspObserved: false,
@@ -165,7 +165,7 @@ describe("observeSession", () => {
     expect(observeSession(frames).approachSide).toBe("unknown");
   });
 
-  it("bands spanBand narrow / medium / wide from thumb-to-pinky distance", () => {
+  it("bands spanBand small / medium / large from thumb-to-pinky distance", () => {
     const build = (span: number) => {
       const frames: CompactFrame[] = [];
       for (let i = 0; i < 6; i += 1) {
@@ -173,9 +173,9 @@ describe("observeSession", () => {
       }
       return observeSession(frames);
     };
-    expect(build(50).spanBand).toBe("narrow");
+    expect(build(50).spanBand).toBe("small");
     expect(build(100).spanBand).toBe("medium");
-    expect(build(160).spanBand).toBe("wide");
+    expect(build(160).spanBand).toBe("large");
   });
 
   it("reports spanBand 'unknown' with no fingertip data", () => {

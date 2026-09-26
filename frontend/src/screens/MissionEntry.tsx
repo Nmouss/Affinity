@@ -121,7 +121,7 @@ export function MissionBriefScreen({ state, actions }: ScreenProps) {
       <ScreenHeading>{draft.title}</ScreenHeading>
       <p className="brief__meta" data-testid="brief-meta">
         {draft.durationDays ? `${draft.durationDays} days · ` : ""}
-        {draft.participantNames.length} people · {money(draft.sharedBudget)} shared-shopping budget
+        {draft.participantNames.length} people · {draft.sharedBudget === undefined ? "budget needed" : `${money(draft.sharedBudget)} shared-shopping budget`}
       </p>
       {draft.clarificationQuestion && <p className="banner banner--info">{draft.clarificationQuestion}</p>}
 
@@ -137,7 +137,7 @@ export function MissionBriefScreen({ state, actions }: ScreenProps) {
             type="number"
             min={0}
             step={10}
-            value={draft.sharedBudget}
+            value={draft.sharedBudget ?? ""}
             onChange={(e) => update({ sharedBudget: Math.max(0, Number(e.target.value) || 0) })}
           />
           <label className="label" htmlFor="brief-days">Days</label>
@@ -196,7 +196,7 @@ export function MissionBriefScreen({ state, actions }: ScreenProps) {
         Affinity uses the trip context to understand what the group needs to buy. It is building the shared cart, not booking the trip.
       </p>
       <div className="row">
-        <button type="button" className="btn btn--primary btn--large" disabled={Boolean(state.busy) || draft.participantNames.length === 0} onClick={actions.confirmBrief}>
+        <button type="button" className="btn btn--primary btn--large" disabled={Boolean(state.busy) || draft.participantNames.length === 0 || !draft.sharedBudget || !draft.missionType} onClick={actions.confirmBrief}>
           Looks right
         </button>
         <button type="button" className="btn" aria-pressed={editing} onClick={() => setEditing((v) => !v)}>
@@ -218,7 +218,8 @@ const briefCategory = (c: string) => BRIEF_CATEGORY[c] ?? categoryLabel(c);
 
 export function ParticipantScreen({ state, actions }: ScreenProps) {
   const missing = state.participants.filter((p) => p.status === "missing");
-  const firstMissing = missing[0];
+  // Onboard the guest first; other people without shoppers can be invited later.
+  const firstMissing = missing.find((p) => /guest/i.test(p.name)) ?? missing[0];
   return (
     <section className="screen screen--narrow">
       <ScreenHeading>Who is joining?</ScreenHeading>

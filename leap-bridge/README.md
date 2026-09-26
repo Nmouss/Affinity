@@ -42,13 +42,13 @@ All thresholds live as named constants at the top of `observe.ts`.
   frames (`0`..`2`).
 - **activeHand** — `"both"` when `handsUsed === 2`; otherwise the side with the most engaged
   frames (falling back to the side with the most present frames, then defaulting to `"right"` on
-  a full tie); `"none"` when `handsUsed === 0`.
+  a full tie); `"unknown"` when `handsUsed === 0`.
 - **approachSide** — dominant axis of the active hand's palm displacement from its first
   appearance to its first engaged frame, only if that displacement exceeds 30mm on the dominant
   axis: `-z` → `"front"` (toward the device), `+x` → `"left"` (came from the user's left), `-x` →
   `"right"`, `-y` → `"top"`; anything smaller, or a dominant axis/sign not listed, is `"unknown"`.
 - **spanBand** — median thumb-tip → pinky-tip distance over the active hand's engaged frames:
-  `< 80mm` → `"narrow"`, `80–130mm` → `"medium"`, `> 130mm` → `"wide"`, `"unknown"` if there's no
+  `< 80mm` → `"small"`, `80–130mm` → `"medium"`, `> 130mm` → `"large"`, `"unknown"` if there's no
   fingertip data.
 - **regraspObserved** — the active hand's `grab` rose to `>= 0.7`, dropped below `0.3`, then rose
   to `>= 0.7` again.

@@ -1,108 +1,39 @@
-// LOCAL MOCK CONTRACTS — replace with imports from shared/types once Terminal 1 freezes them.
-//
-// The first block mirrors the "Shared contract to freeze first" section of the Terminal 1 brief
-// verbatim. The second block holds request/response shapes the frontend needs that the brief names
-// (MissionDraft, ParticipantResolution, ...) but does not define; each is listed as a contract
-// assumption in docs/affinity-experience-status.md.
+// Contracts come from Terminal 1's frozen shared types (contract baseline aa84580). The aliases keep
+// the names the frontend already uses; the second block holds adapter-level shapes that exist only on
+// the UI side of the AffinityApi adapter.
 
-// ---- Mirrored from the Terminal 1 brief ----
+import type {
+  ComparisonPair as SharedComparisonPair,
+  LeapObservation,
+  ObservationClassification,
+  ParsedMission,
+  SubstitutionEvaluation,
+  SubstitutionEvaluationRequest,
+} from "@/shared/types";
 
-export interface Mission {
-  id: string;
-  title: string;
-  missionType: "group_trip_supplies" | "holiday_hosting" | "shared_home";
-  sharedBudget: number;
-  durationDays?: number;
-  destination?: string;
-  participantIds: string[];
-  categories: string[];
-  status: "draft" | "confirmed" | "shopping" | "approval";
-}
+export type {
+  Bundle,
+  ComparisonChoice,
+  IndividualScore,
+  Mission,
+  Product,
+  Recommendation,
+  ShopperProfile,
+  SubstitutionAction,
+  VoiceIntent,
+  VoiceIntentName,
+} from "@/shared/types";
 
-export interface ShopperProfile {
-  id: string;
-  name: string;
-  avatarId: string;
-  category: string;
-  preferences: Record<string, number>;
-  evidenceCounts: Record<string, number>;
-  rules: string[];
-  preferredUseTraits: string[];
-  confirmedUseRequirements: string[];
-}
+export type MissionDraft = ParsedMission;
+export type UseObservation = LeapObservation;
+export type UseClassification = ObservationClassification;
+export type SubstitutionInput = SubstitutionEvaluationRequest;
+export type SubstitutionResult = SubstitutionEvaluation;
 
-export interface Product {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  modelUrl?: string;
-  imageUrl: string;
-  attributes: Record<string, number>;
-  facts: Record<string, string | number | boolean>;
-  satisfies: Record<string, boolean>;
-}
+/** A frozen comparison pair plus optional UI copy for "Tell me the difference". */
+export type ComparisonPair = Omit<SharedComparisonPair, "axis"> & { axis: SharedComparisonPair["axis"] | string; difference?: string };
 
-export interface Bundle {
-  id: string;
-  name: string;
-  productIds: string[];
-  totalPrice: number;
-  attributes: Record<string, number>;
-  satisfies: Record<string, boolean>;
-  valueScore: number;
-}
-
-export interface IndividualScore {
-  shopperId: string;
-  bundleId: string;
-  score: number;
-  reasons: string[];
-}
-
-export interface Recommendation {
-  selectedBundleId: string;
-  eligibleBundleIds: string[];
-  rejectedBundles: {
-    bundleId: string;
-    shopperId: string;
-    violatedRequirement: string;
-  }[];
-  individualScores: IndividualScore[];
-  groupScores: Record<string, number>;
-  reasons: string[];
-}
-
-export type VoiceIntentName =
-  | "create_mission"
-  | "navigate_category"
-  | "compare_products"
-  | "filter_products"
-  | "modify_cart"
-  | "explain_decision"
-  | "approve_action";
-
-export interface VoiceIntent {
-  transcript: string;
-  intent: VoiceIntentName;
-  entities: Record<string, string | number | string[]>;
-  requiresConfirmation: boolean;
-}
-
-// ---- Frontend-side shapes pending Terminal 1 definitions ----
-
-/** Output of POST /missions/parse (Terminal 1 brief, Deliverable 1). */
-export interface MissionDraft {
-  missionType: Mission["missionType"];
-  title: string;
-  destination?: string;
-  durationDays?: number;
-  participantNames: string[];
-  sharedBudget: number;
-  categories: string[];
-  needsConfirmation: boolean;
-  clarificationQuestion?: string;
-}
+// ---- Adapter-level shapes (UI side only) ----
 
 export interface ParticipantResolution {
   name: string;
@@ -119,65 +50,22 @@ export interface CreateShopperInput {
   rule: string | null;
 }
 
-/** Comparison definition (Terminal 1 brief, Deliverable 4). */
-export interface ComparisonPair {
-  pairId: string;
-  axis: string;
-  leftProductId: string;
-  rightProductId: string;
-  leftValue: number;
-  rightValue: number;
-  /** One-line description of the only intended difference, used by "Tell me the difference". */
-  difference: string;
-}
-
-export type ComparisonChoice = "left" | "right" | "neither" | "skip";
-
 export interface ComparisonInput {
   pairId: string;
-  choice: ComparisonChoice;
+  choice: import("@/shared/types").ComparisonChoice;
   rejectionReason?: string;
 }
-
-/** Bounded Leap observation (Terminal 1 brief, Deliverable 8). */
-export interface UseObservation {
-  handsUsed: number;
-  activeHand: "left" | "right" | "both" | "none";
-  approachSide: "front" | "left" | "right" | "top" | "unknown";
-  spanBand: "narrow" | "medium" | "wide" | "unknown";
-  regraspObserved: boolean;
-  trackingLossCount: number;
-}
-
-export type UseClassification = "required" | "preferred" | "incidental";
 
 export interface UseObservationInput {
   productId: string;
   observation: UseObservation;
   classification: UseClassification;
-  /** "live" or "recorded" — recorded sessions are never presented as live. */
+  /** Recorded sessions are never presented as live. */
   source: "live" | "recorded" | "manual";
 }
 
-export interface SubstitutionInput {
-  missionId: string;
-  currentProductId: string;
-  replacementProductId: string;
-  savings: number;
-}
-
-export type SubstitutionAction = "choose_alternative" | "override_with_approval" | `ask_${string}`;
-
-export interface SubstitutionResult {
-  decision: "allow" | "pause";
-  affectedShopperId?: string;
-  violatedRequirement?: string;
-  message: string;
-  actions: SubstitutionAction[];
-}
-
-/** Everything the mission space needs to render: products and bundles referenced by recommendations. */
+/** Products and bundles referenced by recommendations. */
 export interface Catalog {
-  products: Product[];
-  bundles: Bundle[];
+  products: import("@/shared/types").Product[];
+  bundles: import("@/shared/types").Bundle[];
 }

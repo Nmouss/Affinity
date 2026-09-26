@@ -47,8 +47,8 @@ export function createMockApi({ latencyMs = 250 } = {}): AffinityApi {
       const created: Mission = {
         id: "cabin_01",
         title: draft.title,
-        missionType: draft.missionType,
-        sharedBudget: draft.sharedBudget,
+        missionType: draft.missionType ?? "group_trip_supplies",
+        sharedBudget: draft.sharedBudget ?? 0,
         durationDays: draft.durationDays,
         destination: draft.destination,
         participantIds: draft.participantNames.map(idFor),
@@ -135,6 +135,7 @@ export function createMockApi({ latencyMs = 250 } = {}): AffinityApi {
 
     evaluateSubstitution(_missionId, input) {
       const replacement = products.find((p) => p.id === input.replacementProductId);
+      if (input.overrideApproved) return wait({ decision: "allow" as const, message: "Override approved by a human.", actions: [] });
       return wait(replacement?.satisfies.one_hand_operation === false ? pausedSubstitution : allowedSubstitution);
     },
 

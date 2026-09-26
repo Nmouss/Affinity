@@ -1,7 +1,7 @@
 // Completes the demo with the keyboard only (Tab / Shift+Tab / Enter / Space / arrow keys / Esc).
 import { chromium } from "playwright-core";
 
-const BASE = process.env.AFFINITY_URL ?? "http://localhost:5173/?api=mock";
+const BASE = process.env.AFFINITY_URL ?? "http://localhost:5180/?api=mock";
 const browser = await chromium.launch({ channel: "chrome", headless: true, args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
 await page.route("**/*", (r) => (["localhost", "127.0.0.1"].includes(new URL(r.request().url()).hostname) ? r.continue() : r.abort()));
@@ -54,7 +54,11 @@ await tabTo(/Mission table/, null);
 await page.keyboard.press("ArrowRight");
 await page.keyboard.press("Enter");
 log.push(`3D stage: ${await page.locator(".scene__controls .caption").textContent()}`);
-await tabTo(/^Remove products with glass\.$/);
+// "Remove products with glass." is a known Terminal 1 parser gap (parsed as a cart removal); this
+// phrasing is a glass exclusion in both the engine and the mock.
+await tabTo(/^Type a command$/, null);
+await page.keyboard.type("Show a cheaper option without glass.");
+await page.keyboard.press("Enter");
 await page.getByRole("alertdialog").waitFor();
 log.push(`dialog focus: ${await active()}`);
 await page.keyboard.press("Escape");

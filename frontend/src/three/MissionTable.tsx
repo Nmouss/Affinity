@@ -11,6 +11,22 @@ import { SpriteLabel } from "./SpriteLabel";
 
 export const MODEL_URLS = ["/models/table.glb", "/models/press.glb", "/models/lantern.glb", "/models/stove.glb", "/models/cooler.glb", "/models/mug.glb"];
 
+/**
+ * Local model for a product: its own modelUrl, else a stand-in chosen from the product name. Engine
+ * catalogs may omit modelUrl; this keeps the table populated without fetching anything remote.
+ */
+export function modelFor(product: Product | null | undefined): string | undefined {
+  if (!product) return undefined;
+  if (product.modelUrl) return product.modelUrl;
+  const name = product.name.toLowerCase();
+  if (/press|brewer|pump/.test(name)) return "/models/press.glb";
+  if (/mug|cup/.test(name)) return "/models/mug.glb";
+  if (/lantern|light/.test(name)) return "/models/lantern.glb";
+  if (/cooler/.test(name)) return "/models/cooler.glb";
+  if (/stove|burner/.test(name)) return "/models/stove.glb";
+  return undefined;
+}
+
 export function preloadModels() {
   MODEL_URLS.forEach((url) => useGLTF.preload(url));
 }
@@ -199,7 +215,7 @@ export default function MissionTable(props: MissionTableProps) {
         <Turntable yawRef={yawRef} reducedMotion={reducedMotion}>
           {featured && (
             <group onClick={(e) => (e.stopPropagation(), props.onSelectProduct(featured.id))}>
-              <Model key={featured.id} url={featured.modelUrl} fallback={<FallbackProduct />} scale={1.6} />
+              <Model key={featured.id} url={modelFor(featured)} fallback={<FallbackProduct />} scale={1.6} />
             </group>
           )}
         </Turntable>
@@ -210,7 +226,7 @@ export default function MissionTable(props: MissionTableProps) {
         <group position={[0, TABLE_TOP, 0.42]}>
           {compare.map((p, i) => (
             <group key={p.id} position={[i * 0.26 - 0.13, 0, 0]} onClick={(e) => (e.stopPropagation(), props.onSelectProduct(p.id))}>
-              <Model url={p.modelUrl} fallback={<FallbackProduct color={i ? "#c98b4a" : "#9aa3ad"} />} scale={0.8} />
+              <Model url={modelFor(p)} fallback={<FallbackProduct color={i ? "#c98b4a" : "#9aa3ad"} />} scale={0.8} />
               <SpriteLabel lines={[`${p.name} · $${p.price}`]} position={[0, 0.38, 0]} lineHeight={0.024} />
             </group>
           ))}

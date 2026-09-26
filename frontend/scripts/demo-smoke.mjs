@@ -5,7 +5,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright-core";
 
-const BASE = process.env.AFFINITY_URL ?? "http://localhost:5173/?api=mock";
+const BASE = process.env.AFFINITY_URL ?? "http://localhost:5180/?api=mock";
 const out = path.resolve(process.argv[2] ?? "/tmp/affinity-shots");
 mkdirSync(out, { recursive: true });
 

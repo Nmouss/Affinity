@@ -8,14 +8,17 @@ import type {
   UseObservation,
   VoiceIntent,
 } from "../services/contracts";
-import { compatibleSubstitutionInput, pausedSubstitutionInput } from "../mocks/substitution";
 import { categoryLabel, nameFor, ruleLabel } from "./labels";
 import { type AppState, type Screen, handlingFor, initialState, reducer } from "./machine";
 
 export type Controller = ReturnType<typeof useAffinity>["actions"];
 
 /** Products in the catalog that expose a physical control worth a contextual Leap check. */
-export const hasPhysicalControl = (product: Product | undefined) => Boolean(product && typeof product.facts.control === "string");
+export const hasPhysicalControl = (product: Product | undefined) =>
+  Boolean(product && (typeof product.facts.control === "string" || typeof product.facts.controls === "string"));
+
+/** Rule a spoken "no glass"-style exclusion would add; display mapping, confirmed by the user. */
+const RULE_FOR_MATERIAL: Record<string, string> = { glass: "no_fragile_glass" };
 
 export function useAffinity(api: AffinityApi, init: Partial<AppState> = {}) {
   const [state, dispatch] = useReducer(reducer, { ...initialState, ...init });
@@ -39,6 +42,12 @@ export function useAffinity(api: AffinityApi, init: Partial<AppState> = {}) {
     const go = (screen: Screen) => dispatch({ type: "GO", screen });
     const s = () => stateRef.current;
     const product = (id: string | null) => s().catalog?.products.find((p) => p.id === id);
+    /** Same-category products cheaper than `base` and not already in the cart, cheapest first. */
+    const cheaperAlternatives = (base: Product) =>
+      (s().catalog?.products ?? [])
+        .filter((p) => p.category === base.category && p.price < base.price && !s().cartIds.includes(p.id))
+        .sort((a, b) => a.price - b.price);
+    const savingsBetween = (a: Product, b: Product) => Math.round((a.price - b.price) * 100) / 100;
 
     async function parseInto(text: string) {
       const draft = await run("Reading your mission", () => api.parseMission(text));
@@ -135,7 +144,9 @@ export function useAffinity(api: AffinityApi, init: Partial<AppState> = {}) {
         const before = shopper.evidenceCounts[pair.axis] ?? 0;
         const after = updated.evidenceCounts[pair.axis] ?? 0;
         const learned = after > before;
-        const delta = (updated.preferences[pair.axis] ?? 0) - (shopper.preferences[pair.axis] ?? 0);
+        // Which side was "more" of the axis comes from the pair definition, not from the score change.
+        const chosen = choice === "left" ? pair.leftValue : pair.rightValue;
+        const other = choice === "left" ? pair.rightValue : pair.leftValue;
         dispatch({
           type: "CHOICE_RECORDED",
           shopper: updated,
@@ -143,7 +154,7 @@ export function useAffinity(api: AffinityApi, init: Partial<AppState> = {}) {
             pairId: pair.pairId,
             choice,
             learnedAxis: learned ? pair.axis : null,
-            direction: learned ? (delta >= 0 ? 1 : -1) : 0,
+            direction: learned ? (chosen >= other ? 1 : -1) : 0,
           },
         });
         if (choiceIndex + 1 >= pairs.length) go("PROFILE_CONFIRMATION");
@@ -224,8 +235,23 @@ export function useAffinity(api: AffinityApi, init: Partial<AppState> = {}) {
           dispatch({ type: "APPROVAL_REQUESTED" });
           go("COMPLETE");
         } else if (pending.kind === "override_substitution") {
-          const sub = s().substitution;
-          if (!sub) return;
+          const { substitution: sub, mission } = s();
+          if (!sub || !mission) return;
+          // The engine decides whether an approved override is allowed.
+          const result = await run("Recording the override", () =>
+            api.evaluateSubstitution(mission.id, {
+              missionId: mission.id,
+              currentProductId: sub.currentProductId,
+              replacementProductId: sub.replacementProductId,
+              savings: sub.savings,
+              overrideApproved: true,
+            }),
+          );
+          if (!result) return;
+          if (result.decision !== "allow") {
+            dispatch({ type: "ERROR", message: result.message });
+            return;
+          }
           dispatch({ type: "SUBSTITUTION_STATUS", status: "overridden", cartIds: swap(s().cartIds, sub.currentProductId, sub.replacementProductId) });
         }
       },
@@ -259,38 +285,48 @@ export function useAffinity(api: AffinityApi, init: Partial<AppState> = {}) {
       leaveLeapCheck: () => go("MISSION_SPACE"),
 
       // SUBSTITUTION_APPROVAL
-      /** Evaluates a cheaper replacement; defaults to the demo's Easy Press → Basic Pump swap. */
+      /**
+       * Evaluates a cheaper replacement with the engine. Without arguments it takes the cart item with
+       * a physical control and its cheapest same-category alternative.
+       */
       async findSavings(currentProductId?: string, replacementProductId?: string) {
-        const mission = s().mission;
-        if (!mission) return;
-        const current = product(currentProductId ?? null);
-        const replacement = product(replacementProductId ?? null);
-        const swapInput = current && replacement
-          ? { currentProductId: current.id, replacementProductId: replacement.id, savings: Math.round((current.price - replacement.price) * 100) / 100 }
-          : pausedSubstitutionInput;
-        const input = { missionId: mission.id, ...swapInput };
-        const result = await run("Checking a cheaper substitute", () => api.evaluateSubstitution(mission.id, input));
+        const { mission, cartIds, catalog } = s();
+        if (!mission || !catalog) return;
+        const current = product(currentProductId ?? null) ?? product(cartIds.find((id) => hasPhysicalControl(product(id))) ?? null);
+        const replacement = product(replacementProductId ?? null) ?? (current && cheaperAlternatives(current)[0]);
+        if (!current || !replacement) {
+          dispatch({ type: "NOTICE", message: "No cheaper alternative in this category." });
+          return;
+        }
+        const swapInput = { currentProductId: current.id, replacementProductId: replacement.id, savings: savingsBetween(current, replacement) };
+        const result = await run("Checking a cheaper substitute", () => api.evaluateSubstitution(mission.id, { missionId: mission.id, ...swapInput }));
         if (!result) return;
         const allowed = result.decision === "allow";
         dispatch({ type: "SUBSTITUTION", substitution: { ...swapInput, result, status: allowed ? "allowed" : "paused" } });
         if (allowed) dispatch({ type: "SET_CART", cartIds: swap(s().cartIds, swapInput.currentProductId, swapInput.replacementProductId) });
         go("SUBSTITUTION_APPROVAL");
       },
+      /** Asks the engine about each remaining cheaper option, closest price first, and takes the first it allows. */
       async chooseCompatibleAlternative() {
-        const mission = s().mission;
-        if (!mission) return;
-        const input = { missionId: mission.id, ...compatibleSubstitutionInput };
-        const result = await run("Checking the compatible alternative", () => api.evaluateSubstitution(mission.id, input));
-        if (!result) return;
-        if (result.decision !== "allow") {
-          dispatch({ type: "ERROR", message: result.message });
+        const { mission, substitution: paused } = s();
+        const current = product(paused?.currentProductId ?? null);
+        if (!mission || !paused || !current) return;
+        const candidates = cheaperAlternatives(current).filter((p) => p.id !== paused.replacementProductId).reverse();
+        const found = await run("Finding a compatible alternative", async () => {
+          for (const candidate of candidates) {
+            const input = { currentProductId: current.id, replacementProductId: candidate.id, savings: savingsBetween(current, candidate) };
+            const result = await api.evaluateSubstitution(mission.id, { missionId: mission.id, ...input });
+            if (result.decision === "allow") return { input, result };
+          }
+          return null;
+        });
+        if (found === undefined) return;
+        if (!found) {
+          dispatch({ type: "ERROR", message: "No cheaper alternative satisfies everyone. Keep the current item or ask the affected shopper." });
           return;
         }
-        dispatch({
-          type: "SUBSTITUTION",
-          substitution: { ...compatibleSubstitutionInput, result, status: "alternative_approved" },
-        });
-        dispatch({ type: "SET_CART", cartIds: swap(s().cartIds, input.currentProductId, input.replacementProductId) });
+        dispatch({ type: "SUBSTITUTION", substitution: { ...found.input, result: found.result, status: "alternative_approved" } });
+        dispatch({ type: "SET_CART", cartIds: swap(s().cartIds, found.input.currentProductId, found.input.replacementProductId) });
       },
       askAffected: () => dispatch({ type: "SUBSTITUTION_STATUS", status: "asked" }),
       requestOverride: () => dispatch({ type: "CONFIRM_REQUEST", pending: { kind: "override_substitution" } }),
@@ -317,13 +353,16 @@ export function useAffinity(api: AffinityApi, init: Partial<AppState> = {}) {
         return "Waiting for your confirmation before asking everyone.";
       }
       if (handling === "confirm") {
-        if (typeof entities.proposedRule === "string") {
-          const material = typeof entities.excludedMaterial === "string" ? entities.excludedMaterial : "glass";
-          dispatch({ type: "CONFIRM_REQUEST", pending: { kind: "add_rule", rule: entities.proposedRule, material, transcript: intent.transcript } });
-          return `Waiting for your confirmation to add “${ruleLabel(entities.proposedRule)}”.`;
+        const material = typeof entities.excludedMaterial === "string" ? entities.excludedMaterial : null;
+        const rule = typeof entities.proposedRule === "string" ? entities.proposedRule : material ? RULE_FOR_MATERIAL[material] : undefined;
+        if (rule) {
+          dispatch({ type: "CONFIRM_REQUEST", pending: { kind: "add_rule", rule, material: material ?? "glass", transcript: intent.transcript } });
+          return `Waiting for your confirmation to add “${ruleLabel(rule)}”.`;
         }
-        const field = typeof entities.missionField === "string" ? entities.missionField : "mission";
-        const value = typeof entities.value === "number" ? entities.value : undefined;
+        const field = typeof entities.missionField === "string"
+          ? entities.missionField
+          : "sharedBudget" in entities ? "sharedBudget" : "participantNames" in entities ? "participants" : "rule" in entities ? "rules" : "mission";
+        const value = typeof entities.value === "number" ? entities.value : typeof entities.sharedBudget === "number" ? entities.sharedBudget : undefined;
         dispatch({ type: "CONFIRM_REQUEST", pending: { kind: "mission_change", field, value, transcript: intent.transcript } });
         return "Waiting for your confirmation.";
       }
@@ -332,7 +371,10 @@ export function useAffinity(api: AffinityApi, init: Partial<AppState> = {}) {
 
       switch (intent.intent) {
         case "navigate_category": {
-          const category = String(entities.category ?? "cooking");
+          // Prefer the engine's entity; otherwise resolve which on-screen category the transcript names.
+          const shown = [...new Set(state.cartIds.map((id) => product(id)?.category).filter((c): c is string => Boolean(c)))];
+          const spoken = shown.find((c) => intent.transcript.toLowerCase().includes(categoryLabel(c).toLowerCase()));
+          const category = typeof entities.category === "string" ? entities.category : spoken ?? shown[0] ?? "cooking";
           dispatch({ type: "CATEGORY", category });
           return `Showing ${categoryLabel(category)}.`;
         }
@@ -357,7 +399,8 @@ export function useAffinity(api: AffinityApi, init: Partial<AppState> = {}) {
           return "Filter applied.";
         }
         case "explain_decision": {
-          const shopperId = String(entities.shopperId ?? "maya");
+          const named = state.shoppers.find((p) => intent.transcript.toLowerCase().includes(p.name.toLowerCase()));
+          const shopperId = typeof entities.shopperId === "string" ? entities.shopperId : named?.id ?? state.shoppers[0]?.id ?? "maya";
           const rec = state.recommendationAfter ?? state.recommendationBefore;
           const who = nameFor(shopperId, state.shoppers);
           const lines: string[] = [];
@@ -376,7 +419,7 @@ export function useAffinity(api: AffinityApi, init: Partial<AppState> = {}) {
         }
         case "modify_cart": {
           if (!selected) return "Select a product first.";
-          if (entities.operation === "remove") {
+          if ((entities.action ?? entities.operation) === "remove") {
             actions.removeFromCart(selected.id);
             return `Removed ${selected.name}. Undo is available.`;
           }

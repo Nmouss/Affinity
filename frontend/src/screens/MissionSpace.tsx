@@ -2,7 +2,7 @@ import { type ReactNode, useState } from "react";
 import { Avatar, ProductImage, ScreenHeading } from "../components/common";
 import type { Product, Recommendation, ShopperProfile } from "../services/contracts";
 import { type Controller, hasPhysicalControl } from "../state/controller";
-import { categoryLabel, money, nameFor, ruleLabel } from "../state/labels";
+import { categoryLabel, formatScore, money, nameFor, ruleLabel } from "../state/labels";
 import type { AppState } from "../state/machine";
 import { PushToTalk } from "../voice/PushToTalk";
 
@@ -270,11 +270,11 @@ export function DecisionPanel({ state }: { state: AppState }) {
                   const score = scoreFor(b.id, c.id);
                   return (
                     <td key={c.id} className={rejected ? "rejected" : "num"}>
-                      {rejected ? `Rejected (${ruleLabel(rejected.violatedRequirement)})` : score ?? "—"}
+                      {rejected ? `Rejected (${ruleLabel(rejected.violatedRequirement)})` : score === undefined ? "—" : formatScore(score)}
                     </td>
                   );
                 })}
-                <td className="num">{group === undefined ? "—" : selected ? <strong>{group}</strong> : group}</td>
+                <td className="num">{group === undefined ? "—" : selected ? <strong>{formatScore(group)}</strong> : formatScore(group)}</td>
               </tr>
             );
           })}

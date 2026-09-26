@@ -13,7 +13,7 @@ import type {
   UseObservationInput,
   VoiceIntent,
 } from "./contracts";
-import { createHttpApi } from "./httpApi";
+import { createEngineApi, createHttpTransport, createLocalTransport, lazyTransport } from "./engineApi";
 import { createMockApi } from "./mockApi";
 
 /**
@@ -24,7 +24,8 @@ import { createMockApi } from "./mockApi";
  * needed by the UI but have no Terminal 1 endpoint yet; they're requested in the status file.
  */
 export interface AffinityApi {
-  readonly mode: "mock" | "http";
+  /** mock = offline fixtures; core = Terminal 1's engine in the page; http = Terminal 1 over HTTP. */
+  readonly mode: ApiMode;
   parseMission(text: string): Promise<MissionDraft>;
   createMission(draft: MissionDraft): Promise<Mission>;
   resolveParticipants(missionId: string): Promise<ParticipantResolution[]>;
@@ -47,27 +48,35 @@ export interface AffinityApi {
   getCatalog(missionId: string): Promise<Catalog>;
 }
 
+export type ApiMode = "mock" | "core" | "http";
+
 export interface ApiOptions {
-  mode?: "mock" | "http";
+  mode?: ApiMode;
   baseUrl?: string;
   /** Artificial latency for mock calls so loading states are visible; 0 in tests. */
   mockLatencyMs?: number;
-  /** Called when an HTTP call fell back to its fixture response. */
-  onFallback?: (method: string, error: unknown) => void;
 }
 
-/** Mode comes from `?api=http|mock`, then VITE_AFFINITY_API, and defaults to mock. */
-export function resolveApiMode(search = typeof location === "undefined" ? "" : location.search): "mock" | "http" {
-  const fromQuery = new URLSearchParams(search).get("api");
-  if (fromQuery === "http" || fromQuery === "mock") return fromQuery;
-  return import.meta.env?.VITE_AFFINITY_API === "http" ? "http" : "mock";
+const MODES: ApiMode[] = ["mock", "core", "http"];
+
+/**
+ * Mode comes from `?api=mock|core|http`, then VITE_AFFINITY_API, and defaults to core: Terminal 1's
+ * real engine running in the page, which needs no network, backend server, or API key.
+ */
+export function resolveApiMode(search = typeof location === "undefined" ? "" : location.search): ApiMode {
+  const fromQuery = new URLSearchParams(search).get("api") as ApiMode | null;
+  if (fromQuery && MODES.includes(fromQuery)) return fromQuery;
+  const fromEnv = import.meta.env?.VITE_AFFINITY_API as ApiMode | undefined;
+  return fromEnv && MODES.includes(fromEnv) ? fromEnv : "core";
 }
 
 export function createAffinityApi(options: ApiOptions = {}): AffinityApi {
   const mode = options.mode ?? resolveApiMode();
   if (mode === "http") {
-    const baseUrl = options.baseUrl ?? import.meta.env?.VITE_AFFINITY_API_URL ?? "http://localhost:8000";
-    return createHttpApi(baseUrl, createMockApi({ latencyMs: 0 }), options.onFallback);
+    // Default: the thin adapter the Vite dev server mounts over AffinityCoreService (see vite.config.ts).
+    const baseUrl = options.baseUrl ?? import.meta.env?.VITE_AFFINITY_API_URL ?? "/api/core";
+    return createEngineApi(createHttpTransport(baseUrl), "http");
   }
+  if (mode === "core") return createEngineApi(lazyTransport(createLocalTransport), "core");
   return createMockApi({ latencyMs: options.mockLatencyMs ?? 250 });
 }

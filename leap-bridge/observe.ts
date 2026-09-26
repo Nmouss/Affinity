@@ -45,7 +45,7 @@ function median(values: number[]): number | null {
 /** Empty/default observation for a session with no usable data. */
 const EMPTY_OBSERVATION: UseObservation = {
   handsUsed: 0,
-  activeHand: "none",
+  activeHand: "unknown",
   approachSide: "unknown",
   spanBand: "unknown",
   regraspObserved: false,
@@ -110,7 +110,7 @@ export function observeSession(frames: CompactFrame[]): UseObservation {
     }
     activeHand = resolvedSide;
   } else {
-    activeHand = "none";
+    activeHand = "unknown";
   }
 
   // approachSide: dominant axis of palm displacement from the active hand's first appearance to
@@ -153,7 +153,7 @@ export function observeSession(frames: CompactFrame[]): UseObservation {
     }
     const med = median(spans);
     if (med !== null) {
-      spanBand = med < SPAN_NARROW_MAX_MM ? "narrow" : med <= SPAN_WIDE_MIN_MM ? "medium" : "wide";
+      spanBand = med < SPAN_NARROW_MAX_MM ? "small" : med <= SPAN_WIDE_MIN_MM ? "medium" : "large";
     }
   }
 

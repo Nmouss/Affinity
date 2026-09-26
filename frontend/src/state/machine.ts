@@ -335,7 +335,10 @@ export type IntentHandling = "immediate" | "undo" | "confirm" | "confirm_always"
 
 export function handlingFor(intent: VoiceIntent): IntentHandling {
   if (intent.intent === "approve_action") return "confirm_always";
-  if (intent.requiresConfirmation || "missionField" in intent.entities || "proposedRule" in intent.entities) return "confirm";
+  const e = intent.entities;
+  // Rule, budget, and participant changes always confirm, even if the engine didn't flag them.
+  const changesMission = ["missionField", "proposedRule", "excludedMaterial", "sharedBudget", "participantNames", "rule", "rules"].some((k) => k in e);
+  if (intent.requiresConfirmation || changesMission) return "confirm";
   if (intent.intent === "modify_cart") return "undo";
   return "immediate";
 }

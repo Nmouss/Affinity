@@ -1,0 +1,226 @@
+# =====================================================================================
+# AFFINITY: SETUP CHECKLIST AND PROJECT PLANS  (branch: mvp/integration)
+# =====================================================================================
+#
+# This file is a readable doc, not a list of Python packages. Every line is a comment,
+# so `pip install -r requirements.txt` installs nothing. The app is Node: all JavaScript
+# libraries are pinned in package.json + package-lock.json and installed with `npm ci`.
+# (backend/ and this file were originally reserved for a Python fallback that isn't used.)
+#
+# Affinity (HackGT 13): each family member has a "sprite", an AI agent that speaks for
+# them. The sprites hold a council in a cozy 3D living room, agree on a bundle (the demo
+# is a family Christmas tree under $200), and only a hand-tracked handshake read by a
+# Leap Motion approves the purchase.
+#
+# -------------------------------------------------------------------------------------
+# 1. SETUP CHECKLIST (macOS)
+# -------------------------------------------------------------------------------------
+#
+# Install:
+#   [ ] Git
+#   [ ] Node.js 20 or newer (tested on 24) and npm 10 or newer
+#   [ ] Google Chrome (the stage is built and tested in Chrome)
+#   [ ] Ultraleap Hand Tracking 6.x   (only for the real Leap; installs the tracking
+#       service and the LeapC SDK at /Applications/Ultraleap Hand Tracking.app)
+#   [ ] Homebrew, then: brew install cmake libwebsockets   (only for the Leap bridge;
+#       npm run leap:bridge installs libwebsockets itself if it's missing)
+#
+# Project:
+#   git clone <repo> && cd Affinity && git switch mvp/integration
+#   npm ci                          # installs the exact versions from package-lock.json
+#   cp .env.example .env.local      # NEXT_PUBLIC_LEAP_WS_URL=ws://127.0.0.1:6437/v6.json,
+#                                   # DEMO_MODE, and OPENAI_API_KEY for the agents side
+#
+# -------------------------------------------------------------------------------------
+# 2. JAVASCRIPT LIBRARIES (for reference; installed by npm ci)
+# -------------------------------------------------------------------------------------
+#
+#   next 15.5 · react 19.3 · typescript 5.9    App Router pages (/, /lab) and the agents' API
+#                                               routes; the 3D canvas loads client-only
+#   three 0.180                                 3D scene graph, geometry, materials, raycasts
+#   @react-three/fiber 9.8                      three.js as React components; useFrame animation
+#   @react-three/drei 10.7                      Html labels/bubbles, MeshDistortMaterial,
+#                                               Environment + Lightformer, ContactShadows, Sparkles
+#   @react-three/postprocessing 3.1             Bloom and Vignette
+#   @react-spring/three 10.1 · maath 0.10       springs and damped easing for every animation
+#   zustand 5.0                                 one store, one slice per area (council, hand, scene)
+#   leva 0.10                                   live tuning sliders on /lab
+#   @mediapipe/tasks-vision 1.0                 installed for a webcam fallback, not wired yet
+#   vitest 3.2                                  unit tests
+#   ws 8.21                                     Node scripts: leap:synth, leap:replay, leap:record
+#   @langchain/langgraph 0.4 · @langchain/openai 0.6 · zod 4    agents side (not frontend)
+#
+# Native, outside npm: Ultraleap-Tracking-WS (C, built with cmake + libwebsockets + Homebrew
+# OpenSSL by scripts/leap/build-bridge.sh into ~/.affinity/UltraleapTrackingWebSocket).
+#
+# Offline-first: nothing loads from a CDN at runtime (no web fonts, HDRs, or models).
+# Textures are drawn in code and every prop is built from primitives.
+#
+# -------------------------------------------------------------------------------------
+# 3. RUN IT
+# -------------------------------------------------------------------------------------
+#
+#   npm run build && npm run start   then open http://localhost:3000
+#     /?demo      full demo from the local transcript (no network needed)
+#     /           same flow against the live /api/council stream
+#     /lab        the stage plus leva sliders, stats, and a transcript stepper
+#     ?cut=90     the 90-second judge cut (combine with the above)
+#   Use the production build for demos: in `npm run dev`, drei's <Html> shows a harmless
+#   React strict-mode warning badge.
+#
+#   npm run typecheck    npm test    npm run leap:bridge    (see section 6 for the Leap)
+#
+# Keyboard (every gesture has one; keys are ignored while typing in the mission box):
+#   1 / 2 / 3   seat Maya / Ava / Leo          Tab / Shift+Tab   cycle hover
+#   P           pinch-tap the hovered thing    Enter             convene the council
+#   arrows      orbit the tree                 hold Space        handshake (approve)
+#   D           show reasoning                 R                 reset to the opening state
+#   X           swipe away a hovered item (P1, no agent endpoint yet)
+#
+# -------------------------------------------------------------------------------------
+# 4. HOW IT FITS TOGETHER
+# -------------------------------------------------------------------------------------
+#
+#   Leap ─USB─▶ Ultraleap Hand Tracking ─LeapC─▶ Ultraleap-Tracking-WS
+#                        └── ws://127.0.0.1:6437/v6.json (hand frames, JSON) ──┐
+#   lib/gestures/    frames → smoothed pointer → gesture machine ──────────────┤
+#   lib/stage/bus.ts gesture events (drops gestures not armed for the phase) ◀─┘
+#   lib/director/    decides what a gesture means, calls POST /api/council (SSE),
+#                    paces agent events into beats, signs and POSTs /api/mandate
+#   lib/stage/store  zustand slices: council (director), hand (hands), scene (room)
+#   components/      stage/room + stage/tree (room, hearth, tree, veto beat, camera),
+#                    sprites (the agents' bodies), hands (cursor, handshake ring),
+#                    hud + constraints + bundle + controls (DOM panels over the canvas)
+#   app/api/         the agents' routes: council (SSE stream) and mandate (verifies the
+#                    WebCrypto signature). Owned by the agents teammate.
+#
+# Three rules: hands talk to the scene and the scene talks to the agents; agent events
+# drive the sprites; the current phase decides which gestures work.
+#
+# Shared seams. Change these deliberately, because every area depends on them:
+#   types/stage.ts            GestureEvent, StagePhase, SpriteMood, TargetId, ConflictAttribution
+#   types/domain.ts           CouncilEvent, Mission, Bundle, CartMandate (shared with agents)
+#   lib/stage/bus.ts          emitGesture / onGesture / setArmingPolicy
+#   lib/stage/targets.ts      registry of pointable things: sprite:<id>, seat:<n>, hearth,
+#                             tree, anchor:<n>, item:<id>
+#   lib/stage/layout.ts       room layout, 1 unit = 1 ft
+#   components/stage/StageCanvas.tsx   mounts RoomLayer, SpriteLayer, HandLayer
+#
+# -------------------------------------------------------------------------------------
+# 5. HOW TO EXTEND
+# -------------------------------------------------------------------------------------
+#
+# New gesture:
+#   1. add a variant to GestureEvent in types/stage.ts
+#   2. detect it in lib/gestures/detector.ts; add a key in lib/gestures/keyboard.ts
+#   3. arm it for its phases in lib/director/arming.ts; handle it in lib/director/director.ts
+#   4. add a frame-sequence test in tests/unit/gestures/
+# New event from the agents:
+#   agree on it in types/domain.ts → handle in applyCouncilEvent (lib/stage/slices/council.ts)
+#   → beat length in lib/director/beats.ts → phase in lib/director/phase.ts → the visual
+#   reaction (components/sprites/moodStyle.ts or components/stage/tree/)
+# New family member:
+#   data/family.json + HOME_SPOTS and COUNCIL_RING.seatAngles in lib/stage/layout.ts
+#   + icon keywords in components/sprites/icons.ts + a number key in keyboard.ts
+# New mission (e.g. a birthday gift instead of a tree):
+#   catalog items (agents side), then generalize components/stage/tree/ into a
+#   "slot assembly" with a centerpiece and anchors per mission
+# Real 3D tree model:
+#   compress with gltf-transform (meshopt, not Draco, since Draco's decoder loads from a CDN),
+#   put it in public/models/, add it to AVAILABLE_TREE_MODELS in
+#   components/stage/tree/GlbTree.tsx, and name the anchors ornament_01 ... ornament_12
+#
+# -------------------------------------------------------------------------------------
+# 6. TESTING WITH LEAP HAND TRACKING
+# -------------------------------------------------------------------------------------
+#
+# Test in layers, so a failure points at one layer.
+#
+# 1) No hardware
+#    npm test runs the gesture tests (tests/unit/gestures/): frame parsing, the pointer filter,
+#    pinch tap vs drag, fist guard, handshake hold and drain, roll limits, and keys ignored
+#    while typing. One test plays the synthetic session through the real code and expects:
+#    tap Maya → drag her to seat 0 → tap the hearth → orbit → handshake complete.
+#    Visual replay: stop the real bridge first (both use port 6437), then
+#      npm run leap:synth && npm run leap:replay -- --loop
+#    and open /lab. The status pip says "Replay"; the cursor pinches, drags, convenes, and
+#    shakes hands. Turn on "ring in any phase" in leva's Hands folder to see the ring.
+#
+# 2) Is hand data reaching the Mac?
+#    Plug in the controller and check hands in the Ultraleap Control Panel visualizer.
+#    npm run leap:bridge   (builds the bridge the first time; see scripts/leap/README.md)
+#    In the app, the status pip shows:
+#      "Leap · hands"      frames are arriving with hands
+#      "Leap · no hands"   the socket is live but nothing is tracked
+#      "Keyboard"          no frames for more than 1 second
+#
+# 3) Gesture checklist on /lab (production build), aim for 10/10 each
+#    First tune leva's Hands folder: the calibration box (x range, y bottom/top in mm) so a
+#    comfortable sweep covers the screen; One-Euro minCutoff (lower if jittery at rest) and
+#    beta (higher if it lags on fast moves).
+#      Hover       open hand over a sprite            → halo, glow, eyes follow
+#      Pinch tap   quick pinch (< 0.4 s) on a sprite  → profile card; a fist never counts
+#      Pinch drag  hold, move to a ring seat, release → sprite follows and seats
+#      Convene     pinch-tap the hearth               → fire flares, council starts
+#      Orbit       open palm sweep in the bundle phase → camera orbits the tree (±70°)
+#      Handshake   hand sideways, closed grip, 1.5 s  → ring fills once, receipt appears;
+#                  releasing early drains it
+#    For misfires, tune GESTURE_CONFIG in lib/gestures/detector.ts, after first adding the
+#    failing frame sequence as a test in tests/unit/gestures/.
+#
+# 4) Record real hand data for regression
+#    npm run leap:record -- --out scripts/leap/fixtures/real-session.jsonl --seconds 60
+#    npm run leap:replay -- --file scripts/leap/fixtures/real-session.jsonl
+#    Then add a test that plays it, next to the synthetic-session test.
+#
+# 5) Failure drills before the Expo
+#    Unplug the controller mid-run: the pip flips to "Keyboard" and the demo finishes on keys.
+#    Retune under the venue lighting (bright overhead light and shiny tables hurt IR tracking).
+#    Serve over http://localhost only: the bridge has no secure WebSocket.
+#
+# Troubleshooting
+#    Socket open, no frames / "no hands"   controller unplugged or not tracking
+#    Connection closes at once (1006)      URL must end in /v6.json
+#    leap:bridge or leap:replay won't start   port 6437 is used by the other one
+#    Cursor jitters or lags                One-Euro settings in leva
+#    Pinches fire by themselves or never   GESTURE_CONFIG thresholds, or the calibration y range
+#    Handshake never completes             roll must be 60–120° and grab above 0.9
+#
+# -------------------------------------------------------------------------------------
+# 7. ROADMAP AND OPEN TASKS
+# -------------------------------------------------------------------------------------
+#
+# Before the Expo
+#   [ ] Record a real Leap session and tune calibration and thresholds on the demo laptop
+#   [ ] Turn seated sprites 3/4 toward the ring so the audience sees their eyes
+#       (components/sprites/moodStyle.ts)
+#   [ ] With the agents owner: send score and awaiting_mandate events and a threadId in the
+#       live /api/council stream, and resume the graph's interrupt() from /api/mandate
+#   [ ] Rehearse the 3-minute script and the 90-second cut on the production build
+#   [ ] Remove the old agent worktrees under .claude/worktrees/ (their branches stay)
+#
+# P1 features and where they plug in
+#   [ ] Swipe an item away → shopper swaps it: the swipe gesture exists; needs an agents endpoint
+#       to resume with {reject, itemId}. The tree re-flies only the changed ornament sets.
+#   [ ] Live onboarding with "this or that" cards (a judge becomes a guest sprite): a new
+#       onboarding phase in lib/director/, a card HUD, swipe gestures, a runtime profile
+#   [ ] Family reveal after the purchase: a card per sprite from bundle.serves
+#   [ ] Voice mission input and spoken sprite lines: in progress on branch mvp/voice
+#       (Web Speech API, push-to-talk)
+#   [ ] Webcam fallback: a MediaPipe source in lib/gestures/ producing the same HandFrame
+#   [ ] Visa agent checkout: extend lib/crypto/sign.ts to the Trusted Agent Protocol sample
+#
+# After the hackathon
+#   Multi-device councils (each person's phone runs their sprite), persisted sprite memory
+#   of past outcomes, real merchants and AP2 payment rails instead of the demo catalog.
+#
+# -------------------------------------------------------------------------------------
+# 8. WORKING RULES
+# -------------------------------------------------------------------------------------
+#
+#   - Branch from mvp/integration and merge back into it; ask before pushing to main.
+#   - Every gesture keeps a keyboard fallback.
+#   - Stay offline-first: no CDN fonts (don't use drei <Text>), no <Environment preset>.
+#   - Per-frame values are read with useStage.getState() inside useFrame, never subscribed.
+#   - Never commit next-env.d.ts, *.tsbuildinfo, .env.local, or .next/.
+#   - Before merging: npm run typecheck && npm test && npm run build

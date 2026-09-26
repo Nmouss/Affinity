@@ -4,21 +4,21 @@ import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { FamilyProfile } from "@/types/domain";
-import type { CharacterLook } from "@/types/character";
+import type { CharacterLook, EyeType } from "@/types/character";
+import { BLANK_LOOK, STARTER_LOOKS } from "@/lib/people/starters";
 import type { SpriteMood } from "@/types/stage";
 import {
-  characterFor,
+  characterForLook,
   characterTuning,
   createPose,
   poseFor,
-  type Accessory,
   type CharacterMotion,
   type Pose,
   type PoseInput,
 } from "./characterPose";
 
-// Shared procedural geometry keeps the three characters lightweight: every instance reuses the
-// same GPU buffers, while profile color and accessories provide their individual silhouettes.
+// Shared procedural geometry keeps every character lightweight: every instance reuses the same
+// GPU buffers, while per-look materials, offsets and small geometry picks provide the silhouette.
 const sphere = new THREE.SphereGeometry(1, 24, 18);
 const footGeometry = (() => {
   const geometry = sphere.clone();
@@ -73,6 +73,12 @@ function radiusAt(y: number): number {
   return 0.01;
 }
 
+/** Where the lathe body's surface sits at a given (x, y), so head accessories and brows sit flush. */
+function surfaceZ(x: number, y: number): number {
+  const radius = radiusAt(y);
+  return Math.sqrt(Math.max(0.005, radius * radius - x * x)) + 0.01;
+}
+
 const faceGeometry = (() => {
   const positions: number[] = [];
   const indices: number[] = [];
@@ -111,16 +117,88 @@ function curveGeometry(points: Array<[number, number, number]>, radius = 0.011):
   );
 }
 
+// --- Mouths (pose "smile" = show the look's mouth type; "open"/"worried" still win) -------------
+
 const smileGeometry = curveGeometry([
   [-0.063, 0.016, 0],
   [0, -0.014, 0.004],
   [0.063, 0.016, 0],
 ]);
+const grinGeometry = curveGeometry(
+  [
+    [-0.075, 0.022, 0],
+    [0, -0.028, 0.006],
+    [0.075, 0.022, 0],
+  ],
+  0.013,
+);
+const flatGeometry = curveGeometry(
+  [
+    [-0.04, 0, 0],
+    [0, 0, 0.002],
+    [0.04, 0, 0],
+  ],
+  0.01,
+);
+const catArcLeftGeometry = curveGeometry(
+  [
+    [-0.05, 0.006, 0],
+    [-0.032, -0.012, 0.003],
+    [-0.014, 0.006, 0],
+  ],
+  0.009,
+);
+const catArcRightGeometry = curveGeometry(
+  [
+    [0.014, 0.006, 0],
+    [0.032, -0.012, 0.003],
+    [0.05, 0.006, 0],
+  ],
+  0.009,
+);
+const oMouthGeometry = new THREE.TorusGeometry(0.02, 0.011, 8, 16);
 const concernGeometry = curveGeometry([
   [-0.054, -0.012, 0],
   [0, 0.009, 0.004],
   [0.054, -0.012, 0],
 ]);
+
+// --- Eyes: a tiny lid line for "sleepy" -----------------------------------------------------------
+const eyelidLineGeometry = curveGeometry(
+  [
+    [-0.02, 0, 0],
+    [0, 0.004, 0.003],
+    [0.02, 0, 0],
+  ],
+  0.006,
+);
+
+// --- Brows -----------------------------------------------------------------------------------------
+const browSoftGeometry = curveGeometry(
+  [
+    [-0.058, 0, 0],
+    [0, 0.007, 0.005],
+    [0.058, 0, 0],
+  ],
+  0.008,
+);
+const browBoldGeometry = curveGeometry(
+  [
+    [-0.068, 0.003, 0],
+    [0, 0.006, 0.006],
+    [0.068, 0.003, 0],
+  ],
+  0.016,
+);
+const browRaisedGeometry = curveGeometry(
+  [
+    [-0.058, 0.004, 0],
+    [0, 0.026, 0.006],
+    [0.058, 0.004, 0],
+  ],
+  0.01,
+);
+
 const scarfGeometry = curveGeometry(
   [
     [-0.43, 1.1, 0.35],
@@ -140,10 +218,7 @@ const scarfTailGeometry = curveGeometry(
   0.055,
 );
 
-const faceMaterial = new THREE.MeshStandardMaterial({ color: "#ffedce", roughness: 0.96, side: THREE.DoubleSide });
-const eyeMaterial = new THREE.MeshStandardMaterial({ color: "#302c2b", roughness: 0.3 });
 const glintMaterial = new THREE.MeshBasicMaterial({ color: "#fff7e6", toneMapped: false });
-const blushMaterial = new THREE.MeshStandardMaterial({ color: "#eab7a1", roughness: 0.9 });
 const mouthMaterial = new THREE.MeshStandardMaterial({ color: "#805d4d", roughness: 0.9 });
 
 interface SpringValue {
@@ -181,7 +256,109 @@ function Pebble({
   return <mesh geometry={sphere} material={material} position={position} scale={scale} />;
 }
 
-function Details({ accessory, accent }: { accessory: Accessory; accent: THREE.Material }) {
+/** One eyeball's geometry/decoration, keyed off EyeType. `sizeMul` comes from look.eyes.size. */
+function EyeShape({
+  type,
+  material,
+  sizeMul,
+}: {
+  type: EyeType;
+  material: THREE.Material;
+  sizeMul: number;
+}) {
+  switch (type) {
+    case "dot":
+      return <mesh geometry={sphere} material={material} scale={[0.024 * sizeMul, 0.024 * sizeMul, 0.02 * sizeMul]} />;
+    case "sleepy":
+      return (
+        <group>
+          <mesh
+            geometry={sphere}
+            material={material}
+            position={[0, -0.006, 0]}
+            scale={[0.034 * sizeMul, 0.02 * sizeMul, 0.02 * sizeMul]}
+          />
+          <mesh
+            geometry={eyelidLineGeometry}
+            material={material}
+            position={[0, 0.009, 0.019]}
+            scale={[sizeMul, sizeMul, sizeMul]}
+          />
+        </group>
+      );
+    case "sparkle":
+      return (
+        <group>
+          <mesh geometry={sphere} material={material} scale={[0.04 * sizeMul, 0.05 * sizeMul, 0.024 * sizeMul]} />
+          <mesh
+            geometry={sphere}
+            material={glintMaterial}
+            position={[-0.009, 0.017, 0.021]}
+            scale={[0.009 * sizeMul, 0.01 * sizeMul, 0.005 * sizeMul]}
+          />
+          <mesh
+            geometry={sphere}
+            material={glintMaterial}
+            position={[0.008, -0.012, 0.02]}
+            scale={[0.006 * sizeMul, 0.007 * sizeMul, 0.004 * sizeMul]}
+          />
+        </group>
+      );
+    case "wide":
+      return (
+        <group>
+          <mesh geometry={sphere} material={material} scale={[0.045 * sizeMul, 0.045 * sizeMul, 0.024 * sizeMul]} />
+          <mesh
+            geometry={sphere}
+            material={glintMaterial}
+            position={[-0.01, 0.016, 0.021]}
+            scale={[0.009 * sizeMul, 0.01 * sizeMul, 0.005 * sizeMul]}
+          />
+        </group>
+      );
+    case "oval":
+    default:
+      return (
+        <group>
+          <mesh geometry={sphere} material={material} scale={[0.032 * sizeMul, 0.047 * sizeMul, 0.021 * sizeMul]} />
+          <mesh
+            geometry={sphere}
+            material={glintMaterial}
+            position={[-0.008, 0.015, 0.018]}
+            scale={[0.008 * sizeMul, 0.009 * sizeMul, 0.004 * sizeMul]}
+          />
+        </group>
+      );
+  }
+}
+
+/** Above the eyes, following eye spacing/height plus the brow type's own shape and placement. */
+function Brows({
+  type,
+  spacing,
+  heightOffset,
+  material,
+}: {
+  type: CharacterLook["brows"]["type"];
+  spacing: number;
+  heightOffset: number;
+  material: THREE.Material;
+}) {
+  if (type === "none") return null;
+  const geometry = type === "bold" ? browBoldGeometry : type === "raised" ? browRaisedGeometry : browSoftGeometry;
+  const y = 1.63 + 0.1 + heightOffset + (type === "raised" ? 0.02 : 0);
+  return (
+    <>
+      {[-1, 1].map((side) => {
+        const x = side * spacing;
+        return <mesh key={side} geometry={geometry} material={material} position={[x, y, surfaceZ(x, y) + 0.004]} />;
+      })}
+    </>
+  );
+}
+
+function Details({ look, accent }: { look: CharacterLook; accent: THREE.Material }) {
+  const accessory = look.accessory.type;
   if (accessory === "scarf") {
     return (
       <group>
@@ -209,13 +386,73 @@ function Details({ accessory, accent }: { accessory: Accessory; accent: THREE.Ma
       </group>
     );
   }
-  return (
-    <group position={[0.33, 1.98, 0.1]} rotation={[0.1, -0.1, -0.28]}>
-      <Pebble position={[-0.1, 0, 0]} scale={[0.15, 0.1, 0.055]} material={accent} />
-      <Pebble position={[0.1, 0, 0]} scale={[0.15, 0.1, 0.055]} material={accent} />
-      <Pebble position={[0, 0, 0.035]} scale={[0.065, 0.065, 0.06]} material={accent} />
-    </group>
-  );
+  if (accessory === "bow") {
+    return (
+      <group position={[0.33, 1.98, 0.1]} rotation={[0.1, -0.1, -0.28]}>
+        <Pebble position={[-0.1, 0, 0]} scale={[0.15, 0.1, 0.055]} material={accent} />
+        <Pebble position={[0.1, 0, 0]} scale={[0.15, 0.1, 0.055]} material={accent} />
+        <Pebble position={[0, 0, 0.035]} scale={[0.065, 0.065, 0.06]} material={accent} />
+      </group>
+    );
+  }
+  if (accessory === "glasses") {
+    const spacing = 0.16 + look.eyes.spacing * 0.05;
+    const y = 1.63 + look.eyes.height * 0.06;
+    const z = surfaceZ(spacing, y) + 0.02;
+    const bridgeLength = Math.max(0.01, spacing * 2 - 0.09);
+    return (
+      <group>
+        {[-1, 1].map((side) => (
+          <mesh key={side} material={accent} position={[side * spacing, y, z]}>
+            <torusGeometry args={[0.045, 0.008, 8, 20]} />
+          </mesh>
+        ))}
+        <mesh material={accent} position={[0, y, z]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.006, 0.006, bridgeLength, 8]} />
+        </mesh>
+      </group>
+    );
+  }
+  if (accessory === "beanie") {
+    return (
+      <group>
+        <mesh geometry={sphere} material={accent} position={[0, 2, 0]} scale={[0.44, 0.24, 0.44]} />
+        <Pebble position={[0, 2.17, 0]} scale={[0.09, 0.09, 0.09]} material={accent} />
+      </group>
+    );
+  }
+  if (accessory === "flower") {
+    return (
+      <group position={[0.33, 1.98, 0.1]} rotation={[0.1, -0.1, 0]}>
+        {Array.from({ length: 5 }, (_, index) => {
+          const angle = (index / 5) * Math.PI * 2;
+          return (
+            <Pebble
+              key={index}
+              position={[Math.cos(angle) * 0.045, Math.sin(angle) * 0.045, 0.012]}
+              scale={[0.03, 0.045, 0.02]}
+              material={accent}
+            />
+          );
+        })}
+        <Pebble position={[0, 0, 0.024]} scale={[0.028, 0.028, 0.022]} material={accent} />
+      </group>
+    );
+  }
+  if (accessory === "antenna") {
+    return (
+      <group position={[0, 2.13, -0.02]}>
+        <mesh material={accent} position={[0, 0.12, 0]}>
+          <cylinderGeometry args={[0.006, 0.006, 0.24, 8]} />
+        </mesh>
+        <mesh position={[0, 0.25, 0]}>
+          <sphereGeometry args={[0.045, 12, 10]} />
+          <meshStandardMaterial color={look.accessory.color} emissive={look.accessory.color} emissiveIntensity={0.9} toneMapped={false} />
+        </mesh>
+      </group>
+    );
+  }
+  return null;
 }
 
 export interface CharacterModelProps {
@@ -224,7 +461,7 @@ export interface CharacterModelProps {
   gaze: MutableRefObject<{ x: number; y: number }>;
   /** Locomotion from SpriteToken (walk speed, gait, jump and landing times). */
   motion?: MutableRefObject<CharacterMotion>;
-  /** How the person looks (People Maker). Not read yet: the look track renders from it. */
+  /** How the person looks (People Maker). Falls back to that profile's starter, then BLANK_LOOK. */
   look?: CharacterLook;
 }
 
@@ -238,7 +475,7 @@ const ANKLE_Y = 0.2;
 const ANKLE_Z = 0.02;
 const FOOT_MESH_OFFSET: [number, number, number] = [0, 0.16 - ANKLE_Y, 0.1 - ANKLE_Z];
 
-export function CharacterModel({ profile, mood, gaze, motion }: CharacterModelProps) {
+export function CharacterModel({ profile, mood, gaze, motion, look }: CharacterModelProps) {
   const actor = useRef<THREE.Group>(null);
   const torso = useRef<THREE.Group>(null);
   const twist = useRef<THREE.Group>(null);
@@ -248,14 +485,15 @@ export function CharacterModel({ profile, mood, gaze, motion }: CharacterModelPr
   const leftFoot = useRef<THREE.Group>(null);
   const rightFoot = useRef<THREE.Group>(null);
   const accessory = useRef<THREE.Group>(null);
-  const closedMouth = useRef<THREE.Mesh>(null);
+  const lookMouth = useRef<THREE.Group>(null);
   const openMouth = useRef<THREE.Mesh>(null);
   const worriedMouth = useRef<THREE.Mesh>(null);
   const time = useRef(0);
   const stateTime = useRef(0);
   const previousMood = useRef<SpriteMood>(mood.current);
 
-  const character = characterFor(profile.id);
+  const resolvedLook = look ?? STARTER_LOOKS[profile.id] ?? BLANK_LOOK;
+  const character = characterForLook(resolvedLook, profile.id);
 
   const springs = useRef({
     lift: spring(),
@@ -289,22 +527,49 @@ export function CharacterModel({ profile, mood, gaze, motion }: CharacterModelPr
   const pose = useRef<Pose>(createPose());
 
   const materials = useMemo(() => {
-    const core = new THREE.Color(profile.colors[0] ?? "#ffffff");
-    const accentColor = new THREE.Color(profile.colors[1] ?? profile.colors[0] ?? "#d8b37d");
-    const body = core.clone().lerp(accentColor, profile.id === "wife" ? 0.32 : 0.12);
+    const body = new THREE.Color(resolvedLook.bodyColor);
     return {
-      skin: new THREE.MeshStandardMaterial({ color: body, roughness: 0.82, emissive: body, emissiveIntensity: 0.025 }),
-      accent: new THREE.MeshStandardMaterial({ color: accentColor, roughness: 0.78 }),
+      body: new THREE.MeshStandardMaterial({ color: body, roughness: 0.82, emissive: body, emissiveIntensity: 0.025 }),
+      accent: new THREE.MeshStandardMaterial({ color: resolvedLook.accessory.color, roughness: 0.78 }),
+      face: new THREE.MeshStandardMaterial({ color: resolvedLook.skin, roughness: 0.96, side: THREE.DoubleSide }),
+      eye: new THREE.MeshStandardMaterial({ color: resolvedLook.eyes.color, roughness: 0.3 }),
+      brow: new THREE.MeshStandardMaterial({
+        color: new THREE.Color(resolvedLook.eyes.color).lerp(new THREE.Color("#1a120b"), 0.45),
+        roughness: 0.5,
+      }),
+      cheek: new THREE.MeshStandardMaterial({ color: resolvedLook.cheeks.color, roughness: 0.9 }),
     };
-  }, [profile.colors, profile.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    resolvedLook.bodyColor,
+    resolvedLook.accessory.color,
+    resolvedLook.skin,
+    resolvedLook.eyes.color,
+    resolvedLook.cheeks.color,
+  ]);
 
   useEffect(
     () => () => {
-      materials.skin.dispose();
+      materials.body.dispose();
       materials.accent.dispose();
+      materials.face.dispose();
+      materials.eye.dispose();
+      materials.brow.dispose();
+      materials.cheek.dispose();
     },
     [materials],
   );
+
+  const eyeSizeMul = 1 + 0.3 * resolvedLook.eyes.size;
+  const eyeSpacing = 0.16 + resolvedLook.eyes.spacing * 0.05;
+  const lookMouthGeometry =
+    resolvedLook.mouth.type === "grin"
+      ? grinGeometry
+      : resolvedLook.mouth.type === "flat"
+        ? flatGeometry
+        : resolvedLook.mouth.type === "smile"
+          ? smileGeometry
+          : null; // "o" and "cat" are built from primitives directly below
 
   useFrame((state, rawDelta) => {
     if (
@@ -353,7 +618,7 @@ export function CharacterModel({ profile, mood, gaze, motion }: CharacterModelPr
 
     eyes.current.position.y = THREE.MathUtils.damp(
       eyes.current.position.y,
-      1.63 + gaze.current.y * 0.025 + target.eyeLift * 0.02,
+      1.63 + resolvedLook.eyes.height * 0.06 + gaze.current.y * 0.025 + target.eyeLift * 0.02,
       12,
       delta,
     );
@@ -392,47 +657,62 @@ export function CharacterModel({ profile, mood, gaze, motion }: CharacterModelPr
     const mouthOpen = target.mouth === "open";
     openMouth.current!.visible = mouthOpen;
     openMouth.current!.scale.y = 0.018 + Math.min(1, target.mouthOpen) * 0.05;
-    closedMouth.current!.visible = target.mouth === "smile";
     worriedMouth.current!.visible = target.mouth === "worried";
-    materials.skin.emissiveIntensity = target.glow;
+    if (lookMouth.current) lookMouth.current.visible = target.mouth === "smile";
+    materials.body.emissiveIntensity = target.glow;
   });
 
   return (
     <group ref={actor} position-y={BASE_Y}>
       <group ref={torso} position-y={0.34}>
         <group ref={twist} position-y={-0.34}>
-          <mesh geometry={bodyGeometry} material={materials.skin} castShadow receiveShadow />
-          <mesh geometry={faceGeometry} material={faceMaterial} />
+          <mesh geometry={bodyGeometry} material={materials.body} castShadow receiveShadow />
+          <mesh geometry={faceGeometry} material={materials.face} />
           <group ref={eyes} position={[0, 1.63, 0.454]}>
             {[-1, 1].map((side) => (
-              <group key={side} position={[side * 0.16, 0, 0]}>
-                <mesh geometry={sphere} material={eyeMaterial} scale={[0.032, 0.047, 0.021]} />
-                <mesh geometry={sphere} material={glintMaterial} position={[-0.008, 0.015, 0.018]} scale={[0.008, 0.009, 0.004]} />
+              <group key={side} position={[side * eyeSpacing, 0, 0]}>
+                <EyeShape type={resolvedLook.eyes.type} material={materials.eye} sizeMul={eyeSizeMul} />
               </group>
             ))}
           </group>
-          {[-1, 1].map((side) => (
-            <Pebble key={side} position={[side * 0.233, 1.49, 0.435]} scale={[0.052, 0.023, 0.012]} material={blushMaterial} />
-          ))}
-          <mesh ref={closedMouth} geometry={smileGeometry} material={mouthMaterial} position={[0, 1.46, 0.499]} />
+          <Brows
+            type={resolvedLook.brows.type}
+            spacing={eyeSpacing}
+            heightOffset={resolvedLook.brows.height * 0.05}
+            material={materials.brow}
+          />
+          {resolvedLook.cheeks.on &&
+            [-1, 1].map((side) => (
+              <Pebble key={side} position={[side * 0.233, 1.49, 0.435]} scale={[0.052, 0.023, 0.012]} material={materials.cheek} />
+            ))}
+          <group ref={lookMouth} position={[0, 1.46, 0.499]}>
+            {lookMouthGeometry && <mesh geometry={lookMouthGeometry} material={mouthMaterial} />}
+            {resolvedLook.mouth.type === "o" && <mesh geometry={oMouthGeometry} material={mouthMaterial} />}
+            {resolvedLook.mouth.type === "cat" && (
+              <>
+                <mesh geometry={catArcLeftGeometry} material={mouthMaterial} />
+                <mesh geometry={catArcRightGeometry} material={mouthMaterial} />
+              </>
+            )}
+          </group>
           <mesh ref={worriedMouth} geometry={concernGeometry} material={mouthMaterial} position={[0, 1.46, 0.499]} visible={false} />
           <mesh ref={openMouth} geometry={sphere} material={mouthMaterial} position={[0, 1.46, 0.502]} scale={[0.042, 0.04, 0.008]} visible={false} />
           <group ref={leftArm} position={[-0.49, 1.24, 0.105]}>
-            <mesh geometry={armGeometry} material={materials.skin} castShadow />
+            <mesh geometry={armGeometry} material={materials.body} castShadow />
           </group>
           <group ref={rightArm} position={[0.49, 1.24, 0.105]}>
-            <mesh geometry={armGeometry} material={materials.skin} castShadow />
+            <mesh geometry={armGeometry} material={materials.body} castShadow />
           </group>
           <group ref={accessory}>
-            <Details accessory={character.accessory} accent={materials.accent} />
+            <Details look={resolvedLook} accent={materials.accent} />
           </group>
         </group>
       </group>
       <group ref={leftFoot} position={[-0.205, ANKLE_Y, ANKLE_Z]}>
-        <mesh geometry={footGeometry} material={materials.skin} position={FOOT_MESH_OFFSET} scale={[0.132, 0.175, 0.2]} castShadow />
+        <mesh geometry={footGeometry} material={materials.body} position={FOOT_MESH_OFFSET} scale={[0.132, 0.175, 0.2]} castShadow />
       </group>
       <group ref={rightFoot} position={[0.205, ANKLE_Y, ANKLE_Z]}>
-        <mesh geometry={footGeometry} material={materials.skin} position={FOOT_MESH_OFFSET} scale={[0.132, 0.175, 0.2]} castShadow />
+        <mesh geometry={footGeometry} material={materials.body} position={FOOT_MESH_OFFSET} scale={[0.132, 0.175, 0.2]} castShadow />
       </group>
     </group>
   );

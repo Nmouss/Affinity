@@ -1,0 +1,62 @@
+[
+  {
+    "id": "trail-mug",
+    "name": "Trailguard Insulated Mug",
+    "category": "cabin_supplies",
+    "price": 34,
+    "imageUrl": "/demo-assets/trailguard-mug.png",
+    "attributes": { "durability": 0.96, "compactness": 0.62, "simpleControls": 0.72, "expressiveStyle": 0.2 },
+    "facts": { "material": "stainless_steel", "capacity_oz": 16, "fragile": false },
+    "satisfies": { "no_fragile_glass": true, "one_hand_operation": true }
+  },
+  {
+    "id": "easy-press",
+    "name": "Easy Press Travel Brewer",
+    "category": "cabin_supplies",
+    "price": 42,
+    "imageUrl": "/demo-assets/easy-press.png",
+    "attributes": { "durability": 0.9, "compactness": 0.94, "simpleControls": 0.96, "expressiveStyle": 0.32 },
+    "facts": { "material": "stainless_steel_and_polymer", "capacity_oz": 12, "controls": "single_press", "fragile": false },
+    "satisfies": { "no_fragile_glass": true, "one_hand_operation": true }
+  },
+  {
+    "id": "basic-pump",
+    "name": "Basic Pump Brewer",
+    "category": "cabin_supplies",
+    "price": 24,
+    "imageUrl": "/demo-assets/basic-pump.png",
+    "attributes": { "durability": 0.45, "compactness": 0.7, "simpleControls": 0.42, "expressiveStyle": 0.18 },
+    "facts": { "material": "glass_and_plastic", "capacity_oz": 12, "controls": "manual_pump", "fragile": true },
+    "satisfies": { "no_fragile_glass": false, "one_hand_operation": false }
+  },
+  {
+    "id": "classic-press",
+    "name": "Classic Compact Press",
+    "category": "cabin_supplies",
+    "price": 37,
+    "imageUrl": "/demo-assets/classic-press.png",
+    "attributes": { "durability": 0.66, "compactness": 0.5, "simpleControls": 0.68, "expressiveStyle": 0.42 },
+    "facts": { "material": "steel_and_glass", "capacity_oz": 14, "fragile": true },
+    "satisfies": { "no_fragile_glass": false, "one_hand_operation": true }
+  },
+  {
+    "id": "smart-press",
+    "name": "Smart Dial Brewer",
+    "category": "cabin_supplies",
+    "price": 48,
+    "imageUrl": "/demo-assets/smart-dial.png",
+    "attributes": { "durability": 0.7, "compactness": 0.58, "simpleControls": 0.35, "expressiveStyle": 0.72 },
+    "facts": { "material": "steel_and_polymer", "capacity_oz": 14, "controls": "multi_mode_dial", "fragile": false },
+    "satisfies": { "no_fragile_glass": true, "one_hand_operation": true }
+  },
+  {
+    "id": "colorway-press",
+    "name": "Colorway Press Brewer",
+    "category": "cabin_supplies",
+    "price": 39,
+    "imageUrl": "/demo-assets/colorway-press.png",
+    "attributes": { "durability": 0.88, "compactness": 0.72, "simpleControls": 0.78, "expressiveStyle": 0.98 },
+    "facts": { "material": "steel_and_polymer", "capacity_oz": 12, "finish": "coral_and_cobalt", "fragile": false },
+    "satisfies": { "no_fragile_glass": true, "one_hand_operation": true }
+  }
+]

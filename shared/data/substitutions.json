@@ -1,0 +1,22 @@
+[
+  {
+    "name": "allowed_lower_cost_alternative",
+    "request": { "missionId": "cabin-trip", "currentProductId": "smart-press", "replacementProductId": "easy-press", "savings": 6 },
+    "expected": {
+      "decision": "allow",
+      "message": "The replacement saves $6.00 and preserves every rule and confirmed requirement.",
+      "actions": []
+    }
+  },
+  {
+    "name": "pause_one_hand_requirement_violation",
+    "request": { "missionId": "cabin-trip", "currentProductId": "easy-press", "replacementProductId": "basic-pump", "savings": 18 },
+    "expected": {
+      "decision": "pause",
+      "affectedShopperId": "maya",
+      "violatedRequirement": "one_hand_operation",
+      "message": "This replacement conflicts with Maya's confirmed one-hand requirement.",
+      "actions": ["choose_alternative", "ask_maya", "override_with_approval"]
+    }
+  }
+]

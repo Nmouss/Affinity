@@ -1,0 +1,29 @@
+[
+  {
+    "id": "premium-cabin",
+    "name": "Premium Cabin Bundle",
+    "productIds": ["trail-mug", "classic-press", "colorway-press"],
+    "totalPrice": 110,
+    "attributes": { "durability": 0.84, "compactness": 0.72, "simpleControls": 0.82, "expressiveStyle": 0.71 },
+    "satisfies": { "no_fragile_glass": false, "one_hand_operation": true },
+    "valueScore": 0.85
+  },
+  {
+    "id": "balanced-cabin",
+    "name": "Balanced Cabin Bundle",
+    "productIds": ["easy-press", "colorway-press"],
+    "totalPrice": 81,
+    "attributes": { "durability": 0.89, "compactness": 0.83, "simpleControls": 0.87, "expressiveStyle": 0.65 },
+    "satisfies": { "no_fragile_glass": true, "one_hand_operation": true },
+    "valueScore": 0.75
+  },
+  {
+    "id": "value-cabin",
+    "name": "Value Cabin Bundle",
+    "productIds": ["trail-mug", "smart-press"],
+    "totalPrice": 82,
+    "attributes": { "durability": 0.83, "compactness": 0.6, "simpleControls": 0.535, "expressiveStyle": 0.46 },
+    "satisfies": { "no_fragile_glass": true, "one_hand_operation": true },
+    "valueScore": 0.96
+  }
+]

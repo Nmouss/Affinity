@@ -24,8 +24,8 @@ export const HOME_SPOTS: Record<string, Vec3> = {
   son: [7, 0, 1.5],
 };
 
-/** Height the sprite cores float at. */
-export const SPRITE_FLOAT_HEIGHT = 2.2;
+/** Height of a sprite's chest: its hand-tracking hit center and where ornaments launch from. */
+export const SPRITE_FLOAT_HEIGHT = 1.1;
 
 export function seatPosition(index: number): Vec3 {
   const angle = COUNCIL_RING.seatAngles[index] ?? 0;

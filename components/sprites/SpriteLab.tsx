@@ -7,11 +7,12 @@ import { COUNCIL_RING } from "@/lib/stage/layout";
 import { FAMILY } from "@/lib/stage/slices/council";
 import { useStage } from "@/lib/stage/store";
 import type { SpriteMood } from "@/types/stage";
-import { spriteTuning } from "./materials";
+import { characterTuning } from "./characterPose";
 import { SPRITE_MOODS } from "./moodStyle";
 
-// Lab-only leva controls (the panel is hidden outside /lab): glow tuning, forcing moods, the conflict
-// beat, and a simulated hand so drag-follow, hover, and eye tracking can be checked without Leap.
+// Lab-only leva controls (the panel is hidden outside /lab): character tuning, forcing moods, the
+// conflict beat, a seat/home walk toggle, and a simulated hand so drag-follow, hover, and eye
+// tracking can be checked without Leap.
 
 type SimHand = "off" | "hover" | "drag";
 
@@ -27,8 +28,20 @@ export function SpriteLab() {
   const simActive = useRef(false);
 
   const values = useControls("sprites", {
-    glow: { value: spriteTuning.glow, min: 0, max: 3, step: 0.05, onChange: (v: number) => void (spriteTuning.glow = v) },
-    rim: { value: spriteTuning.rim, min: 0, max: 4, step: 0.05, onChange: (v: number) => void (spriteTuning.rim = v) },
+    "character scale": {
+      value: characterTuning.scale,
+      min: 0.6,
+      max: 1.6,
+      step: 0.02,
+      onChange: (v: number) => void (characterTuning.scale = v),
+    },
+    "walk speed": {
+      value: characterTuning.walkSpeed,
+      min: 0.3,
+      max: 2,
+      step: 0.05,
+      onChange: (v: number) => void (characterTuning.walkSpeed = v),
+    },
     sprite: { value: "son", options: Object.fromEntries(FAMILY.map((profile) => [profile.name, profile.id])) },
     mood: { value: "thinking", options: [...SPRITE_MOODS] },
     "set mood": button(() => {
@@ -42,6 +55,12 @@ export function SpriteLab() {
         payload: { spriteId: selection.current.sprite, say: LONG_LINE, hardRules: [], wishes: [], vetoes: [] },
       }),
     ),
+    "walk: seat ↔ home": button(() => {
+      const stage = useStage.getState();
+      const { sprite } = selection.current;
+      const seat = stage.sprites[sprite]?.seat ?? null;
+      stage.seatSprite(sprite, seat === null ? 1 : null);
+    }),
     beats: folder({
       "veto (Maya vs Leo)": button(() => {
         const stage = useStage.getState();

@@ -36,6 +36,9 @@ export interface Velocity {
 
 const crowds = new Map<CrowdName, Map<string, CrowdAgent>>();
 
+// Read-only handle for browser checks (the headless walkthrough measures overlaps from it).
+if (typeof window !== "undefined") (window as unknown as { __affinityCrowds?: typeof crowds }).__affinityCrowds = crowds;
+
 export function getCrowd(name: CrowdName): Map<string, CrowdAgent> {
   let crowd = crowds.get(name);
   if (!crowd) {

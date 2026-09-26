@@ -1,0 +1,72 @@
+.receipt {
+  composes: panel from "./Panel.module.css";
+  width: min(22rem, calc(100vw - 2.5rem));
+  border-color: rgba(255, 209, 138, 0.55);
+  background: linear-gradient(160deg, rgba(64, 38, 22, 0.92), rgba(30, 19, 15, 0.92));
+  animation: receiptIn 600ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.seal {
+  margin: 0;
+  font-size: 1.6rem;
+  color: #ffd18a;
+  text-shadow: 0 0 1rem rgba(255, 209, 138, 0.8);
+}
+
+.heading {
+  margin: 0.1rem 0 0.7rem;
+  font-size: 1.3rem;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.3rem 0.8rem;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.facts dt {
+  color: #ffd18a;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+}
+
+.note {
+  margin: 0.8rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #dcc8b7;
+}
+
+.reset {
+  margin: 0.6rem 0 0;
+  font-size: 0.75rem;
+  color: #b9a494;
+}
+
+.kbd {
+  composes: kbd from "./Panel.module.css";
+}
+
+@keyframes receiptIn {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

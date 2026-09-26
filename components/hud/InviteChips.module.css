@@ -1,0 +1,62 @@
+.chips {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+  padding: 0;
+  list-style: none;
+}
+
+.chip,
+.seated {
+  display: flex;
+  align-items: center;
+  border: 1px solid;
+  border-radius: 999px;
+  background: rgba(30, 19, 15, 0.75);
+  backdrop-filter: blur(6px);
+  transition: background 200ms ease, transform 200ms ease;
+}
+
+.seated {
+  background: rgba(122, 52, 29, 0.85);
+  transform: translateY(-2px);
+  box-shadow: 0 0 1rem rgba(255, 209, 138, 0.25);
+}
+
+.toggle,
+.info {
+  border: 0;
+  background: transparent;
+  color: #fff8eb;
+  cursor: pointer;
+}
+
+.toggle {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.35rem 0.4rem 0.35rem 0.75rem;
+}
+
+.info {
+  padding: 0.35rem 0.7rem 0.35rem 0.3rem;
+  font-style: italic;
+  color: #ffd18a;
+}
+
+.toggle:focus-visible,
+.info:focus-visible {
+  outline: 2px solid #ffd18a;
+  border-radius: 999px;
+}
+
+.dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+}
+
+.kbd {
+  composes: kbd from "./Panel.module.css";
+}

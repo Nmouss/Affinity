@@ -1,0 +1,42 @@
+.form {
+  composes: panel from "../hud/Panel.module.css";
+  display: grid;
+  gap: 0.5rem;
+  width: min(36rem, calc(100vw - 2.5rem));
+}
+
+.label {
+  composes: title from "../hud/Panel.module.css";
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgba(255, 209, 138, 0.3);
+  border-radius: 0.6rem;
+  background: rgba(18, 13, 11, 0.7);
+  color: #fff8eb;
+}
+
+.input:focus {
+  outline: 2px solid rgba(255, 209, 138, 0.6);
+  outline-offset: 1px;
+}
+
+.submit {
+  composes: button from "../hud/Panel.module.css";
+  white-space: nowrap;
+}
+
+.hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #dcc8b7;
+}

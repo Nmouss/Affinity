@@ -2,9 +2,17 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  font-size: 0.9rem;
 }
 
-.hud > * {
+/* Only the panels themselves take clicks; the columns around them let the canvas through. */
+.top,
+.actions,
+.actionsLab,
+.toast,
+.left > *,
+.right > *,
+.bottom > * {
   pointer-events: auto;
 }
 
@@ -13,18 +21,192 @@
   top: 1rem;
   left: 1.25rem;
   display: flex;
-  gap: 0.75rem;
-  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  max-width: calc(100vw - 16rem);
+}
+
+.brand {
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  color: #ffe9c2;
 }
 
 .phase {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 209, 138, 0.12);
+  font-size: 0.75rem;
   color: #dcc8b7;
-  font-size: 0.875rem;
 }
 
-.mission {
+.pipLive,
+.pipReplay,
+.badge {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 0.72rem;
+  color: #dcc8b7;
+}
+
+.pipLive::before,
+.pipReplay::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.pipLive::before {
+  background: #6fe38a;
+  box-shadow: 0 0 0.5rem #6fe38a;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.pipReplay::before {
+  background: #ffb35c;
+}
+
+.badge {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid rgba(255, 209, 138, 0.35);
+  border-radius: 999px;
+}
+
+.gesture {
+  font-size: 0.72rem;
+  color: #b9a494;
+}
+
+.actions {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* On /lab the collapsed leva panel owns the top-right corner. */
+.actionsLab {
+  composes: actions;
+  right: 20rem;
+}
+
+.action {
+  composes: button from "./Panel.module.css";
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+}
+
+.action[aria-pressed="true"] {
+  background: rgba(201, 162, 39, 0.45);
+}
+
+.kbd {
+  composes: kbd from "./Panel.module.css";
+}
+
+.toast {
+  position: absolute;
+  top: 3.6rem;
+  left: 50%;
+  margin: 0;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid rgba(226, 85, 58, 0.5);
+  border-radius: 0.6rem;
+  background: rgba(60, 20, 14, 0.9);
+  color: #ffd9cf;
+  font-size: 0.82rem;
+  transform: translateX(-50%);
+  animation: fadeIn 200ms ease-out;
+}
+
+.left {
+  position: absolute;
+  top: 3.75rem;
+  bottom: 5rem;
+  left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(26rem, calc(100vw - 2.5rem));
+  min-height: 0;
+}
+
+.left > :last-child {
+  min-height: 0;
+}
+
+.cart {
+  composes: panel from "./Panel.module.css";
+  width: min(19rem, 100%);
+  flex: none;
+  animation: fadeIn 400ms ease-out;
+}
+
+.title {
+  composes: title from "./Panel.module.css";
+}
+
+.meters {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+
+.right {
+  position: absolute;
+  top: 3.75rem;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.bottom {
   position: absolute;
   left: 50%;
-  bottom: 2rem;
+  bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   transform: translateX(-50%);
+}
+
+.caption {
+  margin: 0;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(18, 13, 11, 0.6);
+  color: #ffe9c2;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  animation: fadeIn 300ms ease-out;
+}
+
+.mandate {
+  margin-top: 0.6rem;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

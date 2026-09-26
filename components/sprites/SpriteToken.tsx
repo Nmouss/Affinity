@@ -6,6 +6,15 @@ import { Html, Sparkles } from "@react-three/drei";
 import { easing } from "maath";
 import { Color, Vector3, type Group } from "three";
 import { SpeechBubble } from "@/components/council/SpeechBubble";
+import {
+  getAgents,
+  radiusForScale,
+  registerAgent,
+  resolveOverlaps,
+  steer,
+  unregisterAgent,
+  type CrowdAgent,
+} from "@/lib/people/crowd";
 import { lobbySpot, useLook } from "@/lib/people/roster";
 import { restSpot, seatedCount } from "@/lib/stage/slices/council";
 import { activeSeatCount, SPRITE_FLOAT_HEIGHT, seatAngles, seatPosition } from "@/lib/stage/layout";
@@ -47,6 +56,11 @@ const WALK_FACING_SPEED = 0.4;
 /** Numeric MoodStyle dials that are damped every frame. */
 const DIALS = ["scale", "orbitSpeed", "rimFlash", "aura"] as const satisfies ReadonlyArray<keyof MoodStyle>;
 
+// Every SpriteToken in the living room shares one "room" crowd (lib/people/crowd.ts). Only one of
+// them needs to call resolveOverlaps each animation frame; this module-level frame-stamp guard
+// lets whichever sprite's useFrame runs first this tick do it for everybody.
+let roomResolvedAt = -1;
+
 /** Side seats grow their bubbles outward (as seen from the camera) so seated bubbles don't overlap. */
 function bubbleSide(seat: number | null, activeCount: number): "left" | "center" | "right" {
   const angle = seat === null ? 0 : (seatAngles(activeCount)[seat] ?? 0);
@@ -67,6 +81,10 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
   const character = useMemo(() => characterForLook(look, id), [look, id]);
   const icons = useMemo(() => iconsForProfile(profile), [profile]);
   const bubbleY = useMemo(() => MODEL_HEIGHT * character.scale * characterTuning.scale + 0.5, [character]);
+  const radius = useMemo(
+    () => radiusForScale(character.scale * characterTuning.scale, character.width),
+    [character],
+  );
   const palette = useMemo(() => {
     const core = new Color(coreColor(colors));
     return {
@@ -86,6 +104,8 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
   );
 
   const root = useRef<Group>(null);
+  /** This sprite's entry in the "room" crowd; registered on mount, mutated in place every frame. */
+  const agentRef = useRef<CrowdAgent | null>(null);
   const lift = useRef<Group>(null);
   const body = useRef<Group>(null);
   const chest = useRef<Group>(null);
@@ -114,8 +134,6 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
       style: { ...moodStyle("idle") },
       goal: new Vector3(),
       look: new Vector3(),
-      /** Planar walk velocity, ft/s. Reused every frame so nothing allocates. */
-      velocity: new Vector3(),
     }),
     [],
   );
@@ -139,6 +157,31 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
     const [x, , z] = lobbySpot(id);
     root.current?.position.set(x, 0, z);
   }, [id]);
+
+  // Registers once per identity, at wherever the layout effect above just placed the sprite. Kept
+  // separate from the radius effect below so a look edit that resizes the character doesn't reset
+  // its walking position/velocity by re-registering a fresh agent object.
+  useEffect(() => {
+    const agent = registerAgent("room", {
+      id,
+      x: root.current?.position.x ?? 0,
+      z: root.current?.position.z ?? 0,
+      vx: 0,
+      vz: 0,
+      radius,
+      pinned: false,
+    });
+    agentRef.current = agent;
+    return () => {
+      unregisterAgent("room", id);
+      agentRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  useEffect(() => {
+    if (agentRef.current) agentRef.current.radius = radius;
+  }, [radius]);
 
   useEffect(() => (chest.current ? registerTarget(targetId, chest.current, 0.9) : undefined), [targetId]);
 
@@ -177,41 +220,64 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
     easing.damp(a, "lift", held ? DRAG_LIFT : 0, 0.15, delta);
     liftGroup.position.y = a.lift;
 
-    // Move: the hand while dragged, else walk toward the ring seat or home/guest spot.
+    // Move: the hand while dragged, else steer toward the ring seat or home/guest spot, bending
+    // around the rest of the room (lib/people/crowd.ts). oldX/oldZ are captured before this
+    // frame's shared overlap correction and this sprite's own steering, so the walk animation
+    // below reflects the sprite's *total* displacement for the frame (including any push from
+    // resolveOverlaps) and feet never skate.
     const seatIndex = sprite?.seat ?? null;
     const frameActiveCount = activeSeatCount(seatedCount(stage.sprites));
+    const [gx, , gz] = seatIndex !== null ? seatPosition(seatIndex, frameActiveCount) : restSpot(id, stage.visitors);
     const oldX = group.position.x;
     const oldZ = group.position.z;
-    if (held && hand.floorPoint) {
-      scratch.goal.set(hand.floorPoint[0], 0, hand.floorPoint[2]);
-      easing.damp3(group.position, scratch.goal, 0.07, delta);
-    } else {
-      const [gx, , gz] = seatIndex !== null ? seatPosition(seatIndex, frameActiveCount) : restSpot(id, stage.visitors);
-      scratch.goal.set(gx, 0, gz);
-      const toGoalX = scratch.goal.x - group.position.x;
-      const toGoalZ = scratch.goal.z - group.position.z;
-      const dist = Math.hypot(toGoalX, toGoalZ);
-      if (dist < WALK_STOP_EPS) {
-        group.position.x = scratch.goal.x;
-        group.position.z = scratch.goal.z;
-        scratch.velocity.set(0, 0, 0);
+    const agent = agentRef.current;
+
+    if (agent) {
+      const arrivedAtSeat = seatIndex !== null && Math.hypot(gx - agent.x, gz - agent.z) < WALK_STOP_EPS;
+      // Pinned: seated and exactly at the seat (so the ring stays exact), or held/dragged.
+      agent.pinned = held || arrivedAtSeat;
+
+      // The whole room only needs one relaxation pass a frame; whichever sprite's useFrame runs
+      // first this tick does it for everybody (see the roomResolvedAt guard above this component).
+      if (t !== roomResolvedAt) {
+        resolveOverlaps(getAgents("room"));
+        roomResolvedAt = t;
+      }
+
+      if (held && hand.floorPoint) {
+        scratch.goal.set(hand.floorPoint[0], 0, hand.floorPoint[2]);
+        group.position.x = agent.x;
+        group.position.z = agent.z;
+        easing.damp3(group.position, scratch.goal, 0.07, delta);
+        agent.x = group.position.x;
+        agent.z = group.position.z;
+        agent.vx = 0;
+        agent.vz = 0;
+      } else if (arrivedAtSeat) {
+        agent.x = gx;
+        agent.z = gz;
+        agent.vx = 0;
+        agent.vz = 0;
+        group.position.x = gx;
+        group.position.z = gz;
       } else {
         const maxSpeed = character.walkSpeed * characterTuning.walkSpeed;
-        const desiredSpeed = dist < WALK_SLOW_RADIUS ? (maxSpeed * dist) / WALK_SLOW_RADIUS : maxSpeed;
-        const dirX = toGoalX / dist;
-        const dirZ = toGoalZ / dist;
-        const currentSpeed = scratch.velocity.length();
-        const nextSpeed =
-          currentSpeed < desiredSpeed
-            ? Math.min(desiredSpeed, currentSpeed + WALK_ACCEL * delta)
-            : Math.max(desiredSpeed, currentSpeed - WALK_ACCEL * delta);
-        scratch.velocity.set(dirX * nextSpeed, 0, dirZ * nextSpeed);
-        group.position.x += scratch.velocity.x * delta;
-        group.position.z += scratch.velocity.z * delta;
-        if (Math.hypot(scratch.goal.x - group.position.x, scratch.goal.z - group.position.z) < WALK_STOP_EPS) {
-          group.position.x = scratch.goal.x;
-          group.position.z = scratch.goal.z;
+        steer(
+          agent,
+          getAgents("room"),
+          { goalX: gx, goalZ: gz, maxSpeed, accel: WALK_ACCEL, slowRadius: WALK_SLOW_RADIUS, dt: delta },
+          agent,
+        );
+        agent.x += agent.vx * delta;
+        agent.z += agent.vz * delta;
+        if (Math.hypot(gx - agent.x, gz - agent.z) < WALK_STOP_EPS) {
+          agent.x = gx;
+          agent.z = gz;
+          agent.vx = 0;
+          agent.vz = 0;
         }
+        group.position.x = agent.x;
+        group.position.z = agent.z;
       }
     }
 

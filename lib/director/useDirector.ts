@@ -28,9 +28,31 @@ export function useDirector(): { director: Director | null; flags: DirectorFlags
 
   useEffect(() => {
     const flags = readDirectorFlags(window.location);
-    const director = createDirector({ store: useStage, preferReplay: flags.preferReplay, cut90: flags.cut90 });
+    const director = createDirector({
+      store: useStage,
+      preferReplay: flags.preferReplay,
+      cut90: flags.cut90,
+      // Track B's real engines get wired in here at merge time, e.g.:
+      // voice: { recognizer: createRecognizer(), speaker: createSpeaker() }
+    });
     setMounted({ director, flags });
-    return () => director.dispose();
+
+    // speechSynthesis.speak() throws "not-allowed" until the page has had one user activation, and
+    // Leap gestures don't count as one — so the very first click or key press anywhere (e.g. pressing
+    // 1 to seat a sprite) unlocks it. Capture phase so it fires before anything stops propagation.
+    const unlock = () => {
+      director.unlockVoice();
+      window.removeEventListener("pointerdown", unlock, true);
+      window.removeEventListener("keydown", unlock, true);
+    };
+    window.addEventListener("pointerdown", unlock, true);
+    window.addEventListener("keydown", unlock, true);
+
+    return () => {
+      window.removeEventListener("pointerdown", unlock, true);
+      window.removeEventListener("keydown", unlock, true);
+      director.dispose();
+    };
   }, []);
 
   return { director: mounted?.director ?? null, flags: mounted?.flags ?? null };

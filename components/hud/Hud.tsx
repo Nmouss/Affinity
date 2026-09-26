@@ -60,6 +60,8 @@ export function Hud() {
   const profileOpenId = useStage((state) => state.profileOpenId);
   const councilSource = useStage((state) => state.councilSource);
   const error = useStage((state) => state.error);
+  const voiceStatus = useStage((state) => state.voiceStatus);
+  const voiceMuted = useStage((state) => state.voiceMuted);
 
   useEffect(() => {
     if (!error) return;
@@ -88,6 +90,16 @@ export function Hud() {
           </span>
         )}
         {flags?.cut90 && <span className={styles.badge}>90 s cut</span>}
+        {director && voiceStatus === "locked" && (
+          <button type="button" className={styles.voiceChip} onClick={() => director.unlockVoice()}>
+            Enable voice
+          </button>
+        )}
+        {voiceMuted && (
+          <span className={styles.badge}>
+            Voices muted <span className={styles.kbd}>M</span>
+          </span>
+        )}
         <span className={styles.gesture}>
           <GestureStatus />
         </span>

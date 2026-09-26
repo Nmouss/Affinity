@@ -1,0 +1,53 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: 0.6rem;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 4.5rem;
+  min-height: 4.5rem;
+  padding: 0.5rem;
+  border-radius: 1rem;
+  border: 2px solid transparent;
+  background: #fff3e0;
+  color: #6b4a2b;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.tile:hover,
+.tile[data-hand-hover] {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(230, 150, 60, 0.35);
+}
+
+.tile:focus-visible {
+  outline: 3px solid #ffb347;
+  outline-offset: 2px;
+}
+
+.selected {
+  border-color: #ff9d3d;
+  background: #ffe3bd;
+  box-shadow: 0 4px 12px rgba(230, 130, 40, 0.4);
+}
+
+.thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: center;
+  text-transform: capitalize;
+}

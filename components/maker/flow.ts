@@ -1,0 +1,381 @@
+import {
+  ACCESSORY_TYPES,
+  ADJUST,
+  BODY_PRESETS,
+  BROW_TYPES,
+  EYE_COLORS,
+  EYE_TYPES,
+  FAVORITE_COLORS,
+  MOUTH_TYPES,
+  SKIN_TONES,
+  type BodySize,
+  type CharacterLook,
+  type Circle,
+  type PartKind,
+} from "@/types/character";
+import { BLANK_LOOK, STARTER_LOOKS } from "@/lib/people/starters";
+import type { NewPerson, PersonPatch } from "@/lib/people/roster";
+
+// Pure state machine for the People Maker (/create), modeled on the Wii Mii Channel's flow:
+// Plaza -> New person -> Who is this? (circle, then size) -> Start from scratch/preset/random ->
+// Editor (tabs) -> Quit dialog. UI components dispatch actions; nothing here touches the DOM,
+// three.js, or the roster store directly (aside from the injected `save`/`update` calls below),
+// so the whole flow is exercised in flow.test.ts without React or a browser.
+
+export type MakerStep = "plaza" | "who-circle" | "who-size" | "start" | "editor" | "quit-dialog";
+
+export const EDITOR_TABS = [
+  "body",
+  "colors",
+  "eyes",
+  "brows",
+  "mouth",
+  "cheeks",
+  "accessory",
+  "name",
+] as const;
+export type EditorTab = (typeof EDITOR_TABS)[number];
+
+export const MAX_NAME_LENGTH = 12;
+
+/** The Mii-style relationship label for each body size, when the person is family (not a friend). */
+export const SIZE_RELATIONSHIP: Record<BodySize, string> = {
+  grownup: "grown-up",
+  kid: "kid",
+  little: "little one",
+};
+
+/** STARTER_LOOKS keys, with the Mii-channel-style label shown on their "start from a preset" tile. */
+export const PRESET_KEYS = ["wife", "daughter", "son"] as const;
+export const PRESET_LABELS: Record<string, string> = {
+  wife: "Maya-style",
+  daughter: "Ava-style",
+  son: "Leo-style",
+};
+
+export interface DraftPerson {
+  name: string;
+  circle: Circle;
+  /** The "grown-up/kid/little one" pick; kept only to compute body + relationship, unused after. */
+  size: BodySize;
+  relationship: string;
+  look: CharacterLook;
+  /** Set when editing an existing person: save() updates them instead of adding a new one. */
+  editingId: string | null;
+}
+
+export interface MakerState {
+  step: MakerStep;
+  tab: EditorTab;
+  draft: DraftPerson | null;
+  /** True right after a Save with an empty name; cleared the moment the name becomes non-empty. */
+  nameError: boolean;
+}
+
+export const initialMakerState: MakerState = {
+  step: "plaza",
+  tab: "body",
+  draft: null,
+  nameError: false,
+};
+
+export type MakerAction =
+  | { type: "newPerson" }
+  | { type: "editPerson"; id: string; name: string; circle: Circle; relationship: string; look: CharacterLook }
+  | { type: "pickCircle"; circle: Circle }
+  | { type: "pickSize"; size: BodySize }
+  | { type: "startScratch" }
+  | { type: "startPreset"; key: string }
+  | { type: "startRandom"; random?: () => number }
+  | { type: "setTab"; tab: EditorTab }
+  | { type: "setBody"; field: "height" | "build"; delta: number }
+  | { type: "setColor"; field: "bodyColor" | "accent" | "skin"; color: string }
+  | { type: "setPart"; part: PartKind; option: string }
+  | { type: "setPartColor"; part: "eyes" | "accessory"; color: string }
+  | { type: "adjustEyes"; field: "height" | "size" | "spacing"; delta: number }
+  | { type: "adjustBrows"; delta: number }
+  | { type: "setCheeksOn"; on: boolean }
+  | { type: "setCheeksColor"; color: string }
+  | { type: "typeChar"; char: string }
+  | { type: "backspace" }
+  | { type: "setName"; name: string }
+  | { type: "save" }
+  | { type: "quit" }
+  | { type: "quitWithoutSaving" }
+  | { type: "cancelDialog" }
+  | { type: "back" };
+
+export interface FlowDeps {
+  addPerson: (person: NewPerson) => string | null;
+  updatePerson: (id: string, patch: PersonPatch) => void;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function clampAdjust(value: number): number {
+  return clamp(value, ADJUST.min, ADJUST.max);
+}
+
+export function sanitizeName(raw: string): string {
+  return raw.replace(/[^A-Za-z ]/g, "").slice(0, MAX_NAME_LENGTH);
+}
+
+function pick<T>(options: readonly T[], random: () => number): T {
+  const index = Math.min(options.length - 1, Math.floor(random() * options.length));
+  return options[index]!;
+}
+
+/** A fresh, fully random look (body kept as given: it was already set by the who-size pick). */
+export function randomLook(body: { height: number; build: number }, random: () => number = Math.random): CharacterLook {
+  return {
+    body,
+    bodyColor: pick(FAVORITE_COLORS, random),
+    accent: pick(FAVORITE_COLORS, random),
+    skin: pick(SKIN_TONES, random),
+    eyes: { type: pick(EYE_TYPES, random), color: pick(EYE_COLORS, random), size: 0, spacing: 0, height: 0 },
+    brows: { type: pick(BROW_TYPES, random), height: 0 },
+    mouth: { type: pick(MOUTH_TYPES, random) },
+    cheeks: { on: true, color: pick(FAVORITE_COLORS, random) },
+    accessory: { type: pick(ACCESSORY_TYPES, random), color: pick(FAVORITE_COLORS, random) },
+  };
+}
+
+function cloneLook(look: CharacterLook): CharacterLook {
+  return {
+    body: { ...look.body },
+    bodyColor: look.bodyColor,
+    accent: look.accent,
+    skin: look.skin,
+    eyes: { ...look.eyes },
+    brows: { ...look.brows },
+    mouth: { ...look.mouth },
+    cheeks: { ...look.cheeks },
+    accessory: { ...look.accessory },
+  };
+}
+
+function withLook(state: MakerState, mutate: (look: CharacterLook) => CharacterLook): MakerState {
+  if (!state.draft) return state;
+  return { ...state, draft: { ...state.draft, look: mutate(cloneLook(state.draft.look)) } };
+}
+
+function applyNameChange(state: MakerState, name: string): MakerState {
+  if (!state.draft) return state;
+  return { ...state, draft: { ...state.draft, name }, nameError: state.nameError && name.trim().length === 0 };
+}
+
+/**
+ * The reducer proper. `deps` is only exercised on "save": production code passes the roster
+ * store's addPerson/updatePerson, tests pass spies so the whole wizard is exercised without React
+ * or zustand.
+ */
+export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDeps): MakerState {
+  switch (action.type) {
+    case "newPerson": {
+      if (state.step !== "plaza") return state;
+      return {
+        step: "who-circle",
+        tab: "body",
+        nameError: false,
+        draft: {
+          name: "",
+          circle: "family",
+          size: "grownup",
+          relationship: SIZE_RELATIONSHIP.grownup,
+          look: cloneLook(BLANK_LOOK),
+          editingId: null,
+        },
+      };
+    }
+
+    case "editPerson": {
+      if (state.step !== "plaza") return state;
+      return {
+        step: "editor",
+        tab: "body",
+        nameError: false,
+        draft: {
+          name: action.name,
+          circle: action.circle,
+          size: "grownup",
+          relationship: action.relationship,
+          look: cloneLook(action.look),
+          editingId: action.id,
+        },
+      };
+    }
+
+    case "pickCircle": {
+      if (state.step !== "who-circle" || !state.draft) return state;
+      const relationship = action.circle === "friend" ? "friend" : SIZE_RELATIONSHIP[state.draft.size];
+      return { ...state, step: "who-size", draft: { ...state.draft, circle: action.circle, relationship } };
+    }
+
+    case "pickSize": {
+      if (state.step !== "who-size" || !state.draft) return state;
+      const relationship = state.draft.circle === "friend" ? "friend" : SIZE_RELATIONSHIP[action.size];
+      return {
+        ...state,
+        step: "start",
+        draft: {
+          ...state.draft,
+          size: action.size,
+          relationship,
+          look: { ...cloneLook(state.draft.look), body: { ...BODY_PRESETS[action.size] } },
+        },
+      };
+    }
+
+    case "startScratch": {
+      if (state.step !== "start" || !state.draft) return state;
+      const body = { ...BODY_PRESETS[state.draft.size] };
+      return { ...state, step: "editor", tab: "body", draft: { ...state.draft, look: { ...cloneLook(BLANK_LOOK), body } } };
+    }
+
+    case "startPreset": {
+      if (state.step !== "start" || !state.draft) return state;
+      const preset = STARTER_LOOKS[action.key];
+      if (!preset) return state;
+      const body = { ...BODY_PRESETS[state.draft.size] };
+      return { ...state, step: "editor", tab: "body", draft: { ...state.draft, look: { ...cloneLook(preset), body } } };
+    }
+
+    case "startRandom": {
+      if (state.step !== "start" || !state.draft) return state;
+      const body = { ...BODY_PRESETS[state.draft.size] };
+      return {
+        ...state,
+        step: "editor",
+        tab: "body",
+        draft: { ...state.draft, look: randomLook(body, action.random ?? Math.random) },
+      };
+    }
+
+    case "setTab": {
+      if (state.step !== "editor" || !state.draft) return state;
+      return { ...state, tab: action.tab };
+    }
+
+    case "setBody": {
+      return withLook(state, (look) => {
+        look.body[action.field] = clamp(look.body[action.field] + action.delta, 0, 1);
+        return look;
+      });
+    }
+
+    case "setColor": {
+      return withLook(state, (look) => {
+        look[action.field] = action.color;
+        return look;
+      });
+    }
+
+    case "setPart": {
+      return withLook(state, (look) => {
+        // PartKind spans four differently-typed part records (EyeType/BrowType/...); `option` is
+        // validated by the UI against PART_OPTIONS[part] before it ever reaches here.
+        const part = look as unknown as Record<PartKind, { type: string }>;
+        part[action.part] = { ...part[action.part], type: action.option };
+        return look;
+      });
+    }
+
+    case "setPartColor": {
+      return withLook(state, (look) => {
+        const part = look as unknown as Record<"eyes" | "accessory", { color: string }>;
+        part[action.part] = { ...part[action.part], color: action.color };
+        return look;
+      });
+    }
+
+    case "adjustEyes": {
+      return withLook(state, (look) => {
+        look.eyes = { ...look.eyes, [action.field]: clampAdjust(look.eyes[action.field] + action.delta) };
+        return look;
+      });
+    }
+
+    case "adjustBrows": {
+      return withLook(state, (look) => {
+        look.brows = { ...look.brows, height: clampAdjust(look.brows.height + action.delta) };
+        return look;
+      });
+    }
+
+    case "setCheeksOn": {
+      return withLook(state, (look) => {
+        look.cheeks = { ...look.cheeks, on: action.on };
+        return look;
+      });
+    }
+
+    case "setCheeksColor": {
+      return withLook(state, (look) => {
+        look.cheeks = { ...look.cheeks, color: action.color };
+        return look;
+      });
+    }
+
+    case "typeChar": {
+      if (state.step !== "editor" || !state.draft) return state;
+      return applyNameChange(state, sanitizeName(state.draft.name + action.char));
+    }
+
+    case "backspace": {
+      if (state.step !== "editor" || !state.draft) return state;
+      return applyNameChange(state, state.draft.name.slice(0, -1));
+    }
+
+    case "setName": {
+      if (!state.draft) return state;
+      return applyNameChange(state, sanitizeName(action.name));
+    }
+
+    case "save": {
+      if ((state.step !== "editor" && state.step !== "quit-dialog") || !state.draft) return state;
+      const name = state.draft.name.trim();
+      if (!name) return { ...state, step: "editor", tab: "name", nameError: true };
+      const person: NewPerson = { name, circle: state.draft.circle, relationship: state.draft.relationship, look: state.draft.look };
+      if (state.draft.editingId) deps.updatePerson(state.draft.editingId, person);
+      else deps.addPerson(person);
+      return { ...initialMakerState };
+    }
+
+    case "quit": {
+      if (state.step !== "editor") return state;
+      return { ...state, step: "quit-dialog" };
+    }
+
+    case "quitWithoutSaving": {
+      if (state.step !== "quit-dialog") return state;
+      return { ...initialMakerState };
+    }
+
+    case "cancelDialog": {
+      if (state.step !== "quit-dialog") return state;
+      return { ...state, step: "editor" };
+    }
+
+    case "back": {
+      switch (state.step) {
+        case "who-circle":
+          return { ...initialMakerState };
+        case "who-size":
+          return { ...state, step: "who-circle" };
+        case "start":
+          return { ...state, step: "who-size" };
+        case "editor":
+          return { ...state, step: "quit-dialog" };
+        case "quit-dialog":
+          return { ...state, step: "editor" };
+        default:
+          return state;
+      }
+    }
+
+    default:
+      return state;
+  }
+}

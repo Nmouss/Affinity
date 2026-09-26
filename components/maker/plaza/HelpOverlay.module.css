@@ -1,0 +1,82 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(64, 37, 3, 0.45);
+  z-index: 50;
+}
+
+.card {
+  background: #fffaf1;
+  border-radius: 1.5rem;
+  padding: 1.75rem 2rem;
+  max-width: 26rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.heading {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #402503;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.icon {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: 3px solid #6f7470;
+  background: #f4f1e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rowTitle {
+  display: block;
+  color: #402503;
+  font-size: 0.95rem;
+}
+
+.rowBody {
+  display: block;
+  color: #6b4a2b;
+  font-size: 0.85rem;
+}
+
+.close {
+  align-self: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.5rem;
+  border-radius: 1rem;
+  border: none;
+  background: #4caf6d;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.close:hover,
+.close[data-hand-hover] {
+  background: #3f9b5c;
+}

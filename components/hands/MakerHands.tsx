@@ -9,6 +9,8 @@ import type { HandFrame } from "@/lib/gestures/types";
 import type { GestureEvent } from "@/types/stage";
 import { addYaw } from "@/components/maker/turntable";
 import { playBlip } from "@/components/maker/sound";
+import { usePlaza } from "@/components/maker/plaza/plazaState";
+import { GrabbingHandGlyph, PointerHandGlyph } from "@/components/maker/plaza/plazaIcons";
 import { HAND_HOVER_ATTR, HAND_TARGET_ATTR, ndcToClient, uiTargetId, uiTargetValue } from "./makerHitTest";
 import styles from "./MakerHands.module.css";
 
@@ -17,6 +19,14 @@ import styles from "./MakerHands.module.css";
 // R3F HandLayer to hit-test against — every clickable thing here is a real DOM button — so this one
 // component owns the socket, the gesture machine, and a plain requestAnimationFrame loop. Mouse and
 // keyboard keep working whether or not a hand is present; this is additive.
+//
+// It also feeds the plaza seam (components/maker/plaza/plazaState.ts): while a hand is tracked, the
+// filtered pointer is written into usePlaza every frame and the pinch-held state on every change, so
+// the plaza's 3D scene (owned by a different track) can hover/select/drag people with the same hand
+// that clicks these DOM buttons. DOM hover/click (data-hand-target) is untouched: the gesture
+// machine only ever emits pinchTap for a `ui:` target (one under a DOM [data-hand-target] element),
+// so a pinch that starts over the canvas — with no such target under it — never .click()s anything;
+// the scene reads pointer/grabbing directly to handle taps and drags on people itself.
 
 const FRAME_STALE_MS = 250;
 const ORBIT_ZONE = "[data-orbit-zone]";
@@ -28,6 +38,7 @@ function closestHandTarget(element: Element | null): HTMLElement | null {
 export function MakerHands() {
   const [present, setPresent] = useState(false);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  const [pinching, setPinching] = useState(false);
   const hoveredElement = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -75,6 +86,8 @@ export function MakerHands() {
     let lastFrame: HandFrame | null = null;
     let lastFrameAt = -Infinity;
     let raf = 0;
+    let wasPresent = false;
+    let wasPinching = false;
 
     const disconnect = connectLeap(
       (frame) => {
@@ -96,6 +109,14 @@ export function MakerHands() {
         machine.step({ t: now, hand: null }, context);
         setPresent((was) => (was ? false : was));
         setCursor((was) => (was === null ? was : null));
+        if (wasPresent) {
+          // The hand just left: hand off the plaza pointer so the scene stops hovering/dragging.
+          usePlaza.getState().setPointer(null, null);
+          if (wasPinching) usePlaza.getState().setGrabbing(false);
+          wasPresent = false;
+          wasPinching = false;
+          setPinching(false);
+        }
         return;
       }
 
@@ -118,6 +139,16 @@ export function MakerHands() {
       lastClient.y = y;
       setPresent(true);
       setCursor({ x, y });
+      wasPresent = true;
+
+      // Every frame, so the plaza scene's raycast tracks the hand as smoothly as the mouse would.
+      usePlaza.getState().setPointer(pointer, "hand");
+      const pinchingNow = machine.snapshot().pinching;
+      if (pinchingNow !== wasPinching) {
+        wasPinching = pinchingNow;
+        usePlaza.getState().setGrabbing(pinchingNow);
+        setPinching(pinchingNow);
+      }
     };
     raf = requestAnimationFrame(tick);
 
@@ -125,11 +156,17 @@ export function MakerHands() {
       cancelAnimationFrame(raf);
       disconnect();
       if (hoveredElement.current) hoveredElement.current.removeAttribute(HAND_HOVER_ATTR);
+      usePlaza.getState().setPointer(null, null);
+      usePlaza.getState().setGrabbing(false);
     };
   }, []);
 
   if (!present || !cursor) return null;
-  return <div className={styles.cursor} style={{ left: cursor.x, top: cursor.y }} aria-hidden />;
+  return (
+    <div className={styles.cursor} style={{ left: cursor.x, top: cursor.y }} aria-hidden>
+      {pinching ? <GrabbingHandGlyph /> : <PointerHandGlyph />}
+    </div>
+  );
 }
 
 /** Minimal CSS.escape fallback (data-hand-target values are our own slug strings, but escape anyway). */

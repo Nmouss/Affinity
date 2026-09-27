@@ -1,4 +1,4 @@
-import type { Bundle, SpriteScore } from "@/types/domain";
+import type { Bundle, Plan, SpriteScore } from "@/types/domain";
 
 // Pure derivation of who backs one proposed item, for the review card's supporter circles.
 // Product heuristic, not science: a character "serves" an item when the backend attributed it to
@@ -63,4 +63,20 @@ export function supportSentence(supporters: readonly Supporter[], nameOf: (id: s
   if (cool.length > 0) parts.push(`${joinNames(cool)} ${cool.length === 1 ? "isn't" : "aren't"} sold yet`);
   if (parts.length === 0) return "Everyone is warm on it, nobody is set on it.";
   return `${parts.join("; ")}.`;
+}
+
+/** Supporters of a whole proposal (a plan, or a cart seen as one): "serves" means any stop or item was picked for them. */
+export function supportersForProposal(
+  participantIds: readonly string[],
+  serves: Bundle["serves"] | Plan["serves"],
+  scores: Record<string, SpriteScore>,
+): Supporter[] {
+  return participantIds
+    .map((id, index) => {
+      const servesAny = (serves[id] ?? []).length > 0;
+      const score = scores[id]?.score ?? null;
+      return { id, index, serves: servesAny, score, say: scores[id]?.say ?? null, level: supportLevel(servesAny, score) };
+    })
+    .sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level] || a.index - b.index)
+    .map(({ index: _index, ...supporter }) => supporter);
 }

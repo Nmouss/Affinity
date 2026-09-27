@@ -1,44 +1,60 @@
-/* Supporter portrait: a rounded Mii-ish body with a face patch, wrapped in a ring whose color and
-   weight say how much this character backs the item (peach/gold strong, gray-green neutral, muted cool). */
+/* Supporter portrait: a rounded Mii-ish body with a face patch inside a progress ring. The ring's
+   arc is the character's score out of ten and its color says how much they back the pick
+   (peach/gold strong, gray-green neutral, muted cool), so one glance reads the room. */
 
 .ring {
-  --ring: rgba(107, 115, 73, 0.35);
-  --ring-width: 2px;
+  --ring: rgba(107, 115, 73, 0.45);
+  --track: rgba(44, 36, 28, 0.1);
+  --fill: 0;
+  --size: 3.4rem;
   position: relative;
   display: grid;
   justify-items: center;
-  gap: 0.2rem;
+  gap: 0.25rem;
   list-style: none;
-  width: 4rem;
+  width: calc(var(--size) + 0.8rem);
   cursor: help;
   outline: none;
 }
 
-.body {
-  width: 2.7rem;
-  height: 2.7rem;
+.large {
+  --size: 4.1rem;
+}
+
+.arc {
+  width: var(--size);
+  height: var(--size);
   border-radius: 50%;
-  border: 3px solid;
-  box-shadow: 0 0 0 var(--ring-width) var(--ring), 0 6px 14px rgba(44, 36, 28, 0.14);
-  display: grid;
-  place-items: center;
+  padding: 0.28rem;
+  background: conic-gradient(var(--ring) calc(var(--fill) * 1turn), var(--track) 0);
+  box-shadow: 0 6px 14px rgba(44, 36, 28, 0.14);
   transition: transform 0.08s ease, box-shadow 0.12s ease;
 }
 
-.ring:hover .body,
-.ring:focus-visible .body {
+.ring:hover .arc,
+.ring:focus-visible .arc {
   transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 0 0 calc(var(--ring-width) + 2px) var(--ring), 0 10px 20px rgba(44, 36, 28, 0.18);
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.22), 0 10px 20px rgba(44, 36, 28, 0.18);
+}
+
+.body {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid;
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 0 0 2px #fffaf1;
 }
 
 .face {
-  width: 1.55rem;
-  height: 1.25rem;
+  width: 52%;
+  height: 42%;
   border-radius: 45% 45% 50% 50%;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.32rem;
+  gap: 18%;
 }
 
 .eye {
@@ -49,17 +65,32 @@
 
 .pickedFor {
   position: absolute;
-  top: -0.25rem;
-  right: 0.35rem;
+  top: -0.2rem;
+  right: 0.2rem;
   width: 1.15rem;
   height: 1.15rem;
   border-radius: 50%;
   background: #ffb347;
   color: #2c241c;
-  font-size: 0.7rem;
-  line-height: 1.15rem;
-  text-align: center;
+  display: grid;
+  place-items: center;
   border: 1.5px solid rgba(44, 36, 28, 0.22);
+}
+
+.score {
+  position: absolute;
+  bottom: 1.45rem;
+  right: 0.1rem;
+  min-width: 1.35rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #fffaf1;
+  border: 1.5px solid rgba(44, 36, 28, 0.18);
+  color: #2c241c;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.1rem;
+  text-align: center;
 }
 
 .name {
@@ -72,9 +103,10 @@
   white-space: nowrap;
 }
 
-.strong { --ring: #ffb347; --ring-width: 4px; }
-.neutral { --ring: rgba(107, 115, 73, 0.45); --ring-width: 2px; }
-.cool { --ring: rgba(44, 36, 28, 0.18); --ring-width: 2px; }
+.strong { --ring: #ffb347; }
+.neutral { --ring: #8fa06a; }
+.cool { --ring: #b9a99b; }
 .cool .body { opacity: 0.7; }
-.unknown { --ring: rgba(44, 36, 28, 0.12); --ring-width: 2px; }
+.unknown { --ring: rgba(44, 36, 28, 0.18); --track: rgba(44, 36, 28, 0.06); }
 .unknown .body { opacity: 0.8; }
+.unknown .arc { background: repeating-conic-gradient(var(--track) 0 6deg, transparent 6deg 12deg); }

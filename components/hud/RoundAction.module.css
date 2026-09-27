@@ -1,0 +1,85 @@
+/* Round icon button with a label beneath, in the plaza rails' materials (cream fill, soft outline,
+   gray-green glow on hover/hand-hover, compress on press). The dark theme is the living-room HUD. */
+.round {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+}
+
+.icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 209, 138, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  display: grid;
+  place-items: center;
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.small .icon {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.label {
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.round:hover:not(:disabled) .icon,
+.round[data-hand-hover]:not(:disabled) .icon {
+  box-shadow: 0 0 0 3px rgba(255, 209, 138, 0.35), 0 12px 28px rgba(0, 0, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+.round:active:not(:disabled) .icon {
+  transform: scale(0.94);
+}
+
+.round:focus-visible {
+  outline: none;
+}
+
+.round:focus-visible .icon {
+  outline: 2px solid #ffd18a;
+  outline-offset: 3px;
+}
+
+.round:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.approve .icon { background: rgba(42, 132, 79, 0.55); border-color: #63c58a; }
+.swap .icon { border-color: #f4a340; }
+.cancel .icon { border-color: rgba(235, 97, 77, 0.6); color: #ffd3cc; }
+
+.plaza .icon {
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  background: #f7f1e8;
+  box-shadow: 0 12px 28px rgba(44, 36, 28, 0.12);
+  color: #2c241c;
+}
+
+.plaza:hover:not(:disabled) .icon,
+.plaza[data-hand-hover]:not(:disabled) .icon {
+  background: #eef0e4;
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.28), 0 12px 28px rgba(44, 36, 28, 0.12);
+}
+
+.plaza:focus-visible .icon {
+  outline: 2px solid #6b7349;
+}
+
+.plaza.approve .icon { background: #dce4c8; border-color: rgba(107, 115, 73, 0.55); }
+.plaza.swap .icon { background: #eef0e4; }
+.plaza.cancel .icon { background: #f3e6e2; border-color: rgba(107, 58, 50, 0.35); color: #6b3a32; }

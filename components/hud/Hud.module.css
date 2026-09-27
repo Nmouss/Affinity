@@ -375,3 +375,35 @@
   display: inline-flex;
   line-height: 0;
 }
+
+/* Over the plaza, the side panels wear the plaza's cream instead of the living room's dark glass. */
+.plazaHud .cart {
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  background: #f7f1e8;
+  box-shadow: 0 12px 28px rgba(44, 36, 28, 0.12);
+  backdrop-filter: none;
+  color: #2c241c;
+  width: min(22rem, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding-bottom: 1rem;
+}
+
+.plazaHud .cart .meters {
+  margin-top: 0.6rem;
+}
+
+.plazaHud .cart .title {
+  color: #6b7349;
+}
+
+.decisionHeading {
+  margin: -0.35rem 0 0.7rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff4df;
+}
+
+.plazaHud .decisionHeading {
+  color: #2c241c;
+}

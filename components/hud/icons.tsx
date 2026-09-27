@@ -105,3 +105,21 @@ export function GiftIcon(props: IconProps) {
     </Glyph>
   );
 }
+
+export function MapPinIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z" />
+      <circle cx="12" cy="10" r="2.3" />
+    </Glyph>
+  );
+}
+
+export function LinkIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M10 14a4 4 0 0 0 5.7 0l2.8-2.8a4 4 0 0 0-5.7-5.7l-1.2 1.2" />
+      <path d="M14 10a4 4 0 0 0-5.7 0l-2.8 2.8a4 4 0 0 0 5.7 5.7l1.2-1.2" />
+    </Glyph>
+  );
+}

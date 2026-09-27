@@ -1,0 +1,103 @@
+diff --git a/main.c b/main.c
+index 3f19c0e..6729b61 100644
+--- a/main.c
++++ b/main.c
+@@ -18,7 +18,14 @@ static pthread_t ultraleap_thread;
+ static pthread_mutex_t ultraleap_lock;
+ static volatile bool ultraleap_thread_running = false;
+ 
+-static uint64_t previousEventID = 0;
++// Affinity patch: the tracking thread wakes the lws loop for every new frame (lws_cancel_service),
++// and each client remembers the last frame it was sent, so every client gets every frame.
++static struct lws_context* volatile ws_context = NULL;
++
++struct session_data {
++    int flags;               // bit flags (NEW, FOCUSED, BACKGROUND); first so `*((int*)user)` still works
++    uint64_t lastFrameId;    // last tracking_frame_id sent to this client
++};
+ 
+ void handleTrackingEvent(const LEAP_TRACKING_EVENT* event) {
+     pthread_mutex_lock(&ultraleap_lock);
+@@ -45,6 +52,8 @@ void handleTrackingEvent(const LEAP_TRACKING_EVENT* event) {
+     currentFrame->pHands = hands;
+     
+     pthread_mutex_unlock(&ultraleap_lock);
++
++    if (ws_context != NULL) lws_cancel_service(ws_context);
+ }
+ 
+ void* serviceMessageLoop(void* vargp) {
+@@ -95,6 +104,8 @@ static void deallocate(void* ptr, void* state) {
+ 
+ //--------------------| WEBSOCKETS CALLBACKS
+ 
++static struct lws_protocols protocols[];
++
+ static int callback_websocket(struct lws *wsi,
+                                    enum lws_callback_reasons reason,
+                                    void *user, void *in, size_t len)
+@@ -179,6 +190,10 @@ static int callback_websocket(struct lws *wsi,
+ 
+             break;
+         }
++        case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
++            // A new tracking frame arrived: ask every client connection for a write.
++            lws_callback_on_writable_all_protocol(lws_get_context(wsi), &protocols[0]);
++            break;
+         case LWS_CALLBACK_SERVER_WRITEABLE: {
+             // Check if first bit is at zero
+             if (!isBitSet(*((int*)user), NEW)) {
+@@ -221,17 +236,14 @@ static int callback_websocket(struct lws *wsi,
+             // Lock access to data (we'll read it)
+             pthread_mutex_lock(&ultraleap_lock);
+ 
+-            if (currentFrame == NULL || currentFrame->tracking_frame_id == previousEventID) {
+-                // Unlock access to data
++            struct session_data* session = (struct session_data*)user;
++            if (currentFrame == NULL || currentFrame->tracking_frame_id == session->lastFrameId) {
++                // Nothing new for this client; the next frame's wake-up will schedule a write.
+                 pthread_mutex_unlock(&ultraleap_lock);
+-
+-                // Program next send
+-                lws_callback_on_writable(wsi);
+-
+                 return 0;
+             }
+ 
+-            previousEventID = currentFrame->tracking_frame_id;
++            session->lastFrameId = currentFrame->tracking_frame_id;
+ 
+             // Create buffer
+             char* buf = (unsigned char*)malloc(LWS_SEND_BUFFER_PRE_PADDING + LEAP_FRAME_MAX_SIZE + LWS_SEND_BUFFER_POST_PADDING);
+@@ -245,9 +257,6 @@ static int callback_websocket(struct lws *wsi,
+             // Send data
+             lws_write(wsi, (buf + LWS_SEND_BUFFER_PRE_PADDING), len, LWS_WRITE_TEXT);
+ 
+-            // Program next send
+-            lws_callback_on_writable(wsi);
+-
+             // Release memory
+             free(buf);
+ 
+@@ -264,9 +273,11 @@ static int callback_websocket(struct lws *wsi,
+ 
+ static struct lws_protocols protocols[] = {
+     {
+-        NULL,
++        // Named so lws_callback_on_writable_all_protocol can find it (it matches by name); as the
++        // first entry it is still the default for clients that request no subprotocol.
++        "leap-v6",
+         callback_websocket,
+-        1 * sizeof(int)
++        sizeof(struct session_data)
+     },
+     {
+         NULL, NULL, 0   /* End of list */
+@@ -310,6 +321,7 @@ int main(void) {
+     };
+     // create lws context representing this server
+     context = lws_create_context(&context_info);
++    ws_context = context;
+ 
+     if (context == NULL) {
+         fprintf(stderr, "lws init failed\n");

@@ -19,6 +19,16 @@ if [ ! -d "$SRC_DIR/.git" ]; then
   git clone --depth 1 https://github.com/ultraleap/UltraleapTrackingWebSocket.git "$SRC_DIR"
 fi
 
+# Upstream only sends when its event loop happens to wake (~2 of 90 frames/s) and shares one
+# "last frame sent" id across clients. The patch wakes the loop per frame and tracks it per client.
+PATCH="$(cd "$(dirname "$0")" && pwd)/bridge-fps.patch"
+if git -C "$SRC_DIR" apply --reverse --check "$PATCH" 2>/dev/null; then
+  echo "Frame-rate patch already applied."
+else
+  git -C "$SRC_DIR" apply "$PATCH"
+  echo "Applied frame-rate patch."
+fi
+
 # Upstream CMake expects the SDK under /Library/Application Support, but 6.x ships it inside the app.
 # Homebrew's OpenSSL is keg-only (libwebsockets.h includes its headers), and the upstream
 # find_library call misses Homebrew's libwebsockets, so both are passed explicitly.

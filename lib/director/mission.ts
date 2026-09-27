@@ -27,6 +27,40 @@ export function buildMission(text: string, invitedSpriteIds: string[]): Mission 
     budget: parseBudget(text),
     freeText: text.trim(),
     type: "shared",
+    kind: "shopping",
     invitedSpriteIds,
+  };
+}
+
+export interface GiftMissionInput {
+  /** The person the gift is for; always invited and always first, so the ring seats them by the hearth. */
+  recipientId: string;
+  /** Family and friends who weigh in. Duplicates of the recipient are dropped. */
+  advisorIds: string[];
+  budget: number;
+  /** Defaults to Christmas: this slice is the holiday gift demo. */
+  occasion?: string;
+  /** What the shopper should look for; becomes the single shopping slot's query. */
+  slotQuery: string;
+  freeText?: string;
+}
+
+export const GIFT_SLOT_ID = "gift";
+
+/** A gift mission: one recipient whose wishes weigh double, optional advisors, one explicit shopping slot. */
+export function buildGiftMission(input: GiftMissionInput): Mission {
+  const advisors = input.advisorIds.filter((id, index, all) => id !== input.recipientId && all.indexOf(id) === index);
+  const query = input.slotQuery.trim();
+  const occasion = input.occasion?.trim() || "Christmas";
+  const budget = Number.isFinite(input.budget) && input.budget > 0 ? input.budget : DEFAULT_BUDGET;
+  return {
+    occasion,
+    budget,
+    freeText: input.freeText?.trim() || `${occasion} gift: ${query}`,
+    type: "gift",
+    kind: "shopping",
+    recipientId: input.recipientId,
+    invitedSpriteIds: [input.recipientId, ...advisors],
+    shoppingSlots: [{ id: GIFT_SLOT_ID, query, quantity: 1 }],
   };
 }

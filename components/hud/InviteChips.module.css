@@ -16,53 +16,75 @@
   list-style: none;
 }
 
+/* Name pills like the plaza's hover tags (PlazaPerson .tag): ivory, bold brown, a color dot. The
+   border color comes inline from the person's own color. */
 .chip,
 .seated {
   display: flex;
   align-items: center;
-  border: 1px solid;
-  border-radius: 999px;
-  background: rgba(30, 19, 15, 0.75);
-  backdrop-filter: blur(6px);
-  transition: background 200ms ease, transform 200ms ease;
+  border: 3px solid;
+  border-radius: var(--plaza-radius-pill);
+  background: #fffdf8;
+  color: #4a3b2a;
+  font-weight: 700;
+  box-shadow: 0 0.2rem 0.6rem rgba(60, 42, 20, 0.28);
+  transition:
+    background var(--plaza-mid) var(--plaza-ease),
+    transform var(--plaza-mid) var(--plaza-ease),
+    box-shadow var(--plaza-mid) var(--plaza-ease);
+}
+
+.chip:hover,
+.chip[data-hand-hover] {
+  transform: translateY(-2px);
+  background: var(--plaza-peach);
 }
 
 .seated {
-  background: rgba(122, 52, 29, 0.85);
+  background: var(--plaza-peach);
   transform: translateY(-2px);
-  box-shadow: 0 0 1rem rgba(255, 209, 138, 0.25);
+  box-shadow: 0 0 0 4px var(--plaza-glow), 0 0.2rem 0.6rem rgba(60, 42, 20, 0.28);
 }
 
 .toggle,
 .info {
   border: 0;
   background: transparent;
-  color: #fff8eb;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
   cursor: pointer;
+  min-height: 2.5rem;
 }
 
 .toggle {
   display: inline-flex;
-  gap: 0.4rem;
+  gap: 0.45rem;
   align-items: center;
-  padding: 0.35rem 0.4rem 0.35rem 0.75rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.8rem;
+}
+
+.toggle:active,
+.info:active {
+  transform: scale(0.96);
 }
 
 .info {
-  padding: 0.35rem 0.7rem 0.35rem 0.3rem;
+  padding: 0.35rem 0.75rem 0.35rem 0.3rem;
   font-style: italic;
-  color: #ffd18a;
+  color: #8a5a36;
 }
 
 .toggle:focus-visible,
 .info:focus-visible {
-  outline: 2px solid #ffd18a;
-  border-radius: 999px;
+  outline: 3px solid var(--plaza-gold);
+  outline-offset: 2px;
+  border-radius: var(--plaza-radius-pill);
 }
 
 .dot {
-  width: 0.6rem;
-  height: 0.6rem;
+  width: 0.65rem;
+  height: 0.65rem;
   border-radius: 50%;
 }
 

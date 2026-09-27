@@ -1,0 +1,94 @@
+/* Rounded dimensional control in the Plaza's language: cream face, brown label, lifts and glows on
+   hover (mouse or Leap hand), compresses on press, gold focus ring. */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0.55rem 1.2rem;
+  border: none;
+  border-radius: var(--plaza-radius-control);
+  background: var(--plaza-cream);
+  color: var(--plaza-text-muted);
+  font: inherit;
+  font-family: var(--plaza-font);
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  transition:
+    transform var(--plaza-fast) var(--plaza-ease),
+    box-shadow var(--plaza-mid) var(--plaza-ease),
+    background var(--plaza-mid) var(--plaza-ease);
+}
+
+.button:hover:not(:disabled),
+.button[data-hand-hover]:not(:disabled) {
+  transform: translateY(-2px);
+  background: var(--plaza-peach);
+  box-shadow: 0 0 0 4px var(--plaza-glow), 0 6px 16px rgba(230, 150, 60, 0.35);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.96);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--plaza-gold);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lg {
+  min-height: 3.25rem;
+  padding: 0.75rem 1.6rem;
+  font-size: 1.05rem;
+  border-radius: 1.1rem;
+}
+
+.primary {
+  background: #4caf6d;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(60, 150, 90, 0.35);
+}
+
+.primary:hover:not(:disabled),
+.primary[data-hand-hover]:not(:disabled) {
+  background: #3f9b5c;
+}
+
+.secondary {
+  background: var(--plaza-cream);
+}
+
+.danger {
+  background: var(--plaza-danger);
+  color: #6b1414;
+}
+
+.danger:hover:not(:disabled),
+.danger[data-hand-hover]:not(:disabled) {
+  background: #ec8f8f;
+}
+
+.ghost {
+  background: transparent;
+  box-shadow: none;
+  color: #a97a4c;
+}
+
+.ghost:hover:not(:disabled),
+.ghost[data-hand-hover]:not(:disabled) {
+  background: var(--plaza-cream);
+  color: var(--plaza-text-muted);
+  box-shadow: none;
+}

@@ -33,6 +33,7 @@ export const SPRITE_MOODS: readonly SpriteMood[] = [
   "scoring",
   "happy",
   "sad",
+  "concerned",
   "celebrating",
 ];
 
@@ -62,6 +63,8 @@ const STYLES: Record<SpriteMood, MoodStyle> = {
   scoring: { ...BASE, orbitSpeed: 1.2, aura: 0.85, facing: "hearth" },
   happy: { ...BASE, scale: 1.05, orbitSpeed: 1.2, aura: 1 },
   sad: { ...BASE, scale: 0.95, orbitSpeed: 0.2, aura: 0.4 },
+  /** A revision or repair is under way on this sprite's account: unsettled, watching the hearth. */
+  concerned: { ...BASE, scale: 0.97, orbitSpeed: 1.8, aura: 0.6, facing: "hearth" },
   celebrating: { ...BASE, scale: 1.1, orbitSpeed: 3, aura: 1, sparkles: true },
 };
 
@@ -81,7 +84,7 @@ export interface MoodInput {
 
 /** The mood a sprite shows, layering the phase and conflict beat over the stored mood. */
 export function resolveMood({ id, mood, phase, conflict, typing }: MoodInput): SpriteMood {
-  if (phase === "receipt") return "celebrating";
+  if (phase === "receipt" || phase === "checkout") return "celebrating";
   if (phase === "conflict" && conflict) {
     if (conflict.ruleBy === id) return "vetoing";
     if (conflict.wishBy === id) return "conceding";

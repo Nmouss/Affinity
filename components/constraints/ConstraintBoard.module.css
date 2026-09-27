@@ -18,8 +18,8 @@
 .sub {
   margin: 0 0 0.35rem;
   font-size: 0.78rem;
-  font-weight: 600;
-  color: #dcc8b7;
+  font-weight: 800;
+  color: #8a5a36;
 }
 
 .list {
@@ -33,10 +33,11 @@
 .rule {
   display: grid;
   gap: 0.1rem;
-  padding: 0.4rem 0.5rem;
-  border-left: 3px solid #e2553a;
-  border-radius: 0.35rem;
-  background: rgba(226, 85, 58, 0.14);
+  padding: 0.45rem 0.6rem;
+  border-left: 4px solid #d64545;
+  border-radius: 0.7rem;
+  background: #fdeaea;
+  color: var(--plaza-text);
   font-size: 0.82rem;
   animation: pop 320ms ease-out;
 }
@@ -58,9 +59,9 @@
 
 .vetoed > span:nth-child(2) {
   text-decoration: line-through;
-  text-decoration-color: #e2553a;
+  text-decoration-color: #d64545;
   text-decoration-thickness: 2px;
-  color: #dcc8b7;
+  color: #a97a4c;
 }
 
 .dot {
@@ -72,13 +73,13 @@
 
 .meta {
   font-size: 0.7rem;
-  color: #b9a494;
+  color: #a97a4c;
 }
 
 .empty {
   margin: 0;
   font-size: 0.78rem;
-  color: #b9a494;
+  color: #a97a4c;
   font-style: italic;
 }
 
@@ -98,8 +99,9 @@
   gap: 0.2rem;
   justify-items: center;
   padding: 0.5rem 0.4rem;
-  border: 2px solid #e2553a;
-  border-radius: 0.5rem;
+  border: 3px solid #d64545;
+  border-radius: 0.8rem;
+  background: #fff;
   text-align: center;
   font-size: 0.72rem;
   transform: rotate(-4deg);
@@ -111,15 +113,15 @@
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #ff6b4a;
+  color: #d64545;
 }
 
 .stampLine {
-  color: #fff8eb;
+  color: var(--plaza-text);
 }
 
 .arrow {
-  color: #ffd18a;
+  color: var(--plaza-gold);
 }
 
 @keyframes stamp {

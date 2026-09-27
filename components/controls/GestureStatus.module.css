@@ -2,11 +2,13 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.25rem 0.7rem;
-  border-radius: 999px;
-  background: rgb(18 13 11 / 0.6);
-  color: #dcc8b7;
-  font-size: 0.8rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--plaza-radius-pill);
+  background: var(--plaza-cream);
+  color: var(--plaza-text-muted);
+  font-family: var(--plaza-font);
+  font-size: 0.78rem;
+  font-weight: 700;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
@@ -15,7 +17,7 @@
   width: 0.55rem;
   height: 0.55rem;
   border-radius: 50%;
-  background: #8a7768;
+  background: #b9a494;
 }
 
 .status[data-source="leap"] .pip,
@@ -24,10 +26,10 @@
 }
 
 .status[data-source="replay"] .pip {
-  background: #8fb8ff;
+  background: #2f8fd1;
 }
 
 .status[data-live="true"] .pip {
-  background: #7ce0a0;
-  box-shadow: 0 0 8px #7ce0a0;
+  background: #4caf6d;
+  box-shadow: 0 0 8px rgba(76, 175, 109, 0.8);
 }

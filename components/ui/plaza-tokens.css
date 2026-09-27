@@ -1,0 +1,54 @@
+/* Affinity Plaza design tokens. Every value is lifted from the Character Plaza at /create
+   (components/maker/plaza/*.module.css and the People Maker panels) so HUD, council, product and
+   checkout surfaces read as one system with the Plaza. Imported once from app/globals.css. */
+
+:root {
+  /* Surfaces: dialog/card ivory (PlazaRails .confirmDialog, WhoPanel .card, QuitDialog .dialog),
+     control cream (EditorPanel .quitButton, OptionGrid .tile, StartPanel .tile). */
+  --plaza-ivory: #fffaf1;
+  --plaza-cream: #fff3e0;
+
+  /* Outlines: the gray-green ring around the round rail icons (PlazaRails .iconButton, HelpOverlay
+     .icon) and the soft tab/footer dividers (EditorPanel .tabBar / .footer). */
+  --plaza-outline: #6f7470;
+  --plaza-outline-soft: #f0dcc0;
+
+  /* Text browns: headings/messages (.confirmMessage, WhoPanel .title) and control labels
+     (.confirmButton, OptionGrid .tile). */
+  --plaza-text: #402503;
+  --plaza-text-muted: #6b4a2b;
+
+  /* Selection accents: peach hover/active fill (.iconButtonActive, .tile:hover) and gold focus ring
+     (.iconButton:focus-visible outline). The glow is the round-button hover halo. */
+  --plaza-peach: #ffe3bd;
+  --plaza-gold: #ffb347;
+  --plaza-glow: rgba(255, 209, 128, 0.55);
+
+  /* Danger surface for remove/reject controls (PlazaRails .confirmDanger). */
+  --plaza-danger: #f3b0b0;
+
+  /* Shape: dialog radius (1.5rem), control radius (0.9–1.1rem across the maker; 1rem here), pills. */
+  --plaza-radius-panel: 1.5rem;
+  --plaza-radius-control: 1rem;
+  --plaza-radius-pill: 999px;
+
+  /* Depth: resting control shadow (.iconButton) and the floating-panel shadow (.confirmDialog). */
+  --plaza-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
+  --plaza-shadow-lift: 0 20px 50px rgba(0, 0, 0, 0.25);
+
+  /* Motion: press (transform 0.08s), hover glow (0.12s), panel/bubble entrances (~0.3s). */
+  --plaza-fast: 0.08s;
+  --plaza-mid: 0.12s;
+  --plaza-slow: 0.3s;
+  --plaza-ease: ease;
+
+  --plaza-font: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --plaza-fast: 0s;
+    --plaza-mid: 0s;
+    --plaza-slow: 0s;
+  }
+}

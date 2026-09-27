@@ -3,7 +3,7 @@
   display: grid;
   gap: 0.7rem;
   width: min(20rem, calc(100vw - 2.5rem));
-  border-width: 1px 1px 1px 4px;
+  border-width: 2px 2px 2px 6px;
   animation: cardIn 280ms ease-out;
 }
 
@@ -18,25 +18,45 @@
   width: 2.4rem;
   height: 2.4rem;
   border-radius: 50%;
-  box-shadow: 0 0 1rem rgba(255, 209, 138, 0.45);
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 3px var(--plaza-outline-soft), var(--plaza-shadow);
 }
 
 .name {
   margin: 0;
   font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--plaza-text);
 }
 
 .relationship {
   margin: 0;
   font-size: 0.75rem;
-  color: #dcc8b7;
+  color: var(--plaza-text-muted);
   text-transform: capitalize;
 }
 
 .close {
   composes: kbd from "../hud/Panel.module.css";
-  background: transparent;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  background: var(--plaza-cream);
   cursor: pointer;
+  transition: background var(--plaza-mid) var(--plaza-ease), transform var(--plaza-fast) var(--plaza-ease);
+}
+
+.close:hover,
+.close[data-hand-hover] {
+  background: var(--plaza-peach);
+}
+
+.close:active {
+  transform: scale(0.94);
+}
+
+.close:focus-visible {
+  outline: 3px solid var(--plaza-gold);
+  outline-offset: 2px;
 }
 
 .sub {
@@ -55,30 +75,32 @@
 
 .love,
 .avoid {
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  border-radius: var(--plaza-radius-pill);
   font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .love {
-  background: rgba(255, 209, 138, 0.16);
-  color: #ffe9c2;
+  background: var(--plaza-peach);
+  color: var(--plaza-text-muted);
 }
 
 .avoid {
-  background: rgba(226, 85, 58, 0.16);
-  color: #ffc2b3;
+  background: var(--plaza-danger);
+  color: #6b1414;
 }
 
 .rules {
   margin: 0;
   padding-left: 1rem;
   font-size: 0.82rem;
+  color: var(--plaza-text);
 }
 
 .why,
 .none {
-  color: #b9a494;
+  color: #a97a4c;
   font-size: 0.75rem;
 }
 

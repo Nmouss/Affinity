@@ -557,6 +557,7 @@ export function poseFor(input: PoseInput, out: Pose = createPose()): Pose {
       poseSettled(input, out, since);
       break;
     case "thinking":
+    case "concerned":
       poseThinking(input, out, t);
       break;
     case "speaking":

@@ -35,6 +35,9 @@ export const ARMING_TABLE: Record<GestureType, ArmingRule> = {
   },
   orbit: { phases: ["bundle", "scoring", "awaitMandate"] },
   swipe: { phases: ["awaitMandate"], when: bundleSettled },
+  reject: { phases: ["awaitMandate"], when: bundleSettled },
+  /** Only once a council is running: nothing to retry in the lobby, and a finished run is done. */
+  retry: { phases: "all", except: ["lobby", "checkout"] },
   handshakeProgress: { phases: ["awaitMandate"], when: bundleSettled },
   handshakeComplete: { phases: ["awaitMandate"], when: bundleSettled },
 };

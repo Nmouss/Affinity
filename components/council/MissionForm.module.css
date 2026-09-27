@@ -1,7 +1,7 @@
 .form {
   composes: panel from "../hud/Panel.module.css";
   display: grid;
-  gap: 0.5rem;
+  gap: 0.55rem;
   width: min(36rem, calc(100vw - 2.5rem));
 }
 
@@ -12,31 +12,48 @@
 
 .row {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
+/* A normal text field: native cursor and editing, Plaza colors. */
 .input {
   flex: 1;
   min-width: 0;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid rgba(255, 209, 138, 0.3);
-  border-radius: 0.6rem;
-  background: rgba(18, 13, 11, 0.7);
-  color: #fff8eb;
+  min-height: 2.75rem;
+  padding: 0.6rem 0.9rem;
+  border: 2px solid var(--plaza-outline-soft);
+  border-radius: var(--plaza-radius-control);
+  background: #fff;
+  color: var(--plaza-text);
+  font-family: var(--plaza-font);
+  font-weight: 600;
+}
+
+.input::placeholder {
+  color: #a97a4c;
 }
 
 .input:focus {
-  outline: 2px solid rgba(255, 209, 138, 0.6);
+  outline: 3px solid var(--plaza-gold);
   outline-offset: 1px;
+  border-color: var(--plaza-gold);
 }
 
 .submit {
   composes: button from "../hud/Panel.module.css";
   white-space: nowrap;
+  background: #4caf6d;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(60, 150, 90, 0.35);
+}
+
+.submit:hover,
+.submit[data-hand-hover] {
+  background: #3f9b5c;
 }
 
 .hint {
   margin: 0;
   font-size: 0.8rem;
-  color: #dcc8b7;
+  color: var(--plaza-text-muted);
 }

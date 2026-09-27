@@ -1,0 +1,85 @@
+/* The Plaza's big round rail icon (PlazaRails .iconButton) for edge rails on other screens. */
+
+.wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.button {
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 50%;
+  border: 5px solid var(--plaza-outline);
+  background: #f4f1e6;
+  color: var(--plaza-text);
+  box-shadow: var(--plaza-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font: inherit;
+  transition:
+    transform var(--plaza-fast) var(--plaza-ease),
+    box-shadow var(--plaza-mid) var(--plaza-ease),
+    background var(--plaza-mid) var(--plaza-ease);
+}
+
+.button:hover:not(:disabled),
+.button[data-hand-hover]:not(:disabled) {
+  background: #fffdf6;
+  box-shadow: 0 0 0 6px var(--plaza-glow), var(--plaza-shadow);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--plaza-gold);
+  outline-offset: 3px;
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dim {
+  opacity: 0.55;
+}
+
+.active {
+  background: var(--plaza-peach);
+  box-shadow: 0 0 0 6px rgba(255, 179, 71, 0.6), var(--plaza-shadow);
+}
+
+.tooltip {
+  position: absolute;
+  left: calc(100% + 0.6rem);
+  top: 50%;
+  transform: translateY(-50%) scale(0.9);
+  background: var(--plaza-text);
+  color: #fffaf1;
+  font-family: var(--plaza-font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.6rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s var(--plaza-ease), transform 0.1s var(--plaza-ease);
+}
+
+.right .tooltip {
+  left: auto;
+  right: calc(100% + 0.6rem);
+}
+
+.button:hover ~ .tooltip,
+.button:focus-visible ~ .tooltip,
+.button[data-hand-hover] ~ .tooltip {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}

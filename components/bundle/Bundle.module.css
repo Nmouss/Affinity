@@ -28,21 +28,22 @@
 
 .score {
   font-variant-numeric: tabular-nums;
-  color: #ffd18a;
+  font-weight: 800;
+  color: #8a5a36;
 }
 
 .track {
   position: relative;
   height: 0.55rem;
   overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 248, 235, 0.1);
+  border-radius: var(--plaza-radius-pill);
+  background: var(--plaza-outline-soft);
 }
 
 .fill {
   height: 100%;
   border-radius: inherit;
-  box-shadow: 0 0 0.6rem rgba(255, 209, 138, 0.5);
+  box-shadow: 0 0 0.6rem var(--plaza-glow);
   transition: width 900ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 
@@ -50,7 +51,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 248, 235, 0.18), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
   animation: shimmer 1.2s linear infinite;
 }
 
@@ -68,9 +69,9 @@
 
 .say {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-style: italic;
-  color: #dcc8b7;
+  color: var(--plaza-text-muted);
 }
 
 @keyframes shimmer {
@@ -97,34 +98,40 @@
 
 .total {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
+  color: var(--plaza-text);
 }
 
 .budget {
-  color: #dcc8b7;
+  color: var(--plaza-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
 .under,
 .over {
   margin-left: auto;
+  padding: 0.1rem 0.55rem;
+  border-radius: var(--plaza-radius-pill);
   font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .under {
-  color: #8fd49a;
+  background: #dff3e4;
+  color: #2f7a47;
 }
 
 .over {
-  color: #ff6b4a;
+  background: var(--plaza-danger);
+  color: #6b1414;
 }
 
 .budgetTrack {
   height: 0.6rem;
   overflow: hidden;
-  border-radius: 999px;
-  background: rgba(255, 248, 235, 0.1);
+  border-radius: var(--plaza-radius-pill);
+  background: var(--plaza-outline-soft);
 }
 
 .budgetFill,
@@ -135,11 +142,11 @@
 }
 
 .budgetFill {
-  background: linear-gradient(90deg, #c9a227, #ffd18a);
+  background: linear-gradient(90deg, #ffd27a, var(--plaza-gold));
 }
 
 .budgetFillOver {
-  background: linear-gradient(90deg, #c9a227, #e2553a);
+  background: linear-gradient(90deg, var(--plaza-gold), #d64545);
 }
 
 .items {
@@ -186,7 +193,8 @@
 .price {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  color: #dcc8b7;
+  font-weight: 700;
+  color: var(--plaza-text-muted);
 }
 
 @keyframes rise {

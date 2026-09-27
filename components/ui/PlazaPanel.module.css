@@ -1,0 +1,43 @@
+/* Rounded ivory panel (PlazaRails .confirmDialog / WhoPanel .card). Opaque so it stays readable over
+   the dark living room as well as the bright plaza. */
+
+.panel {
+  position: relative;
+  padding: 1rem 1.15rem;
+  border: 2px solid var(--plaza-outline-soft);
+  border-radius: var(--plaza-radius-panel);
+  background: var(--plaza-ivory);
+  color: var(--plaza-text);
+  font-family: var(--plaza-font);
+  box-shadow: var(--plaza-shadow-lift);
+  animation: panelIn var(--plaza-slow) cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.title {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--plaza-text);
+}
+
+.celebrate {
+  border-color: var(--plaza-gold);
+  background: linear-gradient(160deg, #fffaf1, var(--plaza-peach));
+  box-shadow: 0 0 0 6px var(--plaza-glow), var(--plaza-shadow-lift);
+}
+
+.warning {
+  border-color: #e0a458;
+  background: linear-gradient(160deg, #fffaf1, #fff0d6);
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(0.6rem) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

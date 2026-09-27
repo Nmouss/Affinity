@@ -25,6 +25,7 @@ describe("moodStyle", () => {
       scoring: true,
       happy: true,
       sad: true,
+      concerned: true,
       celebrating: true,
     };
     expect([...SPRITE_MOODS].sort()).toEqual(Object.keys(all).sort());

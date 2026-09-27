@@ -1,0 +1,232 @@
+/* One gift product's facts and controls, in the Plaza's rounded ivory language. Tokens come from
+   components/ui/plaza-tokens.css when present; the fallbacks match the Plaza rails. */
+
+.panel {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem 1rem;
+  border: 3px solid var(--plaza-outline, #6f7470);
+  border-radius: var(--plaza-radius-panel, 1.4rem);
+  background: var(--plaza-ivory, #f4f1e6);
+  color: var(--plaza-text, #4a3a2f);
+  box-shadow: var(--plaza-shadow, 0 6px 14px rgba(0, 0, 0, 0.22));
+  font-family: var(--plaza-font, ui-rounded, "SF Pro Rounded", system-ui, sans-serif);
+  animation: rise 360ms ease-out both;
+}
+
+.head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem 0.8rem;
+  align-items: start;
+}
+
+.name {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.merchant {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--plaza-text-muted, #7a6a5f);
+}
+
+.price {
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #b8742a;
+  white-space: nowrap;
+}
+
+.quantity {
+  font-size: 0.75rem;
+  color: var(--plaza-text-muted, #7a6a5f);
+  text-align: right;
+}
+
+.source {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: var(--plaza-radius-pill, 999px);
+  border: 2px solid var(--plaza-outline-soft, #a9b0ab);
+  background: var(--plaza-cream, #fffdf6);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.budget {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.budgetHead {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.budgetHead strong {
+  font-size: 1rem;
+}
+
+.left {
+  margin-left: auto;
+  font-weight: 700;
+  color: #3d7a4a;
+}
+
+.over {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--plaza-danger, #c8452d);
+}
+
+.track {
+  height: 0.7rem;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 2px solid var(--plaza-outline-soft, #a9b0ab);
+  background: var(--plaza-cream, #fffdf6);
+}
+
+.fill,
+.fillOver {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 900ms ease-out;
+}
+
+.fill {
+  background: linear-gradient(90deg, var(--plaza-gold, #e6b54a), var(--plaza-peach, #ffd180));
+}
+
+.fillOver {
+  background: linear-gradient(90deg, var(--plaza-gold, #e6b54a), var(--plaza-danger, #c8452d));
+}
+
+.section {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--plaza-text-muted, #7a6a5f);
+}
+
+.list {
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.warning {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--plaza-radius-control, 0.8rem);
+  border: 2px solid var(--plaza-gold, #e6b54a);
+  background: var(--plaza-cream, #fffdf6);
+  font-size: 0.8rem;
+}
+
+.details summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--plaza-text-muted, #7a6a5f);
+}
+
+.details summary:focus-visible {
+  outline: 3px solid var(--plaza-glow, rgba(255, 209, 128, 0.55));
+  outline-offset: 2px;
+  border-radius: 0.4rem;
+}
+
+.alternative {
+  display: grid;
+  gap: 0.1rem;
+  font-size: 0.8rem;
+}
+
+.alternative small {
+  color: var(--plaza-text-muted, #7a6a5f);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+}
+
+.action {
+  min-height: 3rem;
+  padding: 0.6rem 0.9rem;
+  border: 3px solid var(--plaza-outline, #6f7470);
+  border-radius: var(--plaza-radius-control, 1rem);
+  background: var(--plaza-cream, #fffdf6);
+  color: var(--plaza-text, #4a3a2f);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: var(--plaza-shadow, 0 4px 10px rgba(0, 0, 0, 0.18));
+  transition:
+    transform var(--plaza-fast, 0.08s) var(--plaza-ease, ease),
+    box-shadow var(--plaza-mid, 0.12s) var(--plaza-ease, ease),
+    background var(--plaza-mid, 0.12s) var(--plaza-ease, ease);
+}
+
+.actionPrimary {
+  background: var(--plaza-peach, #ffd180);
+}
+
+.action:hover,
+.action[data-hand-hover] {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 5px var(--plaza-glow, rgba(255, 209, 128, 0.55)),
+    var(--plaza-shadow, 0 6px 14px rgba(0, 0, 0, 0.22));
+}
+
+.action:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.action:focus-visible {
+  outline: 4px solid var(--plaza-glow, rgba(255, 209, 128, 0.55));
+  outline-offset: 2px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .fill,
+  .fillOver,
+  .action {
+    animation: none;
+    transition: none;
+  }
+}

@@ -1,18 +1,19 @@
 import type { StoreApi } from "zustand";
 import { signMandate } from "@/lib/crypto/sign";
+import { runtimeProfilesFor } from "@/lib/people/runtimeProfile";
 import { emitGesture, onGesture, setArmingPolicy } from "@/lib/stage/bus";
 import { MAX_SEATS } from "@/lib/stage/layout";
 import type { StageStore } from "@/lib/stage/store";
-import type { Bundle, CartMandate, Mission } from "@/types/domain";
+import type { Bundle, CartMandate, CouncilEvent, Mission, ResumeAction, RuntimeProfile, StartRunRequest } from "@/types/domain";
 import type { GestureEvent } from "@/types/stage";
 import { isGestureArmed, type ArmingContext } from "./arming";
 import { BeatQueue, CUT90_BEATS, DEFAULT_BEATS, type Beat, type BeatDurations } from "./beats";
-import { runCouncil, type CouncilRunOptions } from "./councilClient";
+import { resumeCouncil, runCouncil, type CouncilRunOptions } from "./councilClient";
 import { buildMission } from "./mission";
 
 // The director sits between the hands and the agents: it decides what each armed gesture means in the
-// current phase, runs the council, and paces its events into beats so stage timing never depends on
-// LLM speed.
+// current phase, runs the council on the Python backend, and paces its events into beats so stage
+// timing never depends on LLM speed. Approval, replacement, and decline all resume the same thread.
 
 export interface DirectorOptions {
   store: StoreApi<StageStore>;
@@ -24,6 +25,10 @@ export interface DirectorOptions {
   now?: () => number;
   stallMs?: number;
   sign?: (mission: Mission, bundle: Bundle) => Promise<CartMandate>;
+  /** Runtime profiles for the invited ids; defaults to the roster mapper. */
+  profiles?: (ids: string[]) => RuntimeProfile[];
+  /** Thread id factory (tests pin it). */
+  threadId?: () => string;
   log?: (message: string, detail?: unknown) => void;
 }
 
@@ -55,11 +60,21 @@ export function armingContext(state: StageStore, now: number): ArmingContext {
   };
 }
 
+function newThreadId(): string {
+  const random = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+  return `affinity-${random}`;
+}
+
+/** What resumed the thread last, so a failed segment can be retried against the same checkpoint. */
+type LastRequest = { kind: "start"; envelope: StartRunRequest } | { kind: "resume"; action: ResumeAction };
+
 export function createDirector(options: DirectorOptions): Director {
   const { store } = options;
   const now = options.now ?? Date.now;
   const fetchImpl = options.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
   const sign = options.sign ?? signMandate;
+  const profilesFor = options.profiles ?? ((ids: string[]) => runtimeProfilesFor(ids));
+  const threadIdFor = options.threadId ?? newThreadId;
   const log = options.log ?? ((message: string, detail?: unknown) => console.info(`[director] ${message}`, detail ?? ""));
   const beats: BeatDurations = { ...(options.cut90 ? CUT90_BEATS : DEFAULT_BEATS) };
   const get = () => store.getState();
@@ -67,6 +82,10 @@ export function createDirector(options: DirectorOptions): Director {
   // Bumped on every reset so async work from an older run can tell it has been superseded.
   let run = 0;
   let council: AbortController | null = null;
+  let last: LastRequest | null = null;
+  // The room's veto beat is synthesized from the first constraints conflict on the live path; the
+  // replay transcript carries its own veto event, so only one may play per council.
+  let vetoPlayed = false;
 
   const applyBeat = (beat: Beat) => {
     if (beat.kind === "streamEnd") {
@@ -80,25 +99,45 @@ export function createDirector(options: DirectorOptions): Director {
     apply: applyBeat,
     durations: () => beats,
     onBeatEnd: (beat) => {
-      if (beat.kind === "event" && beat.event.type === "opinion") {
+      if (beat.kind === "event" && (beat.event.type === "opinion" || beat.event.type === "deliberation")) {
         const id = beat.event.payload.spriteId;
         if (get().sprites[id]?.mood === "speaking") get().setSpriteMood(id, "listening");
       }
     },
   });
 
-  async function convene() {
+  const parser = {
+    onUnknown: (type: string) => log(`ignoring unknown council event "${type}"`),
+    onMalformed: (type: string) => log(`skipping malformed "${type}" payload`),
+  };
+
+  function enqueue(event: CouncilEvent) {
+    if (event.type === "veto") {
+      if (vetoPlayed) return;
+      vetoPlayed = true;
+    }
+    queue.push({ kind: "event", event });
+    if (event.type === "constraints" && !vetoPlayed && event.payload.conflicts.length > 0) {
+      vetoPlayed = true;
+      queue.push({ kind: "event", event: { type: "veto", payload: event.payload.conflicts[0]! } });
+    }
+  }
+
+  function startEnvelope(mission: Mission): StartRunRequest {
+    return { threadId: threadIdFor(), mission, profiles: profilesFor(mission.invitedSpriteIds) };
+  }
+
+  async function start(envelope: StartRunRequest) {
     const state = get();
-    const invited = seatedInOrder(state);
-    const mission = buildMission(state.missionText, invited);
     const runId = ++run;
     council?.abort();
     council = new AbortController();
-    state.setMission(mission);
+    last = { kind: "start", envelope };
+    vetoPlayed = false;
+    state.setThread(envelope.threadId);
+    state.setRunStatus("running");
     state.setError(null);
-    state.openProfile(null);
-    state.advancePhase("convene");
-    for (const id of invited) state.setSpriteMood(id, "thinking");
+    state.setNotice(null);
 
     const runOptions: CouncilRunOptions = {
       signal: council.signal,
@@ -106,18 +145,75 @@ export function createDirector(options: DirectorOptions): Director {
       stallMs: options.stallMs,
       replaySpeed: options.cut90 ? 2 : 1,
       fetchImpl,
-      onSource: (source) => runId === run && get().setCouncilSource(source),
+      parser,
+      onSource: (source) => {
+        if (runId !== run) return;
+        get().setCouncilSource(source);
+        // The replay is a recorded demo, not this thread: its bundle can never resume the backend.
+        if (source === "replay") get().setThread(null);
+      },
       onFallback: (reason) => log(`falling back to replay: ${reason}`),
     };
     try {
-      for await (const event of runCouncil(mission, runOptions)) {
+      for await (const event of runCouncil(envelope, runOptions)) {
         if (runId !== run) return;
-        queue.push({ kind: "event", event });
+        enqueue(event);
       }
       if (runId === run) queue.push({ kind: "streamEnd" });
     } catch (error) {
       if (runId !== run || council?.signal.aborted) return;
-      get().setError(error instanceof Error ? error.message : "The council could not be reached");
+      get().setError(error instanceof Error ? error.message : "The council could not be reached", true);
+      get().setRunStatus("error");
+    }
+  }
+
+  async function convene() {
+    const state = get();
+    const invited = seatedInOrder(state);
+    const mission = state.mission?.type === "gift" && state.phase === "lobby" ? state.mission : buildMission(state.missionText, invited);
+    state.setMission(mission);
+    state.openProfile(null);
+    state.advancePhase("convene");
+    for (const id of mission.invitedSpriteIds) state.setSpriteMood(id, "thinking");
+    await start(startEnvelope(mission));
+  }
+
+  /** Resumes the current thread. Only the live backend can do this; a replayed demo has no thread. */
+  async function resume(action: ResumeAction) {
+    const state = get();
+    const threadId = state.threadId;
+    if (!threadId) {
+      state.setError(
+        state.councilSource === "replay"
+          ? "This was the recorded demo, so there is no live council to approve. Reset and run it live."
+          : "The council thread is gone. Reset and start the mission again.",
+      );
+      if (state.phase === "signing") state.advancePhase("mandateRejected");
+      return;
+    }
+    const runId = run;
+    council?.abort();
+    council = new AbortController();
+    last = { kind: "resume", action };
+    state.setError(null);
+    state.setRunStatus("running");
+    try {
+      const stream = resumeCouncil({ threadId, ...action }, council.signal, fetchImpl, parser);
+      let received = false;
+      for await (const event of stream) {
+        if (runId !== run) return;
+        received = true;
+        enqueue(event);
+      }
+      if (runId !== run) return;
+      if (!received) throw new Error("The council backend closed the stream without answering");
+      queue.push({ kind: "streamEnd" });
+    } catch (error) {
+      if (runId !== run || council?.signal.aborted) return;
+      const message = error instanceof Error ? error.message : "The council could not be reached";
+      get().setError(message, true);
+      get().setRunStatus("error");
+      if (get().phase === "signing") get().advancePhase("mandateRejected");
     }
   }
 
@@ -129,33 +225,62 @@ export function createDirector(options: DirectorOptions): Director {
       state.mission ?? buildMission(state.missionText, [...new Set([...seatedInOrder(state), ...Object.keys(state.opinions)])]);
     const runId = run;
     state.setError(null);
+    state.setNotice(null);
     state.advancePhase("handshakeComplete");
+    let signature: string;
     try {
       const mandate = await sign(mission, bundle);
-      const response = await fetchImpl("/api/mandate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mandate),
-      });
-      const result = (await response.json().catch(() => ({}))) as { valid?: boolean; receiptId?: string };
       if (runId !== run) return;
-      if (result.valid && result.receiptId) {
-        get().completeMandate(result.receiptId, mandate);
-      } else {
-        get().advancePhase("mandateRejected");
-        get().setError("The mandate signature was rejected. Shake again to retry.");
-      }
+      get().setMandate(mandate);
+      signature = mandate.signature;
     } catch (error) {
-      if (runId !== run) return;
-      get().advancePhase("mandateRejected");
-      get().setError(error instanceof Error ? `Signing failed: ${error.message}` : "Signing failed");
+      // The device key is a nice-to-have proof; the backend only needs a non-empty attestation.
+      log("signing unavailable; sending a plain handshake attestation", error);
+      signature = `handshake:${now()}`;
     }
+    if (!signature) signature = `handshake:${now()}`;
+    await resume({ action: "approve", signature });
+  }
+
+  async function replace(itemId: string, prompt?: string) {
+    const state = get();
+    if (!state.bundle?.items.some((item) => item.id === itemId)) return;
+    state.setNotice("Asking the council for a replacement…");
+    state.setParticipantMoods("thinking");
+    await resume(prompt?.trim() ? { action: "replace_agent", itemId, prompt: prompt.trim() } : { action: "replace_agent", itemId });
+  }
+
+  async function decline() {
+    const state = get();
+    const itemId = state.bundle?.items[0]?.id;
+    if (!itemId) return;
+    state.setNotice("Declining the proposal…");
+    await resume({ action: "reject", itemId });
+  }
+
+  async function retry() {
+    const state = get();
+    if (!last || state.runStatus !== "error") return;
+    if (last.kind === "resume") {
+      if (state.threadId) {
+        if (state.phase === "awaitMandate" && last.action.action === "approve") state.advancePhase("handshakeComplete");
+        await resume(last.action);
+        return;
+      }
+      state.setError("The council thread is gone. Reset and start the mission again.");
+      return;
+    }
+    // A failed start gets a fresh thread; the backend never saw (or has forgotten) the old one.
+    for (const id of last.envelope.mission.invitedSpriteIds) state.setSpriteMood(id, "thinking");
+    await start({ ...last.envelope, threadId: threadIdFor() });
   }
 
   function reset() {
     run += 1;
     council?.abort();
     council = null;
+    last = null;
+    vetoPlayed = false;
     queue.clear();
     const state = get();
     state.resetCouncil();
@@ -221,15 +346,20 @@ export function createDirector(options: DirectorOptions): Director {
       case "handshakeComplete":
         void approve();
         return;
+      case "swipe":
+        void replace(event.itemId, event.prompt);
+        return;
+      case "reject":
+        void decline();
+        return;
+      case "retry":
+        void retry();
+        return;
       case "toggleReasoning":
         state.toggleReasoning();
         return;
       case "reset":
         reset();
-        return;
-      case "swipe":
-        // No agent endpoint for swapping items yet; this is where a revise request would go.
-        log("swipe (no-op)", event.itemId);
         return;
       case "hover":
       case "orbit":

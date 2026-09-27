@@ -3,18 +3,26 @@ import type { CouncilEvent } from "./domain";
 // Frontend-only contracts shared by the stage, hands, and director tracks.
 // Agent-side contracts stay in types/domain.ts.
 
-/** Where the demo is. lobby, convening, and signing are local; the rest follow CouncilEvents. */
+/**
+ * Where the demo is. lobby, convening, and signing are local; the rest follow CouncilEvents.
+ * preflight and checkout only occur on the live backend path (after an approval resumes the thread).
+ */
 export type StagePhase =
   | "lobby"
   | "convening"
   | "opinions"
   | "merge"
+  | "deliberating"
   | "conflict"
+  | "searching"
   | "bundle"
   | "scoring"
+  | "revising"
   | "awaitMandate"
   | "signing"
-  | "receipt";
+  | "preflight"
+  | "receipt"
+  | "checkout";
 
 export type SpriteMood =
   | "idle"
@@ -29,6 +37,7 @@ export type SpriteMood =
   | "scoring"
   | "happy"
   | "sad"
+  | "concerned"
   | "celebrating";
 
 /** Anything the hand can point at. Registered in lib/stage/targets.ts by whoever renders it. */
@@ -52,10 +61,15 @@ export type GestureEvent =
   | { type: "dragEnd"; spriteId: string; seat: number | null }
   | { type: "seat"; spriteId: string }
   | { type: "orbit"; dx: number; dy: number }
-  | { type: "swipe"; itemId: string }
+  /** Push an item away: ask the council for a replacement. */
+  | { type: "swipe"; itemId: string; prompt?: string }
   | { type: "handshakeProgress"; progress: number }
   | { type: "handshakeComplete" }
   | { type: "convene" }
+  /** Decline the whole proposal; the run ends without a cart. */
+  | { type: "reject" }
+  /** Retry the last failed council request (start or resume) without losing the thread. */
+  | { type: "retry" }
   | { type: "toggleReasoning" }
   | { type: "reset" };
 

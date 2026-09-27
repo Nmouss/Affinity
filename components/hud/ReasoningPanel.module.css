@@ -22,34 +22,47 @@
 .empty {
   margin: 0;
   font-size: 0.8rem;
-  color: #b9a494;
+  color: #a97a4c;
 }
 
 .block,
 .focused {
-  border-radius: 0.5rem;
-  background: rgba(18, 13, 11, 0.55);
+  border-radius: 0.8rem;
+  background: var(--plaza-cream);
 }
 
 .focused {
-  outline: 1px solid #ffd18a;
+  outline: 3px solid var(--plaza-gold);
 }
 
 .block summary,
 .focused summary {
-  padding: 0.35rem 0.55rem;
-  font-size: 0.78rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 700;
   cursor: pointer;
-  color: #ffe9c2;
+  color: var(--plaza-text-muted);
+  border-radius: 0.8rem;
+}
+
+.block summary:hover,
+.focused summary:hover {
+  background: var(--plaza-peach);
+}
+
+.block summary:focus-visible,
+.focused summary:focus-visible {
+  outline: 3px solid var(--plaza-gold);
+  outline-offset: 1px;
 }
 
 .pre {
   margin: 0;
-  padding: 0 0.6rem 0.5rem;
+  padding: 0 0.7rem 0.6rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font: 0.7rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: #dcc8b7;
+  color: var(--plaza-text-muted);
 }
 
 @keyframes drawer {

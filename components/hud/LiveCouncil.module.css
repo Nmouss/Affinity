@@ -1,0 +1,99 @@
+/* HUD pieces for the live council: status notices, retry controls, the decline button beside the
+   handshake, per-product panels, and the checkout handoff list. Plaza language throughout. */
+
+.notice {
+  margin: 0;
+  padding: 0.55rem 1rem;
+  border-radius: var(--plaza-radius-pill, 999px);
+  background: var(--plaza-peach, #ffe3bd);
+  border: 2px solid var(--plaza-outline-soft, #f0dcc0);
+  color: var(--plaza-text, #402503);
+  font-size: 0.95rem;
+  box-shadow: var(--plaza-shadow, 0 6px 14px rgba(0, 0, 0, 0.22));
+  max-width: 34rem;
+  text-align: center;
+}
+
+.toastRow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.toastActions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.mandateRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.products {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.carts {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cartLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--plaza-radius-control, 1rem);
+  background: var(--plaza-cream, #fff3e0);
+  border: 2px solid var(--plaza-outline, #6f7470);
+  color: var(--plaza-text, #402503);
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: var(--plaza-shadow, 0 6px 14px rgba(0, 0, 0, 0.22));
+  transition: transform var(--plaza-fast, 0.08s) var(--plaza-ease, ease), box-shadow var(--plaza-mid, 0.12s) var(--plaza-ease, ease);
+}
+
+.cartLink:hover,
+.cartLink:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 5px var(--plaza-glow, rgba(255, 209, 128, 0.55)), var(--plaza-shadow, 0 6px 14px rgba(0, 0, 0, 0.22));
+  outline: none;
+}
+
+.cartLink:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.cartTotal {
+  font-variant-numeric: tabular-nums;
+  color: var(--plaza-text-muted, #6b4a2b);
+  font-weight: 500;
+}
+
+.pending {
+  margin: 0.4rem 0 0;
+  color: var(--plaza-text-muted, #6b4a2b);
+  font-style: italic;
+}
+
+.warning {
+  margin: 0.4rem 0 0;
+  padding: 0.5rem 0.8rem;
+  border-radius: var(--plaza-radius-control, 1rem);
+  background: var(--plaza-danger, #f3b0b0);
+  color: var(--plaza-text, #402503);
+}

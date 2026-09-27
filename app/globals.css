@@ -1,3 +1,5 @@
+@import "../components/ui/plaza-tokens.css";
+
 :root {
   color-scheme: dark;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -20,3 +22,14 @@ button, input, select { font: inherit; }
 .stage-copy { max-width: 44rem; text-align: center; }
 .stage-copy h1 { margin: 0; font-size: clamp(3rem, 10vw, 7rem); }
 .stage-copy p { color: #dcc8b7; font-size: 1.125rem; }
+
+/* Motion is decorative everywhere: essential actions stay understandable when it is off. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

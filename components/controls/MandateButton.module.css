@@ -1,19 +1,43 @@
+/* Hold-to-approve: a big rounded Plaza control whose fill rises with the handshake meter. */
 .button {
   --progress: 0;
   position: relative;
   overflow: hidden;
-  padding: 0.75rem 1.4rem;
-  border: 1px solid rgb(255 209 138 / 0.6);
-  border-radius: 999px;
-  background: rgb(18 13 11 / 0.7);
-  color: #fff4d6;
+  min-height: 3.25rem;
+  padding: 0.8rem 1.6rem;
+  border: 3px solid var(--plaza-outline);
+  border-radius: var(--plaza-radius-pill);
+  background: var(--plaza-ivory);
+  color: var(--plaza-text);
   font: inherit;
+  font-family: var(--plaza-font);
   font-size: 0.95rem;
+  font-weight: 800;
   cursor: pointer;
+  box-shadow: var(--plaza-shadow);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
+  transition:
+    transform var(--plaza-fast) var(--plaza-ease),
+    box-shadow var(--plaza-mid) var(--plaza-ease),
+    background var(--plaza-mid) var(--plaza-ease);
+}
+
+.button:hover:not(:disabled),
+.button[data-hand-hover]:not(:disabled) {
+  background: #fffdf6;
+  box-shadow: 0 0 0 6px var(--plaza-glow), var(--plaza-shadow);
+}
+
+.button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--plaza-gold);
+  outline-offset: 3px;
 }
 
 .button:disabled {
@@ -24,7 +48,7 @@
 .fill {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgb(255 209 138 / 0.55), rgb(255 244 214 / 0.75));
+  background: linear-gradient(90deg, var(--plaza-peach), var(--plaza-gold));
   transform: scaleX(var(--progress));
   transform-origin: left center;
 }

@@ -4,25 +4,53 @@ import type { CouncilEvent } from "@/types/domain";
 export type BeatDurations = Record<CouncilEvent["type"] | "streamEnd", number>;
 
 export const DEFAULT_BEATS: BeatDurations = {
+  mission: 0,
   opinion: 2500,
   constraints: 2000,
+  deliberation: 2200,
+  consensus: 1200,
   veto: 4500,
+  search_plan: 1800,
   bundle: 5000,
   score: 1500,
+  revision: 2500,
+  scores_complete: 0,
   awaiting_mandate: 0,
+  repair_requested: 0,
+  repair: 2000,
+  preflight: 1500,
   receipt: 0,
+  carts: 0,
+  notifications: 0,
+  plan: 0,
+  run_state: 0,
+  error: 0,
   streamEnd: 0,
 };
 
 /** The 90-second cut: everything tighter, but the veto beat keeps enough time to land. */
 export const CUT90_BEATS: BeatDurations = {
+  mission: 0,
   opinion: 1100,
   constraints: 900,
+  deliberation: 900,
+  consensus: 500,
   veto: 3200,
+  search_plan: 800,
   bundle: 3000,
   score: 600,
+  revision: 1200,
+  scores_complete: 0,
   awaiting_mandate: 0,
+  repair_requested: 0,
+  repair: 900,
+  preflight: 800,
   receipt: 0,
+  carts: 0,
+  notifications: 0,
+  plan: 0,
+  run_state: 0,
+  error: 0,
   streamEnd: 0,
 };
 

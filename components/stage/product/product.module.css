@@ -1,0 +1,67 @@
+/* Labels floating over the gift pedestals (drei Html). Plaza palette: ivory pill, gray-green outline,
+   brown text, peach price. */
+
+.chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  border: 3px solid var(--plaza-outline, #6f7470);
+  border-radius: var(--plaza-radius-pill, 999px);
+  background: var(--plaza-ivory, #f4f1e6);
+  color: var(--plaza-text, #4a3a2f);
+  font: 700 14px/1.15 ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  box-shadow: var(--plaza-shadow, 0 6px 14px rgba(0, 0, 0, 0.22));
+  white-space: nowrap;
+  max-width: 16rem;
+  pointer-events: none;
+  user-select: none;
+  animation: chipIn 420ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+.chipFocused {
+  box-shadow: 0 0 0 5px var(--plaza-glow, rgba(255, 209, 128, 0.55)), var(--plaza-shadow, 0 6px 14px rgba(0, 0, 0, 0.22));
+  background: var(--plaza-cream, #fffdf6);
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 15rem;
+}
+
+.price {
+  font-size: 12px;
+  font-weight: 800;
+  color: #b8742a;
+}
+
+.loading {
+  font: 700 12px/1 ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  color: var(--plaza-text-muted, #7a6a5f);
+  background: var(--plaza-cream, #fffdf6);
+  border: 2px solid var(--plaza-outline-soft, #a9b0ab);
+  border-radius: 999px;
+  padding: 4px 9px;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+@keyframes chipIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    animation: none;
+  }
+}

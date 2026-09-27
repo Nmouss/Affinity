@@ -1,13 +1,28 @@
-import type { CouncilEvent } from "@/types/domain";
+import type { CouncilEvent, CouncilEventType } from "@/types/domain";
 
-const COUNCIL_EVENT_TYPES: ReadonlySet<string> = new Set<CouncilEvent["type"]>([
+/** Every frame the stage understands. Anything else is reported through onUnknown and skipped. */
+export const COUNCIL_EVENT_TYPES: ReadonlySet<string> = new Set<CouncilEventType>([
+  "mission",
   "opinion",
   "constraints",
+  "deliberation",
+  "consensus",
+  "search_plan",
   "bundle",
   "score",
   "veto",
+  "revision",
+  "scores_complete",
   "awaiting_mandate",
+  "repair_requested",
+  "repair",
+  "preflight",
   "receipt",
+  "carts",
+  "notifications",
+  "plan",
+  "run_state",
+  "error",
 ]);
 
 export interface SseParser {
@@ -17,21 +32,34 @@ export interface SseParser {
   end: () => void;
 }
 
+export interface SseParserOptions {
+  /** A frame whose event type the stage doesn't know (a newer backend); the payload is the raw text. */
+  onUnknown?: (type: string, data: string) => void;
+  /** A known event whose data wasn't JSON; skipped so the beat queue carries on. */
+  onMalformed?: (type: string, data: string) => void;
+}
+
 /**
- * Incremental parser for `event: <type>\ndata: <json>\n\n` frames. Unknown event types, comments,
- * and malformed JSON are dropped rather than breaking the stream.
+ * Incremental parser for `event: <type>\ndata: <json>\n\n` frames. Unknown event types and malformed
+ * JSON are reported (when asked) and dropped rather than breaking the stream, so a newer backend stays
+ * forward-compatible with an older stage.
  */
-export function createSseParser(onEvent: (event: CouncilEvent) => void): SseParser {
+export function createSseParser(onEvent: (event: CouncilEvent) => void, options: SseParserOptions = {}): SseParser {
   let buffer = "";
   let eventType = "message";
   let data: string[] = [];
 
   const dispatch = () => {
-    if (data.length > 0 && COUNCIL_EVENT_TYPES.has(eventType)) {
-      try {
-        onEvent({ type: eventType, payload: JSON.parse(data.join("\n")) } as CouncilEvent);
-      } catch {
-        // Malformed payloads are skipped; the beat queue carries on with the next event.
+    if (data.length > 0) {
+      const text = data.join("\n");
+      if (!COUNCIL_EVENT_TYPES.has(eventType)) {
+        options.onUnknown?.(eventType, text);
+      } else {
+        try {
+          onEvent({ type: eventType, payload: JSON.parse(text) } as CouncilEvent);
+        } catch {
+          options.onMalformed?.(eventType, text);
+        }
       }
     }
     eventType = "message";
@@ -75,11 +103,14 @@ export function createSseParser(onEvent: (event: CouncilEvent) => void): SsePars
 }
 
 /** Yields CouncilEvents from an SSE byte stream as they arrive. */
-export async function* readSseStream(body: ReadableStream<Uint8Array>): AsyncGenerator<CouncilEvent> {
+export async function* readSseStream(
+  body: ReadableStream<Uint8Array>,
+  options: SseParserOptions = {},
+): AsyncGenerator<CouncilEvent> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   const ready: CouncilEvent[] = [];
-  const parser = createSseParser((event) => ready.push(event));
+  const parser = createSseParser((event) => ready.push(event), options);
   try {
     for (;;) {
       const { done, value } = await reader.read();

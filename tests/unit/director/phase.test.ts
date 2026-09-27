@@ -3,7 +3,7 @@ import { getDemoTranscript } from "@/lib/demo/transcript";
 import { STAGE_TRANSCRIPT } from "@/lib/demo/stageTranscript";
 import { nextPhase } from "@/lib/director/phase";
 import { useStage } from "@/lib/stage/store";
-import type { CartMandate } from "@/types/domain";
+import type { CommerceCart, CouncilReceipt } from "@/types/domain";
 
 const state = () => useStage.getState();
 
@@ -36,10 +36,18 @@ describe("phase walk over the stage transcript", () => {
 
     state().advancePhase("handshakeComplete");
     expect(state().phase).toBe("signing");
-    state().completeMandate("receipt-1", { approvedAt: "now" } as CartMandate);
+    // The resumed thread answers: preflight, receipt, then the merchant carts.
+    state().applyCouncilEvent({ type: "preflight", payload: { status: "ready", changes: [], total: 182 } });
+    expect(state().phase).toBe("preflight");
+    const receipt: CouncilReceipt = { status: "approved", threadId: "t-1", total: 182, signature: "sig" };
+    state().applyCouncilEvent({ type: "receipt", payload: receipt });
     expect(state().phase).toBe("receipt");
-    expect(state().receiptId).toBe("receipt-1");
-    expect(Object.values(state().sprites).every((sprite) => sprite.mood === "celebrating")).toBe(true);
+    expect(state().receipt).toEqual(receipt);
+    expect(Object.values(state().sprites).filter((sprite) => sprite.seat !== null).every((sprite) => sprite.mood === "celebrating")).toBe(true);
+    const carts: CommerceCart[] = [{ merchantDomain: "shop.example", cartId: "c1", checkoutUrl: "https://shop.example/cart/c1" }];
+    state().applyCouncilEvent({ type: "carts", payload: carts });
+    expect(state().phase).toBe("checkout");
+    expect(state().carts).toEqual(carts);
 
     state().advancePhase("reset");
     expect(state().phase).toBe("lobby");
@@ -99,5 +107,27 @@ describe("nextPhase", () => {
     expect(nextPhase("bundle", "handshakeComplete")).toBe("bundle");
     expect(nextPhase("signing", "score")).toBe("signing");
     expect(nextPhase("signing", "mandateRejected")).toBe("awaitMandate");
+  });
+
+  it("walks the live backend's extra stages", () => {
+    expect(nextPhase("merge", "deliberation")).toBe("deliberating");
+    expect(nextPhase("deliberating", "consensus")).toBe("merge");
+    expect(nextPhase("merge", "search_plan")).toBe("searching");
+    expect(nextPhase("scoring", "revision")).toBe("revising");
+    expect(nextPhase("revising", "search_plan")).toBe("searching");
+    expect(nextPhase("scoring", "scores_complete")).toBe("scoring");
+    expect(nextPhase("scoring", "run_state")).toBe("scoring");
+    expect(nextPhase("searching", "error")).toBe("searching");
+  });
+
+  it("lets only the resumed thread's events move on from signing", () => {
+    expect(nextPhase("signing", "preflight")).toBe("preflight");
+    expect(nextPhase("signing", "repair")).toBe("revising");
+    expect(nextPhase("signing", "opinion")).toBe("signing");
+    expect(nextPhase("preflight", "awaiting_mandate")).toBe("awaitMandate");
+    expect(nextPhase("preflight", "receipt")).toBe("receipt");
+    expect(nextPhase("receipt", "carts")).toBe("checkout");
+    expect(nextPhase("receipt", "score")).toBe("receipt");
+    expect(nextPhase("checkout", "awaiting_mandate")).toBe("checkout");
   });
 });

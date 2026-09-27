@@ -1,51 +1,75 @@
-/* Shared warm panel look; other HUD modules `composes` these. */
+/* Shared Plaza-language panel look; other HUD modules `composes` these. Opaque ivory so the panels
+   read over the dark living room as well as the bright plaza. Tokens: components/ui/plaza-tokens.css */
 
 .panel {
-  padding: 0.85rem 1rem;
-  border: 1px solid rgba(255, 209, 138, 0.18);
-  border-radius: 0.9rem;
-  background: rgba(30, 19, 15, 0.8);
-  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(8px);
-  color: #fff8eb;
+  padding: 0.95rem 1.1rem;
+  border: 2px solid var(--plaza-outline-soft);
+  border-radius: var(--plaza-radius-panel);
+  background: var(--plaza-ivory);
+  box-shadow: var(--plaza-shadow-lift);
+  color: var(--plaza-text);
+  font-family: var(--plaza-font);
 }
 
 .title {
   margin: 0 0 0.6rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #ffd18a;
+  color: #8a5a36;
 }
 
 .muted {
-  color: #dcc8b7;
+  color: var(--plaza-text-muted);
 }
 
 .kbd {
   display: inline-block;
-  min-width: 1.3em;
-  padding: 0 0.3em;
-  border: 1px solid rgba(255, 209, 138, 0.35);
-  border-radius: 0.3rem;
+  min-width: 1.4em;
+  padding: 0 0.35em;
+  border: 2px solid var(--plaza-outline-soft);
+  border-bottom-width: 3px;
+  border-radius: 0.45rem;
+  background: #fff;
   font-size: 0.75em;
+  font-weight: 700;
   line-height: 1.4;
   text-align: center;
-  color: #ffd18a;
+  color: var(--plaza-text-muted);
 }
 
 .button {
-  padding: 0.45rem 0.8rem;
-  border: 1px solid rgba(255, 209, 138, 0.35);
-  border-radius: 999px;
-  background: rgba(122, 52, 29, 0.55);
-  color: #fff8eb;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.95rem;
+  border: none;
+  border-radius: var(--plaza-radius-pill);
+  background: var(--plaza-cream);
+  color: var(--plaza-text-muted);
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  transition:
+    transform var(--plaza-fast) var(--plaza-ease),
+    box-shadow var(--plaza-mid) var(--plaza-ease),
+    background var(--plaza-mid) var(--plaza-ease);
 }
 
 .button:hover,
+.button[data-hand-hover] {
+  transform: translateY(-2px);
+  background: var(--plaza-peach);
+  box-shadow: 0 0 0 4px var(--plaza-glow), 0 6px 16px rgba(230, 150, 60, 0.35);
+}
+
+.button:active {
+  transform: translateY(1px) scale(0.96);
+}
+
 .button:focus-visible {
-  background: rgba(160, 72, 38, 0.8);
-  outline: none;
+  outline: 3px solid var(--plaza-gold);
+  outline-offset: 2px;
 }

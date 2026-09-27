@@ -1,24 +1,12 @@
-import transcript from "@/data/cached-transcript.json";
+import { proxyBackendSse } from "@/lib/server/backendProxy";
+
+// Starts a council run: the browser's {threadId, mission, profiles} envelope goes straight to the
+// Python backend's POST /runs/stream and its SSE frames stream back unbuffered. The demo replay no
+// longer lives here; it plays client-side (lib/demo/stageTranscript.ts) and is labeled as replay.
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  await request.json();
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      for (const event of transcript) {
-        controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`));
-      }
-      controller.close();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-    },
-  });
+  return proxyBackendSse("/runs/stream", request);
 }

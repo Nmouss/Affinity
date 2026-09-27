@@ -1,24 +1,48 @@
 import { STAGE_TIMELINE, type TimedCouncilEvent } from "@/lib/demo/stageTranscript";
-import type { CouncilEvent, Mission } from "@/types/domain";
+import type { CouncilEvent, ResumeRunRequest, StartRunRequest } from "@/types/domain";
 import type { CouncilSource } from "@/lib/stage/slices/council";
-import { readSseStream } from "./sse";
+import { readSseStream, type SseParserOptions } from "./sse";
 
 type FetchLike = typeof fetch;
 
-/** POSTs the mission to /api/council and yields CouncilEvents as the SSE stream arrives. */
-export async function* startCouncil(
-  mission: Mission,
+export const START_PATH = "/api/council";
+export const RESUME_PATH = "/api/council/resume";
+
+async function* postSse(
+  path: string,
+  body: unknown,
   signal: AbortSignal,
-  fetchImpl: FetchLike = fetch,
+  fetchImpl: FetchLike,
+  parser?: SseParserOptions,
 ): AsyncGenerator<CouncilEvent> {
-  const response = await fetchImpl("/api/council", {
+  const response = await fetchImpl(path, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-    body: JSON.stringify(mission),
+    body: JSON.stringify(body),
     signal,
   });
   if (!response.ok || !response.body) throw new Error(`Council request failed (${response.status})`);
-  yield* readSseStream(response.body);
+  yield* readSseStream(response.body, parser);
+}
+
+/** POSTs the {threadId, mission, profiles} envelope to /api/council and yields the backend's events. */
+export function startCouncil(
+  envelope: StartRunRequest,
+  signal: AbortSignal,
+  fetchImpl: FetchLike = fetch,
+  parser?: SseParserOptions,
+): AsyncGenerator<CouncilEvent> {
+  return postSse(START_PATH, envelope, signal, fetchImpl, parser);
+}
+
+/** Resumes the interrupted thread through /api/council/resume; approve, replace_agent, or reject. */
+export function resumeCouncil(
+  request: ResumeRunRequest,
+  signal: AbortSignal,
+  fetchImpl: FetchLike = fetch,
+  parser?: SseParserOptions,
+): AsyncGenerator<CouncilEvent> {
+  return postSse(RESUME_PATH, request, signal, fetchImpl, parser);
 }
 
 function abortError(): Error {
@@ -57,6 +81,8 @@ export function eventKey(event: CouncilEvent): string {
   switch (event.type) {
     case "opinion":
     case "score":
+    case "deliberation":
+    case "revision":
       return `${event.type}:${event.payload.spriteId}`;
     default:
       return event.type;
@@ -72,6 +98,7 @@ export interface CouncilRunOptions {
   replaySpeed?: number;
   fetchImpl?: FetchLike;
   timeline?: readonly TimedCouncilEvent[];
+  parser?: SseParserOptions;
   onSource?: (source: CouncilSource) => void;
   onFallback?: (reason: string) => void;
 }
@@ -83,8 +110,9 @@ type Next = IteratorResult<CouncilEvent> | { stalled: true };
 /**
  * The council as one event stream: live when it works, replay when it's asked for, fails, or stays
  * silent too long. A mid-stream failure hands over to replay without repeating what already played.
+ * A backend `error` frame is not a transport failure: it is yielded as-is for the stage to show.
  */
-export async function* runCouncil(mission: Mission, options: CouncilRunOptions): AsyncGenerator<CouncilEvent> {
+export async function* runCouncil(envelope: StartRunRequest, options: CouncilRunOptions): AsyncGenerator<CouncilEvent> {
   const { signal, stallMs = LIVE_STALL_MS } = options;
   const replay = (skip: Set<string>) => {
     options.onSource?.("replay");
@@ -104,7 +132,7 @@ export async function* runCouncil(mission: Mission, options: CouncilRunOptions):
 
   try {
     options.onSource?.("live");
-    const stream = startCouncil(mission, live.signal, options.fetchImpl);
+    const stream = startCouncil(envelope, live.signal, options.fetchImpl, options.parser);
     let first = true;
     for (;;) {
       let timer: ReturnType<typeof setTimeout> | undefined;

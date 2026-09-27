@@ -7,12 +7,17 @@ const PHASES: StagePhase[] = [
   "convening",
   "opinions",
   "merge",
+  "deliberating",
   "conflict",
+  "searching",
   "bundle",
   "scoring",
+  "revising",
   "awaitMandate",
   "signing",
+  "preflight",
   "receipt",
+  "checkout",
 ];
 
 const settled = (phase: StagePhase): ArmingContext => ({
@@ -37,7 +42,9 @@ describe("arming table", () => {
         "hover",
         "orbit",
         "pinchTap",
+        "reject",
         "reset",
+        "retry",
         "seat",
         "swipe",
         "toggleReasoning",
@@ -52,9 +59,10 @@ describe("arming table", () => {
     expect(armedPhases("pinchTap")).toEqual(PHASES.filter((phase) => phase !== "signing"));
     for (const type of ["dragStart", "dragEnd", "seat", "convene"] as const) expect(armedPhases(type)).toEqual(["lobby"]);
     expect(armedPhases("orbit")).toEqual(["bundle", "scoring", "awaitMandate"]);
-    for (const type of ["swipe", "handshakeProgress", "handshakeComplete"] as const) {
+    for (const type of ["swipe", "reject", "handshakeProgress", "handshakeComplete"] as const) {
       expect(armedPhases(type)).toEqual(["awaitMandate"]);
     }
+    expect(armedPhases("retry")).toEqual(PHASES.filter((phase) => phase !== "lobby" && phase !== "checkout"));
   });
 
   it("only convenes with mission text and a seated sprite", () => {

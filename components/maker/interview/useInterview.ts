@@ -28,9 +28,10 @@ import { sharedVoiceAudio } from "./voiceUnlock";
 // React reducer (Strict Mode double-invokes those). The mount effect is guarded by a session counter
 // so its cleanup/re-run in development leaves exactly one live engine set.
 
-export const SILENCE_MS = 1500;
-export const ANSWER_CAP_MS = 20_000;
-export const NUDGE_MS = 8000;
+/** Free talk pauses to think; wait a while before calling the answer done, and let it run long. */
+export const SILENCE_MS = 2800;
+export const ANSWER_CAP_MS = 90_000;
+export const NUDGE_MS = 12_000;
 export const EXTRACT_TIMEOUT_MS = 8000;
 
 export interface Engines {

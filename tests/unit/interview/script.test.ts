@@ -4,14 +4,11 @@ import { closingFor, introFor, QUESTIONS } from "@/lib/interview";
 const EMOJI = /\p{Extended_Pictographic}/u;
 
 describe("interview script", () => {
-  it("asks four indirect questions with unique ids", () => {
-    expect(QUESTIONS).toHaveLength(4);
-    expect(new Set(QUESTIONS.map((question) => question.id)).size).toBe(4);
-    for (const question of QUESTIONS) expect(question.spoken.toLowerCase()).not.toMatch(/what do you want|gift/);
-  });
-
-  it("feeds avoids only from the spending question", () => {
-    expect(QUESTIONS.filter((question) => question.feeds === "avoids").map((question) => question.id)).toEqual(["never"]);
+  it("is one open prompt about the person, never about what they want", () => {
+    expect(QUESTIONS).toHaveLength(1);
+    expect(QUESTIONS[0]!.id).toBe("about");
+    expect(QUESTIONS[0]!.spoken.toLowerCase()).toContain("about yourself");
+    expect(QUESTIONS[0]!.spoken.toLowerCase()).not.toMatch(/what do you want|gift/);
   });
 
   it("names the person in the intro and closing, with no emoji anywhere", () => {

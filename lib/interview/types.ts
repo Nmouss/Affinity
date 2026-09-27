@@ -2,7 +2,7 @@
 // the person's loves, avoids, and personality. Pure contracts; the machine, extractor, and script
 // live beside this file and the React hook/panel in components/maker/interview consume them.
 
-export type QuestionId = "weekend" | "hours" | "place" | "never";
+export type QuestionId = "about";
 
 export interface InterviewQuestion {
   id: QuestionId;
@@ -18,6 +18,8 @@ export interface InterviewAnswer {
   questionId: QuestionId;
   question: string;
   answer: string;
+  /** Which list the question was fishing for; open prompts feed loves and let the text decide. */
+  feeds?: "loves" | "avoids";
 }
 
 export interface Preferences {

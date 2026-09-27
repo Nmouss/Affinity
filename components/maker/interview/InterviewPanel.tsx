@@ -44,7 +44,7 @@ export function InterviewPanel({ name, existing, onFinish }: InterviewPanelProps
 
   const statusLine = (() => {
     if (state.phase === "intro" || state.phase === "asking") return { icon: <SpeakerIcon size={18} />, text: "Asking…", tone: styles.speaking };
-    if (state.phase === "listening") return { icon: <MicIcon size={18} />, text: nudge ? "Still listening. Tap Done or type if it's easier." : "Listening… tap Done when you're finished", tone: styles.listening };
+    if (state.phase === "listening") return { icon: <MicIcon size={18} />, text: nudge ? "Still listening. Tap Done or type if it's easier." : "Listening… take your time, then tap Done", tone: styles.listening };
     if (state.phase === "typing") return { icon: <KeyboardIcon size={18} />, text: "Type your answer and press Send", tone: "" };
     return null;
   })();
@@ -53,14 +53,14 @@ export function InterviewPanel({ name, existing, onFinish }: InterviewPanelProps
     <section className={styles.panel} aria-label={`Getting to know ${name}`}>
       <div className={styles.header}>
         <h2 className={styles.title}>{state.phase === "review" ? `Here's what I picked up` : `Getting to know ${name}`}</h2>
-        {state.phase !== "review" && state.phase !== "extracting" && state.phase !== "finished" && (
+        {total > 1 && state.phase !== "review" && state.phase !== "extracting" && state.phase !== "finished" && (
           <span className={styles.progress} aria-live="polite">
             {state.phase === "intro" || state.phase === "idle" ? "Hello" : `Question ${index + 1} of ${total}`}
           </span>
         )}
       </div>
 
-      {state.phase !== "review" && state.phase !== "extracting" && (
+      {total > 1 && state.phase !== "review" && state.phase !== "extracting" && (
         <div className={styles.dots} aria-hidden>
           {Array.from({ length: total }, (_, dot) => (
             <span key={dot} className={dot < index || state.phase === "finished" ? styles.dotDone : dot === index && state.phase !== "intro" ? styles.dotNow : styles.dot} />
@@ -70,8 +70,8 @@ export function InterviewPanel({ name, existing, onFinish }: InterviewPanelProps
 
       {(state.phase === "idle" || state.phase === "intro") && (
         <>
-          <p className={styles.question}>Nice to meet you, {name}. Four quick questions so I get a feel for you.</p>
-          <p className={styles.hint}>Answer out loud, or type if you&apos;d rather.</p>
+          <p className={styles.question}>Nice to meet you, {name}. Tell me a bit about yourself.</p>
+          <p className={styles.hint}>Out loud, or typed if you&apos;d rather.</p>
         </>
       )}
 

@@ -10,6 +10,7 @@ import {
   type ExtractedPreferences,
   type InterviewEvent,
   type InterviewState,
+  extractLocally,
 } from "@/lib/interview";
 
 const VOICE = { canSpeak: true, canListen: true };
@@ -43,44 +44,33 @@ function answerByVoice(h: ReturnType<typeof harness>, text: string) {
 }
 
 describe("voice path", () => {
-  it("walks intro, four questions, extraction, review, and save with the expected effects", () => {
+  it("walks intro, the open prompt, extraction, review, and save with the expected effects", () => {
     const h = harness();
     expect(h.state.phase).toBe("intro");
     expect(h.effects[0]).toEqual({ type: "speak", text: expect.stringContaining("Ava") });
 
-    h.send({ type: "speakEnd" }); // intro done -> question 1 spoken
+    h.send({ type: "speakEnd" }); // intro done -> the prompt is spoken
     expect(h.state.phase).toBe("asking");
-    expect(currentQuestion(h.state)?.id).toBe("weekend");
-    answerByVoice(h, "went hiking");
-    expect(h.state.answers[0]).toBe("went hiking");
-    expect(progress(h.state)).toEqual({ index: 1, total: 4 });
-
-    answerByVoice(h, "books");
-    answerByVoice(h, "the mountains");
-    answerByVoice(h, "gambling");
+    expect(currentQuestion(h.state)?.id).toBe("about");
+    expect(progress(h.state)).toEqual({ index: 0, total: 1 });
+    answerByVoice(h, "went hiking and I read a lot of books, but I would never spend money on gambling");
+    expect(h.state.answers[0]).toContain("went hiking");
     expect(h.state.phase).toBe("extracting");
 
-    const extract = h.effects.find((effect) => effect.type === "extract");
-    expect(extract).toBeDefined();
-    if (extract?.type === "extract") {
-      expect(extract.answers.map((answer) => answer.questionId)).toEqual(QUESTIONS.map((question) => question.id));
-      expect(extract.answers.map((answer) => answer.answer)).toEqual(["went hiking", "books", "the mountains", "gambling"]);
-    }
-    // The closing line is spoken while extraction runs.
-    expect(h.types().slice(-2)).toEqual(["speak", "extract"]);
-
-    h.send({ type: "extracted", result: RESULT });
+    h.send({
+      type: "extracted",
+      result: extractLocally("Ava", [{ questionId: "about", question: QUESTIONS[0]!.spoken, answer: h.state.answers[0]!, feeds: "loves" }]),
+    });
     expect(h.state.phase).toBe("review");
-    h.send({ type: "removeChip", list: "avoids", value: "gambling" });
     h.send({ type: "addChip", list: "loves", value: "Cooking." });
     h.send({ type: "addChip", list: "loves", value: "hiking" }); // duplicate ignored
-    expect(h.state.result).toMatchObject({ loves: ["hiking", "books", "cooking"], avoids: [] });
+    expect(h.state.result).toMatchObject({ loves: ["hiking", "books", "cooking"], avoids: ["gambling"] });
     h.send({ type: "save" });
     expect(h.state.phase).toBe("finished");
-    expect(h.effects.at(-1)).toEqual({ type: "finish", result: { loves: ["hiking", "books", "cooking"], avoids: [], personality: ["outdoorsy"] } });
+    expect(h.effects.at(-1)).toMatchObject({ type: "finish", result: { loves: ["hiking", "books", "cooking"], avoids: ["gambling"] } });
 
     const spoken = h.effects.filter((effect) => effect.type === "speak").length;
-    expect(spoken).toBe(1 + QUESTIONS.length + 1); // intro, four questions, closing
+    expect(spoken).toBe(1 + QUESTIONS.length + 1); // intro, the prompt, closing
     expect(h.effects.filter((effect) => effect.type === "listen")).toHaveLength(QUESTIONS.length);
   });
 
@@ -108,7 +98,8 @@ describe("voice path", () => {
     h.send({ type: "silence" });
     h.send({ type: "final", text: "" });
     expect(h.state.answers[0]).toBe("");
-    expect(h.state.index).toBe(1);
+    // One prompt: an empty second try goes straight to extraction.
+    expect(h.state.phase).toBe("extracting");
     expect(h.state.notice).toBeNull();
   });
 
@@ -123,8 +114,8 @@ describe("voice path", () => {
     h.send({ type: "typed", text: "board games" });
     h.send({ type: "submitTyped" });
     expect(h.state.answers[0]).toBe("board games");
-    h.send({ type: "speakEnd" }); // question 2 spoken; still typed
-    expect(h.state.phase).toBe("typing");
+    expect(h.state.mode).toBe("typed");
+    expect(h.state.phase).toBe("extracting");
     expect(h.effects.filter((effect) => effect.type === "listen")).toHaveLength(1);
   });
 
@@ -137,10 +128,11 @@ describe("voice path", () => {
     expect(h.state.notice).toBe(NOTICES.micUnavailable);
     expect(h.state.capabilities.canListen).toBe(false);
     h.send({ type: "submitTyped" });
-    expect(h.state.index).toBe(0);
+    expect(h.state.phase).toBe("typing");
     h.send({ type: "typed", text: "cooking" });
     h.send({ type: "submitTyped" });
-    expect(h.state.index).toBe(1);
+    expect(h.state.answers[0]).toBe("cooking");
+    expect(h.state.phase).toBe("extracting");
   });
 
   it("skips a question while listening, stopping the mic first", () => {
@@ -149,8 +141,8 @@ describe("voice path", () => {
     h.send({ type: "speakEnd" });
     h.send({ type: "skipQuestion" });
     expect(h.state.answers[0]).toBe("");
-    expect(h.state.index).toBe(1);
-    expect(h.types().slice(-2)).toEqual(["stopListening", "speak"]);
+    // Skipping the only prompt stops the mic and goes on to the closing line and extraction.
+    expect(h.types().slice(-3)).toEqual(["stopListening", "speak", "extract"]);
   });
 });
 
@@ -160,7 +152,7 @@ describe("typed-only path", () => {
     expect(h.state.phase).toBe("typing");
     expect(h.state.notice).toBe(NOTICES.voiceOff);
     expect(h.effects).toEqual([]);
-    for (const text of ["a", "b", "c", "d"]) {
+    for (const text of ["a"]) {
       h.send({ type: "typed", text });
       h.send({ type: "submitTyped" });
     }

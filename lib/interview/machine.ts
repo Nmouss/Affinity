@@ -125,7 +125,7 @@ function askQuestion(state: InterviewState): Step {
 }
 
 function answersOf(state: InterviewState): InterviewAnswer[] {
-  return QUESTIONS.map((question, index) => ({ questionId: question.id, question: question.spoken, answer: state.answers[index] ?? "" }));
+  return QUESTIONS.map((question, index) => ({ questionId: question.id, question: question.spoken, answer: state.answers[index] ?? "", feeds: question.feeds }));
 }
 
 /** Records the answer for the current question and moves to the next one, or to extraction. */

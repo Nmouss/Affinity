@@ -171,24 +171,35 @@ export function chunkFallback(answer: string, max = 2): string[] {
   return dedupe(chunks, max);
 }
 
-/** Runs the lexicon for one answer; `feeds` decides whether unmatched chunks become loves or avoids. */
+/**
+ * Runs the lexicons for one answer. An open answer mixes likes and dislikes, so both lexicons run:
+ * the avoid lexicon only over the clauses that sound like a dislike ("never spend on", "can't stand",
+ * "hate", "not into"), the love lexicon over everything else.
+ */
+const DISLIKE_CLAUSE = /\b(never|wouldn'?t|would not|don'?t|do not|can'?t stand|hate|not into|avoid|refuse to|no way)\b[^.!?;,]*/g;
+
 function extractAnswer(answer: InterviewAnswer, out: { loves: string[]; avoids: string[]; personality: string[] }): void {
   const text = normalizeText(answer.answer);
   if (!text) return;
-  const avoidQuestion = answer.questionId === "never";
+  const avoidQuestion = answer.feeds === "avoids";
   let matched = false;
-  if (avoidQuestion) {
+
+  const dislikes = avoidQuestion ? [text] : (text.match(DISLIKE_CLAUSE) ?? []);
+  const likes = avoidQuestion ? "" : text.replace(DISLIKE_CLAUSE, " ");
+
+  for (const clause of dislikes) {
     for (const entry of AVOIDS) {
-      if (!entry.pattern.test(text)) continue;
+      if (!entry.pattern.test(clause)) continue;
       if (entry.avoid) {
         out.avoids.push(entry.avoid);
         matched = true;
       }
       if (entry.personality) out.personality.push(...entry.personality);
     }
-  } else {
+  }
+  if (likes.trim()) {
     for (const entry of LOVES) {
-      if (!entry.pattern.test(text)) continue;
+      if (!entry.pattern.test(likes)) continue;
       if (entry.love) {
         out.loves.push(entry.love);
         matched = true;

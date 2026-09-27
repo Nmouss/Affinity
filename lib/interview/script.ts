@@ -1,22 +1,20 @@
 import type { InterviewQuestion } from "./types";
 
-// The interview script. Questions are indirect on purpose: they ask what the person does and where
-// they go, never what they want, so the answers say something true about them.
+// The interview is one open prompt: the person just talks about themselves for a bit, and the
+// extractor listens for what they enjoy, what they avoid, and how they come across. Open on purpose:
+// asking what they *want* gets a shopping list; asking who they are gets something true.
 
 export const QUESTIONS: readonly InterviewQuestion[] = [
-  { id: "weekend", spoken: "What did you get up to last weekend?", hint: "Anything counts, even a quiet one.", feeds: "loves" },
-  { id: "hours", spoken: "What's something you could talk about for hours?", hint: "A hobby, a subject, a show, anything.", feeds: "loves" },
   {
-    id: "place",
-    spoken: "Where's your happy place? Somewhere you go to feel like yourself.",
-    hint: "A room, a trail, a gym, a cafe.",
+    id: "about",
+    spoken: "Tell me a bit about yourself. What do you love doing, what are you into lately, and what would you never spend money on?",
+    hint: "Just talk. Hobbies, weekends, favourite places, pet peeves. Anything counts.",
     feeds: "loves",
   },
-  { id: "never", spoken: "What's one thing you'd never spend money on?", hint: "Be honest, nobody is judging.", feeds: "avoids" },
 ];
 
 export function introFor(name: string): string {
-  return `Nice to meet you, ${name}. Four quick questions so I get a feel for you. Answer out loud, or type if you'd rather.`;
+  return `Nice to meet you, ${name}. Tell me a bit about yourself, out loud or typed, and I'll get a feel for you.`;
 }
 
 export function closingFor(name: string): string {

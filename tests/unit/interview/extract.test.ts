@@ -19,7 +19,7 @@ function answer(id: InterviewAnswer["questionId"], text: string): InterviewAnswe
 
 describe("extractLocally", () => {
   it("turns an active weekend into loves and personality", () => {
-    const result = extractLocally("Ava", [answer("weekend", "Went hiking with friends, then cooked dinner.")]);
+    const result = extractLocally("Ava", [answer("about", "Went hiking with friends, then cooked dinner.")]);
     expect(result.loves).toEqual(expect.arrayContaining(["hiking", "cooking"]));
     expect(result.personality).toEqual(expect.arrayContaining(["outdoorsy", "social"]));
     expect(result.source).toBe("local");
@@ -27,7 +27,7 @@ describe("extractLocally", () => {
   });
 
   it("reads the spending question as avoids", () => {
-    const result = extractLocally("Leo", [answer("never", "Designer handbags, honestly.")]);
+    const result = extractLocally("Leo", [answer("about", "I would never spend money on designer handbags, honestly.")]);
     expect(result.avoids).toContain("luxury brands");
     expect(result.personality).toContain("practical");
     expect(result.loves).toEqual([]);
@@ -35,19 +35,19 @@ describe("extractLocally", () => {
   });
 
   it("falls back to short chunks when the lexicon has never heard of it", () => {
-    const result = extractLocally("Sam", [answer("hours", "mostly birdwatching and my terrarium")]);
+    const result = extractLocally("Sam", [answer("about", "mostly birdwatching and my terrarium")]);
     expect(result.loves).toEqual(["birdwatching", "terrarium"]);
     // Known hobbies land as their canonical phrase, never as a raw chunk.
-    expect(extractLocally("Sam", [answer("hours", "mostly pottery and my podcast")]).loves).toEqual(["podcasts", "crafts"]);
+    expect(extractLocally("Sam", [answer("about", "mostly pottery and my podcast")]).loves).toEqual(["podcasts", "crafts"]);
     expect(chunkFallback("mostly pottery and my knitting circle")).toEqual(["pottery", "knitting circle"]);
     expect(chunkFallback("I spent 3 hours doing nothing")).not.toContain("3 hours");
   });
 
   it("ignores empty answers and dedupes across questions", () => {
     const result = extractLocally("Ava", [
-      answer("weekend", ""),
-      answer("hours", "Hiking, always hiking."),
-      answer("place", "A trail in the mountains"),
+      answer("about", ""),
+      answer("about", "Hiking, always hiking."),
+      answer("about", "A trail in the mountains"),
     ]);
     expect(result.loves.filter((love) => love === "hiking")).toHaveLength(1);
     expect(result.personality.filter((trait) => trait === "outdoorsy")).toHaveLength(1);
@@ -69,7 +69,7 @@ describe("extractLocally", () => {
     expect(stripEmoji("hiking 🥾 trips")).toBe("hiking trips");
     const prefs = normalizePreferences({ loves: ['"Board games."', "board games"], avoids: [], personality: [] });
     expect(prefs.loves).toEqual(["board games"]);
-    const result = extractLocally("Ava", [answer("weekend", "🎉 party with friends 🎉")]);
+    const result = extractLocally("Ava", [answer("about", "🎉 party with friends 🎉")]);
     for (const text of [...result.loves, ...result.personality, result.summary]) expect(text).not.toMatch(/\p{Extended_Pictographic}/u);
   });
 });

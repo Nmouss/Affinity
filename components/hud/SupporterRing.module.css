@@ -1,0 +1,80 @@
+/* Supporter portrait: a rounded Mii-ish body with a face patch, wrapped in a ring whose color and
+   weight say how much this character backs the item (peach/gold strong, gray-green neutral, muted cool). */
+
+.ring {
+  --ring: rgba(107, 115, 73, 0.35);
+  --ring-width: 2px;
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  list-style: none;
+  width: 4rem;
+  cursor: help;
+  outline: none;
+}
+
+.body {
+  width: 2.7rem;
+  height: 2.7rem;
+  border-radius: 50%;
+  border: 3px solid;
+  box-shadow: 0 0 0 var(--ring-width) var(--ring), 0 6px 14px rgba(44, 36, 28, 0.14);
+  display: grid;
+  place-items: center;
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+}
+
+.ring:hover .body,
+.ring:focus-visible .body {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 0 0 calc(var(--ring-width) + 2px) var(--ring), 0 10px 20px rgba(44, 36, 28, 0.18);
+}
+
+.face {
+  width: 1.55rem;
+  height: 1.25rem;
+  border-radius: 45% 45% 50% 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.eye {
+  width: 0.24rem;
+  height: 0.34rem;
+  border-radius: 50%;
+}
+
+.pickedFor {
+  position: absolute;
+  top: -0.25rem;
+  right: 0.35rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: #ffb347;
+  color: #2c241c;
+  font-size: 0.7rem;
+  line-height: 1.15rem;
+  text-align: center;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+}
+
+.name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: inherit;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strong { --ring: #ffb347; --ring-width: 4px; }
+.neutral { --ring: rgba(107, 115, 73, 0.45); --ring-width: 2px; }
+.cool { --ring: rgba(44, 36, 28, 0.18); --ring-width: 2px; }
+.cool .body { opacity: 0.7; }
+.unknown { --ring: rgba(44, 36, 28, 0.12); --ring-width: 2px; }
+.unknown .body { opacity: 0.8; }

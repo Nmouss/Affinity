@@ -35,6 +35,10 @@
   white-space: nowrap;
 }
 
+.submit[data-hand-hover] {
+  background: rgba(160, 72, 38, 0.8);
+}
+
 .hint {
   margin: 0;
   font-size: 0.8rem;

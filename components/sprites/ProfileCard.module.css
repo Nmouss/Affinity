@@ -39,6 +39,11 @@
   cursor: pointer;
 }
 
+.close[data-hand-hover] {
+  outline: 2px solid #ffd18a;
+  outline-offset: 1px;
+}
+
 .sub {
   composes: title from "../hud/Panel.module.css";
   margin-bottom: 0.35rem;

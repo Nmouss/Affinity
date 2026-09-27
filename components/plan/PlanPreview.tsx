@@ -1,4 +1,5 @@
 import type { FamilyProfile, Plan } from "@/types/domain";
+import { handItem, handTarget } from "@/components/hands/makerHitTest";
 import styles from "./PlanPreview.module.css";
 
 export interface PlanPreviewProps {
@@ -22,7 +23,7 @@ export function PlanPreview({ plan, family, onSwap, swapping, plaza = false }: P
       <p className={styles.location}>{plan.location}{plan.when ? ` · ${plan.when}` : ""}</p>
       <ol className={styles.stops}>
         {plan.stops.map((stop) => (
-          <li key={stop.id} className={styles.stop}>
+          <li key={stop.id} className={styles.stop} {...handItem(stop.id)}>
             {stop.photoName ? (
               <img
                 src={`/api/places/photo?name=${encodeURIComponent(stop.photoName)}`}
@@ -47,7 +48,12 @@ export function PlanPreview({ plan, family, onSwap, swapping, plaza = false }: P
                 {stop.googleMapsUri && <a href={stop.googleMapsUri} target="_blank" rel="noreferrer">Map</a>}
                 {stop.websiteUri && <a href={stop.websiteUri} target="_blank" rel="noreferrer">Website</a>}
                 {onSwap && (
-                  <button type="button" onClick={() => onSwap(stop.id)} disabled={swapping === stop.id}>
+                  <button
+                    type="button"
+                    {...handTarget(`plan-swap:${stop.id}`)}
+                    onClick={() => onSwap(stop.id)}
+                    disabled={swapping === stop.id}
+                  >
                     {swapping === stop.id ? "Asking…" : "Replace"}
                   </button>
                 )}

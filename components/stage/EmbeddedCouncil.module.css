@@ -17,9 +17,14 @@
   cursor: pointer;
 }
 
-.back:hover {
+.back:hover,
+.back[data-hand-hover] {
   background: #eef0e4;
   transform: translateY(-1px);
+}
+
+.back[data-hand-hover] {
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.28), 0 12px 28px rgba(44, 36, 28, 0.12);
 }
 
 .back:active {

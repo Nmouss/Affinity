@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { FamilyProfile, HouseRule } from "@/types/domain";
+import { handTarget } from "@/components/hands/makerHitTest";
 import styles from "./ProfileCard.module.css";
 
 function ruleText(rule: HouseRule): string {
@@ -33,7 +34,7 @@ export function ProfileCard({ profile, onClose }: { profile: FamilyProfile; onCl
             {profile.relationship} · {profile.personality.join(", ")}
           </p>
         </div>
-        <button type="button" className={styles.close} onClick={onClose} aria-label="Close profile">
+        <button type="button" {...handTarget("profile-close")} className={styles.close} onClick={onClose} aria-label="Close profile">
           Esc
         </button>
       </header>

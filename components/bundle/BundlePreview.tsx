@@ -1,4 +1,5 @@
 import type { Bundle, FamilyProfile } from "@/types/domain";
+import { handItem, handTarget } from "@/components/hands/makerHitTest";
 import styles from "./Bundle.module.css";
 
 const money = (value: number) => `$${Number.isInteger(value) ? value : value.toFixed(2)}`;
@@ -37,7 +38,7 @@ export function BundlePreview({ bundle, budget, family, onSwap, swapping }: Bund
       </div>
       <ul className={styles.items}>
         {bundle.items.map((item) => (
-          <li key={item.id} className={styles.item}>
+          <li key={item.id} className={styles.item} {...handItem(item.id)}>
             {item.imageUrl ? (
               <img src={item.imageUrl} alt="" className={styles.itemImage} loading="lazy" />
             ) : (
@@ -60,6 +61,7 @@ export function BundlePreview({ bundle, budget, family, onSwap, swapping }: Bund
               {onSwap && (
                 <button
                   type="button"
+                  {...handTarget(`bundle-swap:${item.id}`)}
                   className={styles.swap}
                   onClick={() => onSwap(item.id)}
                   disabled={swapping === item.id}

@@ -3,6 +3,7 @@
 import type { FormEvent, KeyboardEvent } from "react";
 import { emitGesture } from "@/lib/stage/bus";
 import { useStage } from "@/lib/stage/store";
+import { handTarget } from "@/components/hands/makerHitTest";
 import styles from "./MissionForm.module.css";
 
 /** The mission (AP2 intent). Submitting convenes through the bus, so the same arming applies. */
@@ -40,7 +41,7 @@ export function MissionForm() {
           autoComplete="off"
           spellCheck={false}
         />
-        <button type="submit" className={styles.submit}>
+        <button type="submit" {...handTarget("mission-submit")} className={styles.submit}>
           Gather the council
         </button>
       </div>

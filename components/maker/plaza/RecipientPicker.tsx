@@ -2,6 +2,7 @@
 
 import { getPerson } from "@/lib/people/roster";
 import { MAX_SHOP_RECIPIENTS } from "@/lib/director/mission";
+import { handTarget } from "@/components/hands/makerHitTest";
 import styles from "./RecipientPicker.module.css";
 
 export function RecipientPicker({
@@ -35,6 +36,7 @@ export function RecipientPicker({
               <li key={id}>
                 <button
                   type="button"
+                  {...handTarget(`recipient:${id}`)}
                   className={`${styles.choice} ${on ? styles.on : ""}`}
                   aria-pressed={on}
                   disabled={blocked}
@@ -47,10 +49,16 @@ export function RecipientPicker({
           })}
         </ul>
         <div className={styles.actions}>
-          <button type="button" className={styles.primary} disabled={selected.size === 0} onClick={onConfirm}>
+          <button
+            type="button"
+            {...handTarget("recipient-done")}
+            className={styles.primary}
+            disabled={selected.size === 0}
+            onClick={onConfirm}
+          >
             Shop for {selected.size || "…"}
           </button>
-          <button type="button" className={styles.secondary} onClick={onCancel}>
+          <button type="button" {...handTarget("recipient-cancel")} className={styles.secondary} onClick={onCancel}>
             Cancel
           </button>
         </div>

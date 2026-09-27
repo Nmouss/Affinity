@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { PlazaCouncilKeys } from "@/components/hands/PlazaCouncilKeys";
 import { Hud } from "@/components/hud/Hud";
 import { emitGesture } from "@/lib/stage/bus";
 import { getPeople, getPerson } from "@/lib/people/roster";
@@ -58,6 +59,7 @@ export function EmbeddedCouncil({
   return (
     <>
       <Hud plaza />
+      <PlazaCouncilKeys />
       <button type="button" className={styles.back} onClick={returnToWorld}>
         Stop agents
       </button>

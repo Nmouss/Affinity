@@ -1,6 +1,6 @@
 import type { StoreApi } from "zustand";
 import { signMandate } from "@/lib/crypto/sign";
-import { runtimeProfilesFor } from "@/lib/people/runtimeProfile";
+import { runtimeProfilesWithTaste } from "@/lib/people/runtimeProfile";
 import { emitGesture, onGesture, setArmingPolicy } from "@/lib/stage/bus";
 import { MAX_SEATS } from "@/lib/stage/layout";
 import type { StageStore } from "@/lib/stage/store";
@@ -73,7 +73,7 @@ export function createDirector(options: DirectorOptions): Director {
   const now = options.now ?? Date.now;
   const fetchImpl = options.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
   const sign = options.sign ?? signMandate;
-  const profilesFor = options.profiles ?? ((ids: string[]) => runtimeProfilesFor(ids));
+  const profilesFor = options.profiles ?? ((ids: string[]) => runtimeProfilesWithTaste(ids));
   const threadIdFor = options.threadId ?? newThreadId;
   const log = options.log ?? ((message: string, detail?: unknown) => console.info(`[director] ${message}`, detail ?? ""));
   const beats: BeatDurations = { ...(options.cut90 ? CUT90_BEATS : DEFAULT_BEATS) };

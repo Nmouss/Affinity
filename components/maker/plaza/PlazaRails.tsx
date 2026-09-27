@@ -17,6 +17,7 @@ import {
   RemoveIcon,
   SortCircleIcon,
   SortNameIcon,
+  TasteIcon,
   WhistleIcon,
 } from "./plazaIcons";
 import { HelpOverlay } from "./HelpOverlay";
@@ -188,6 +189,20 @@ export function PlazaRails({ state, dispatch }: PlazaRailsProps) {
     dispatch({ type: "newPerson" });
   }
 
+  /** Teach it what you like: the taste comparisons for someone who already exists. */
+  function handleTeach() {
+    if (!selectedId) {
+      showHint("Pick someone first");
+      return;
+    }
+    const person = getPerson(selectedId);
+    const look = getLook(selectedId);
+    const circle = getCircle(selectedId);
+    if (!person || !look || !circle) return;
+    playBlip("select");
+    dispatch({ type: "teachTaste", id: selectedId, name: person.name, circle, relationship: person.relationship, look });
+  }
+
   const confirmingSelected = selectedId !== null && state.plazaConfirmRemoveId === selectedId;
 
   function handleRemoveClick() {
@@ -250,6 +265,9 @@ export function PlazaRails({ state, dispatch }: PlazaRailsProps) {
         </RailButton>
         <RailButton targetId="plaza-edit" dropAction="edit" label="View/Edit" dim={!selectedId} onClick={handleEdit}>
           <EditIcon />
+        </RailButton>
+        <RailButton targetId="plaza-taste" label="Teach taste" dim={!selectedId} onClick={handleTeach}>
+          <TasteIcon />
         </RailButton>
         <RailButton targetId="plaza-new" label="New person" disabled={total >= MAX_PEOPLE} onClick={handleNew}>
           <NewIcon />

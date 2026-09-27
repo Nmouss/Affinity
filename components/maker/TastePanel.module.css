@@ -1,0 +1,203 @@
+/* "Teach it what you like": two big rounded option tiles beside the character, a progress row,
+   and the choose/neither/skip/undo/done controls. Sits on the right half so the character on the
+   canvas stays visible at 1280x800. */
+
+.shell {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  width: min(38rem, 56vw);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.card {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  background: var(--plaza-ivory, #fffaf1);
+  border-radius: var(--plaza-radius-panel, 1.5rem);
+  padding: 1.75rem 2rem;
+  box-shadow: var(--plaza-shadow-lift, 0 20px 50px rgba(0, 0, 0, 0.25));
+  color: var(--plaza-text, #402503);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.6rem;
+  color: var(--plaza-text, #402503);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--plaza-text-muted, #8a5a36);
+  font-size: 1rem;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.or {
+  align-self: center;
+  font-weight: 700;
+  color: var(--plaza-text-muted, #a97a4c);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1rem 1.1rem;
+  min-height: 15rem;
+  border-radius: 1.25rem;
+  border: 4px solid transparent;
+  background: var(--plaza-cream, #fff3e0);
+  color: var(--plaza-text-muted, #6b4a2b);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  transition:
+    transform var(--plaza-fast, 0.08s) var(--plaza-ease, ease),
+    box-shadow var(--plaza-mid, 0.12s) var(--plaza-ease, ease),
+    background var(--plaza-mid, 0.12s) var(--plaza-ease, ease),
+    border-color var(--plaza-mid, 0.12s) var(--plaza-ease, ease);
+}
+
+.tile:hover,
+.tile[data-hand-hover] {
+  transform: translateY(-3px);
+  background: var(--plaza-peach, #ffe3bd);
+  box-shadow: 0 0 0 5px var(--plaza-glow, rgba(255, 209, 128, 0.55)), 0 8px 18px rgba(0, 0, 0, 0.16);
+}
+
+.tile:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.tile:focus-visible {
+  outline: 3px solid var(--plaza-gold, #ffb347);
+  outline-offset: 3px;
+}
+
+/* The picked tile pops for a beat while the character hops; the other one settles back. */
+.tileChosen {
+  border-color: var(--plaza-gold, #ffb347);
+  background: var(--plaza-peach, #ffe3bd);
+  animation: chosen var(--plaza-slow, 0.3s) var(--plaza-ease, ease) 1;
+}
+
+.tileDim {
+  opacity: 0.55;
+}
+
+@keyframes chosen {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.06) translateY(-4px); }
+  100% { transform: scale(1); }
+}
+
+.image {
+  width: 9.5rem;
+  height: 9.5rem;
+  border-radius: 1rem;
+  background: #fff;
+  object-fit: contain;
+  box-shadow: inset 0 0 0 2px rgba(111, 116, 112, 0.18);
+}
+
+.name {
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.category {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--plaza-text-muted, #a97a4c);
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--plaza-text-muted, #8a5a36);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.dots {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: rgba(111, 116, 112, 0.25);
+}
+
+.dotDone {
+  background: var(--plaza-gold, #ffb347);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.controlGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.kbd {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.35rem;
+  border-radius: 0.35rem;
+  background: rgba(111, 116, 112, 0.15);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tileChosen {
+    animation: none;
+  }
+  .tile,
+  .tile:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .shell {
+    width: calc(100vw - 3rem);
+  }
+  .tile {
+    min-height: 12rem;
+  }
+  .image {
+    width: 7rem;
+    height: 7rem;
+  }
+}

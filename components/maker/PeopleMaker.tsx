@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { MakerHands } from "@/components/hands/MakerHands";
-import { useRosterHydration } from "@/lib/people/roster";
+import { useRosterHydration, useTasteProfile } from "@/lib/people/roster";
 import { HAND_TARGET_ATTR } from "@/components/hands/makerHitTest";
 import { usePlaza } from "@/components/maker/plaza/plazaState";
 import { GRABBING_CURSOR_CSS, POINTER_CURSOR_CSS } from "@/components/maker/plaza/plazaIcons";
@@ -17,6 +17,8 @@ import { WhoCirclePanel, WhoSizePanel } from "./WhoPanel";
 import { StartPanel } from "./StartPanel";
 import { EditorPanel } from "./EditorPanel";
 import { QuitDialog } from "./QuitDialog";
+import { TastePanel } from "./TastePanel";
+import { MeetPanel } from "./MeetPanel";
 import styles from "./PeopleMaker.module.css";
 
 // The R3F canvas is browser-only (WebGL, the Leap socket downstream in MakerHands), so it never
@@ -59,6 +61,8 @@ export function PeopleMaker() {
 
   useHoverBlips();
   const plazaCursor = usePlazaCursor(state.step === "plaza");
+  // The roster hook takes an id; while no one is being taught, the lookup key is a never-present id.
+  const tasteProfile = useTasteProfile(state.tasteId ?? "");
 
   return (
     <div className={styles.root} style={plazaCursor ? { cursor: plazaCursor } : undefined}>
@@ -83,6 +87,13 @@ export function PeopleMaker() {
       )}
 
       {state.step === "quit-dialog" && <QuitDialog dispatch={wrappedDispatch} />}
+
+      {state.step === "taste" && state.draft && (
+        <TastePanel personName={state.draft.name} profile={tasteProfile} dispatch={wrappedDispatch} />
+      )}
+      {state.step === "meet" && state.draft && (
+        <MeetPanel personName={state.draft.name} profile={tasteProfile} dispatch={wrappedDispatch} />
+      )}
 
       <MakerHands />
     </div>

@@ -4,6 +4,7 @@
 export { PlazaButton, type PlazaButtonProps } from "./PlazaButton";
 export { PlazaPanel, type PlazaPanelProps } from "./PlazaPanel";
 export { RailButton, type RailButtonProps } from "./RailButton";
+export { SoundToggle } from "./SoundToggle";
 export {
   joinClasses,
   plazaButtonClassName,

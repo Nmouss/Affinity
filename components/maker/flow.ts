@@ -15,14 +15,26 @@ import {
 } from "@/types/character";
 import { BLANK_LOOK, STARTER_LOOKS } from "@/lib/people/starters";
 import type { NewPerson, PersonPatch } from "@/lib/people/roster";
+import {
+  applyChoice,
+  emptyProfile,
+  nextComparison,
+  progress,
+  TASTE_COMPARISONS,
+  undoChoice,
+  type TasteChoice,
+  type TasteComparison,
+  type TasteProfile,
+} from "@/lib/taste";
 
 // Pure state machine for the People Maker (/create), modeled on the Wii Mii Channel's flow:
 // Plaza -> New person -> Who is this? (circle, then size) -> Start from scratch/preset/random ->
-// Editor (tabs) -> Quit dialog. UI components dispatch actions; nothing here touches the DOM,
-// three.js, or the roster store directly (aside from the injected `save`/`update` calls below),
-// so the whole flow is exercised in flow.test.ts without React or a browser.
+// Editor (tabs) -> Quit dialog -> Taste (teach it what you like) -> Meet your character -> Plaza.
+// UI components dispatch actions; nothing here touches the DOM, three.js, or the roster store
+// directly (aside from the injected roster/taste calls in FlowDeps), so the whole flow is exercised
+// in flow.test.ts without React or a browser.
 
-export type MakerStep = "plaza" | "who-circle" | "who-size" | "start" | "editor" | "quit-dialog";
+export type MakerStep = "plaza" | "who-circle" | "who-size" | "start" | "editor" | "quit-dialog" | "taste" | "meet";
 
 export const EDITOR_TABS = [
   "body",
@@ -72,6 +84,8 @@ export interface MakerState {
   nameError: boolean;
   /** Set while the plaza's Remove confirm dialog is open (rail click or Delete key), for this id. */
   plazaConfirmRemoveId: string | null;
+  /** The saved person being taught their taste (steps "taste" and "meet"); `draft` keeps their look for the canvas. */
+  tasteId: string | null;
 }
 
 export const initialMakerState: MakerState = {
@@ -80,6 +94,7 @@ export const initialMakerState: MakerState = {
   draft: null,
   nameError: false,
   plazaConfirmRemoveId: null,
+  tasteId: null,
 };
 
 export type MakerAction =
@@ -109,12 +124,34 @@ export type MakerAction =
   | { type: "back" }
   | { type: "requestRemove"; id: string }
   | { type: "confirmRemove" }
-  | { type: "cancelRemove" };
+  | { type: "cancelRemove" }
+  /** Plaza: teach (or re-teach) an existing person's taste. Carries the look so the canvas can show them. */
+  | { type: "teachTaste"; id: string; name: string; circle: Circle; relationship: string; look: CharacterLook }
+  | { type: "tasteChoice"; choice: TasteChoice }
+  | { type: "tasteUndo" }
+  /** "Done for now": skip the remaining pairs and meet the character with what was learned. */
+  | { type: "tasteDone" }
+  | { type: "meetDone" };
 
 export interface FlowDeps {
   addPerson: (person: NewPerson) => string | null;
   updatePerson: (id: string, patch: PersonPatch) => void;
   removePerson: (id: string) => void;
+  /** The person's saved taste, if they have been taught anything yet. */
+  getTaste: (id: string) => TasteProfile | undefined;
+  setTaste: (id: string, profile: TasteProfile) => void;
+  /** ISO timestamp for taste evidence; injected so the reducer stays deterministic in tests. */
+  now: () => string;
+}
+
+/** The pair the person is looking at now, or null once every curated comparison is done. */
+export function currentComparison(profile: TasteProfile | undefined): TasteComparison | null {
+  return nextComparison(profile ?? emptyProfile(""), TASTE_COMPARISONS);
+}
+
+/** "3 of 10" style progress for the taste step. */
+export function tasteProgress(profile: TasteProfile | undefined): { done: number; total: number } {
+  return progress(profile ?? emptyProfile(""), TASTE_COMPARISONS);
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -228,6 +265,7 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
         tab: "body",
         nameError: false,
         plazaConfirmRemoveId: null,
+        tasteId: null,
         draft: {
           name: "",
           circle: "family",
@@ -246,6 +284,7 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
         tab: "body",
         nameError: false,
         plazaConfirmRemoveId: null,
+        tasteId: null,
         draft: {
           name: action.name,
           circle: action.circle,
@@ -388,9 +427,22 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
       const name = sanitizeName(state.draft.name).trim();
       if (!name) return { ...state, step: "editor", tab: "name", nameError: true };
       const person: NewPerson = { name, circle: state.draft.circle, relationship: state.draft.relationship, look: state.draft.look };
-      if (state.draft.editingId) deps.updatePerson(state.draft.editingId, person);
-      else deps.addPerson(person);
-      return { ...initialMakerState };
+      let id: string | null;
+      if (state.draft.editingId) {
+        id = state.draft.editingId;
+        deps.updatePerson(id, person);
+        // An existing person who already has a taste goes straight back to the plaza, as before.
+        if (deps.getTaste(id)) return { ...initialMakerState };
+      } else {
+        id = deps.addPerson(person);
+        if (!id) return { ...initialMakerState }; // roster full: nothing to teach
+      }
+      return {
+        ...initialMakerState,
+        step: "taste",
+        tasteId: id,
+        draft: { ...state.draft, name, editingId: id },
+      };
     }
 
     case "quit": {
@@ -420,6 +472,11 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
           return { ...state, step: "quit-dialog" };
         case "quit-dialog":
           return { ...state, step: "editor" };
+        case "taste":
+          // The person is already saved; leaving the lesson early just meets them with what they know.
+          return { ...state, step: "meet" };
+        case "meet":
+          return { ...initialMakerState };
         default:
           return state;
       }
@@ -439,6 +496,54 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
     case "cancelRemove": {
       if (state.step !== "plaza") return state;
       return { ...state, plazaConfirmRemoveId: null };
+    }
+
+    case "teachTaste": {
+      if (state.step !== "plaza") return state;
+      return {
+        ...initialMakerState,
+        step: "taste",
+        tasteId: action.id,
+        draft: {
+          name: action.name,
+          circle: action.circle,
+          size: "grownup",
+          relationship: action.relationship,
+          look: cloneLook(action.look),
+          editingId: action.id,
+        },
+      };
+    }
+
+    case "tasteChoice": {
+      if (state.step !== "taste" || !state.tasteId) return state;
+      const now = deps.now();
+      const profile = deps.getTaste(state.tasteId) ?? emptyProfile(now);
+      const comparison = currentComparison(profile);
+      if (!comparison) return { ...state, step: "meet" };
+      const next = applyChoice(profile, comparison, action.choice, now);
+      deps.setTaste(state.tasteId, next);
+      const { done, total } = tasteProgress(next);
+      return done >= total ? { ...state, step: "meet" } : state;
+    }
+
+    case "tasteUndo": {
+      if (state.step !== "taste" || !state.tasteId) return state;
+      const profile = deps.getTaste(state.tasteId);
+      const last = profile?.completedComparisonIds.at(-1);
+      if (!profile || !last) return state;
+      deps.setTaste(state.tasteId, undoChoice(profile, last, deps.now()));
+      return state;
+    }
+
+    case "tasteDone": {
+      if (state.step !== "taste") return state;
+      return { ...state, step: "meet" };
+    }
+
+    case "meetDone": {
+      if (state.step !== "meet") return state;
+      return { ...initialMakerState };
     }
 
     default:

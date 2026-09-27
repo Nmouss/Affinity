@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { create } from "zustand";
 import { persist, type PersistStorage, type StorageValue } from "zustand/middleware";
+import type { TasteProfile } from "@/lib/taste/types";
 import type { CharacterLook, Circle } from "@/types/character";
 import type { FamilyProfile } from "@/types/domain";
 import { DOORWAY, homeSpot, type Vec3 } from "@/lib/stage/layout";
@@ -11,11 +12,15 @@ import { STARTER_CIRCLES, STARTER_LOOKS, STARTER_PEOPLE } from "./starters";
 // agents' FamilyProfile shape; looks and circles sit beside them keyed by id. React reads with the
 // hooks below, everything else (director, attribution, keyboard) with getPeople()/getPerson().
 // Persisted to localStorage (validated on load; corrupt or invalid data falls back to starters).
+// Learned taste lives in a sibling `tasteProfiles` map keyed by person id (schema v2): old v1 blobs
+// load with an empty map, and removing a person removes their taste.
 
 export const MAX_PEOPLE = 24;
 
 const STORAGE_KEY = "affinity.people.v1";
-type Persisted = Pick<RosterState, "people" | "looks" | "circles">;
+/** Bumped when the persisted shape grows; parsePersistedRoster accepts every older shape. */
+export const ROSTER_SCHEMA_VERSION = 2;
+type Persisted = Pick<RosterState, "people" | "looks" | "circles" | "tasteProfiles">;
 
 export interface NewPerson {
   name: string;
@@ -35,11 +40,17 @@ export interface RosterState {
   people: FamilyProfile[];
   looks: Record<string, CharacterLook>;
   circles: Record<string, Circle>;
+  /** What each character has learned about its person's taste, keyed by person id. */
+  tasteProfiles: Record<string, TasteProfile>;
   /** Adds a person and returns their id, or null when the roster is full. */
   addPerson: (person: NewPerson) => string | null;
   updatePerson: (id: string, patch: PersonPatch) => void;
+  /** Removes the person and, with them, their look, circle, and taste. */
   removePerson: (id: string) => void;
   setCircle: (id: string, circle: Circle) => void;
+  /** Stores a taste profile for a person the roster knows; ignored for unknown ids. */
+  setTasteProfile: (id: string, profile: TasteProfile) => void;
+  clearTasteProfile: (id: string) => void;
   /** Reorders to match `ids`; ids not listed keep their relative order at the end. */
   reorder: (ids: string[]) => void;
   resetToStarters: () => void;
@@ -49,11 +60,12 @@ function newId(): string {
   return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function starterState(): Pick<RosterState, "people" | "looks" | "circles"> {
+function starterState(): Persisted {
   return {
     people: STARTER_PEOPLE.map((profile) => ({ ...profile })),
     looks: structuredClone(STARTER_LOOKS),
     circles: { ...STARTER_CIRCLES },
+    tasteProfiles: {},
   };
 }
 
@@ -153,8 +165,14 @@ export const useRoster = create<RosterState>()(
           people: state.people.filter((profile) => profile.id !== id),
           looks: withoutKey(state.looks, id),
           circles: withoutKey(state.circles, id),
+          tasteProfiles: withoutKey(state.tasteProfiles, id),
         })),
       setCircle: (id, circle) => set((state) => ({ circles: { ...state.circles, [id]: circle } })),
+      setTasteProfile: (id, profile) =>
+        set((state) =>
+          state.people.some((person) => person.id === id) ? { tasteProfiles: { ...state.tasteProfiles, [id]: profile } } : {},
+        ),
+      clearTasteProfile: (id) => set((state) => ({ tasteProfiles: withoutKey(state.tasteProfiles, id) })),
       reorder: (ids) =>
         set((state) => {
           const rank = new Map(ids.map((id, index) => [id, index]));
@@ -166,9 +184,13 @@ export const useRoster = create<RosterState>()(
     }),
     {
       name: STORAGE_KEY,
+      version: ROSTER_SCHEMA_VERSION,
       storage: rosterStorage,
       skipHydration: true,
-      partialize: (state) => ({ people: state.people, looks: state.looks, circles: state.circles }),
+      partialize: (state) => ({ people: state.people, looks: state.looks, circles: state.circles, tasteProfiles: state.tasteProfiles }),
+      // getItem already normalizes every older blob through parsePersistedRoster (v1 → empty taste),
+      // so migrating is just accepting that normalized state whatever version it was saved under.
+      migrate: (persisted) => persisted as Persisted,
     },
   ),
 );
@@ -187,6 +209,14 @@ export function getLook(id: string): CharacterLook | undefined {
 
 export function getCircle(id: string): Circle | undefined {
   return useRoster.getState().circles[id];
+}
+
+export function getTasteProfile(id: string): TasteProfile | undefined {
+  return useRoster.getState().tasteProfiles[id];
+}
+
+export function useTasteProfile(id: string): TasteProfile | undefined {
+  return useRoster((state) => state.tasteProfiles[id]);
 }
 
 export function usePeople(): FamilyProfile[] {

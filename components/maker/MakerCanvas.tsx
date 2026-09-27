@@ -79,7 +79,7 @@ function OrbitPlane() {
   );
 }
 
-function EditorScene({ draft }: { draft: DraftPerson }) {
+function EditorScene({ draft, offsetX = 0 }: { draft: DraftPerson; offsetX?: number }) {
   const group = useRef<import("three").Group>(null);
   const mood = useRef<SpriteMood>("idle");
   const gaze = useRef({ x: 0, y: 0 });
@@ -115,13 +115,13 @@ function EditorScene({ draft }: { draft: DraftPerson }) {
 
   return (
     <group>
-      <group ref={group} position={[0, 0, 0]}>
+      <group ref={group} position={[offsetX, 0, 0]}>
         <CharacterModel profile={profile} mood={mood} gaze={gaze} motion={motion} look={draft.look} />
       </group>
       <OrbitPlane />
       <ambientLight intensity={0.7} />
       <directionalLight position={[3, 5, 4]} intensity={1} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[offsetX, -0.01, 0]}>
         <circleGeometry args={[2.4, 32]} />
         <meshStandardMaterial color="#ffe9c7" />
       </mesh>
@@ -134,8 +134,12 @@ export interface MakerCanvasProps {
   draft: DraftPerson | null;
 }
 
+/** Taste and meet keep the saved person on the turntable, nudged left so the panels fit beside them. */
+const TEACHING_OFFSET_X = -1.15;
+
 export default function MakerCanvas({ step, draft }: MakerCanvasProps) {
-  const editing = (step === "editor" || step === "quit-dialog") && draft !== null;
+  const teaching = (step === "taste" || step === "meet") && draft !== null;
+  const editing = (step === "editor" || step === "quit-dialog" || teaching) && draft !== null;
   // In the plaza the canvas inherits PeopleMaker's pointing-hand / grabbing-fist cursor.
   const cursor = editing ? "auto" : "inherit";
 
@@ -176,7 +180,9 @@ export default function MakerCanvas({ step, draft }: MakerCanvasProps) {
       onCreated={({ camera }) => camera.lookAt(0, editing ? 1 : 0, 0)}
       {...pointerHandlers}
     >
-      <Suspense fallback={null}>{editing && draft ? <EditorScene draft={draft} /> : <PlazaScene />}</Suspense>
+      <Suspense fallback={null}>
+        {editing && draft ? <EditorScene draft={draft} offsetX={teaching ? TEACHING_OFFSET_X : 0} /> : <PlazaScene />}
+      </Suspense>
     </Canvas>
   );
 }

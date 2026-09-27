@@ -1,5 +1,6 @@
+import { toAgentTaste } from "@/lib/taste/agents";
 import type { FamilyProfile, RuntimeProfile, TasteSummaryForAgents } from "@/types/domain";
-import { getPerson } from "./roster";
+import { getPerson, getTasteProfile } from "./roster";
 
 // The one mapper from a roster person (plus, later, their learned taste) to the profile the Python
 // backend reasons from. Hard rules pass through untouched: taste can add preferences, never vetoes.
@@ -37,4 +38,12 @@ export function runtimeProfilesFor(
     if (person) profiles.push(toRuntimeProfile(person, extrasFor(id)));
   }
   return profiles;
+}
+
+/** Runtime profiles for the invited ids with each person's learned taste attached when they have any. */
+export function runtimeProfilesWithTaste(ids: string[]): RuntimeProfile[] {
+  return runtimeProfilesFor(ids, (id) => {
+    const taste = getTasteProfile(id);
+    return taste ? { taste: toAgentTaste(taste) } : {};
+  });
 }

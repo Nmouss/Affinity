@@ -12,8 +12,49 @@ const BLIPS: Record<BlipKind, { freq: number; duration: number; type: Oscillator
 
 let ctx: AudioContext | null = null;
 
+// One switch for every blip and whistle in the app, remembered per browser. Essential actions never
+// depend on sound, so muting is purely a preference (and the default on the server / in tests).
+const SOUND_KEY = "affinity.sound.v1";
+let soundEnabled: boolean | null = null;
+const soundListeners = new Set<(enabled: boolean) => void>();
+
+function readSoundPreference(): boolean {
+  if (typeof localStorage === "undefined") return true;
+  try {
+    return localStorage.getItem(SOUND_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+export function isSoundEnabled(): boolean {
+  if (soundEnabled === null) soundEnabled = readSoundPreference();
+  return soundEnabled;
+}
+
+export function setSoundEnabled(enabled: boolean): void {
+  soundEnabled = enabled;
+  if (typeof localStorage !== "undefined") {
+    try {
+      localStorage.setItem(SOUND_KEY, enabled ? "on" : "off");
+    } catch {
+      // Private browsing or a full store: the choice still holds for this session.
+    }
+  }
+  for (const listener of [...soundListeners]) listener(enabled);
+}
+
+/** Notifies on every change; returns the unsubscribe. */
+export function onSoundChange(listener: (enabled: boolean) => void): () => void {
+  soundListeners.add(listener);
+  return () => {
+    soundListeners.delete(listener);
+  };
+}
+
 function context(): AudioContext | null {
   if (typeof window === "undefined") return null;
+  if (!isSoundEnabled()) return null;
   const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctor) return null;
   if (!ctx) ctx = new Ctor();

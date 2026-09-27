@@ -71,6 +71,23 @@ export function EditIcon({ size }: IconProps) {
 }
 
 /** New person: a face with a plus in its speech bubble. */
+/** Teach taste: a face with a heart in its speech bubble. */
+export function TasteIcon({ size }: IconProps) {
+  return (
+    <Glyph size={size}>
+      <FaceWithBubble
+        bubble={
+          <path
+            d="M36.5 17.2 L32.6 13.5 a2.3 2.3 0 0 1 3.3 -3.3 l0.6 0.6 l0.6 -0.6 a2.3 2.3 0 0 1 3.3 3.3 z"
+            fill={PLAZA_ICON_STROKE}
+            stroke="none"
+          />
+        }
+      />
+    </Glyph>
+  );
+}
+
 export function NewIcon({ size }: IconProps) {
   return (
     <Glyph size={size}>

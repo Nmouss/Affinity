@@ -11,10 +11,14 @@ import { flowReducer, initialMakerState, type FlowDeps, type MakerAction, type M
 export function useMakerFlow(): [MakerState, (action: MakerAction) => void] {
   const [state, dispatch] = useReducer(
     (current: MakerState, action: MakerAction) => {
+      const roster = useRoster.getState();
       const deps: FlowDeps = {
-        addPerson: useRoster.getState().addPerson,
-        updatePerson: useRoster.getState().updatePerson,
-        removePerson: useRoster.getState().removePerson,
+        addPerson: roster.addPerson,
+        updatePerson: roster.updatePerson,
+        removePerson: roster.removePerson,
+        getTaste: (id) => roster.tasteProfiles[id],
+        setTaste: roster.setTasteProfile,
+        now: () => new Date().toISOString(),
       };
       return flowReducer(current, action, deps);
     },

@@ -12,6 +12,27 @@ import type { MakerAction, MakerState } from "./flow";
 // dialog from the editor), and, in the plaza only, W (toggle the whistle) and Delete (remove the
 // selected Mii, with the same confirm the Remove rail icon uses).
 
+/** Keys the taste step answers to, and what they mean. Exported so the map is testable. */
+export const TASTE_KEYS: Record<string, MakerAction> = {
+  ArrowLeft: { type: "tasteChoice", choice: "left" },
+  ArrowRight: { type: "tasteChoice", choice: "right" },
+  n: { type: "tasteChoice", choice: "neither" },
+  N: { type: "tasteChoice", choice: "neither" },
+  s: { type: "tasteChoice", choice: "skip" },
+  S: { type: "tasteChoice", choice: "skip" },
+  u: { type: "tasteUndo" },
+  U: { type: "tasteUndo" },
+  Backspace: { type: "tasteUndo" },
+  Enter: { type: "tasteDone" },
+};
+
+/** The maker action a key means in the given step, or null when the key is free. */
+export function keyAction(step: MakerState["step"], key: string): MakerAction | null {
+  if (step === "taste") return TASTE_KEYS[key] ?? null;
+  if (step === "meet" && key === "Enter") return { type: "meetDone" };
+  return null;
+}
+
 export function useMakerKeyboard(state: MakerState, dispatch: (action: MakerAction) => void): void {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -19,6 +40,16 @@ export function useMakerKeyboard(state: MakerState, dispatch: (action: MakerActi
       if (event.key === "Escape") {
         event.preventDefault();
         dispatch({ type: "back" });
+        return;
+      }
+      if (!typing && (state.step === "taste" || state.step === "meet")) {
+        // A focused button handles its own Enter/Space; only the free keys go through here.
+        if (event.key === "Enter" && document.activeElement instanceof HTMLButtonElement) return;
+        const action = keyAction(state.step, event.key);
+        if (action) {
+          event.preventDefault();
+          dispatch(action);
+        }
         return;
       }
       if (!typing && (event.key === "q" || event.key === "Q") && state.step === "editor") {

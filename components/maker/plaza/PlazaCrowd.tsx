@@ -26,7 +26,10 @@ export function PlazaCrowd() {
   const sort = usePlaza((state) => state.whistle.sort);
   const missionMemberIds = usePlaza((state) => state.missionMemberIds);
   const giftPick = usePlaza((state) => state.giftPick);
-  const missionCircleOpen = usePlaza((state) => state.missionMode === "plan");
+  // Members gather in the circle while dinner selection is open *and* while any council runs there:
+  // a gift council has missionMode "shopping", and PlazaPerson only shows council bubbles and moods
+  // for someone holding a mission slot. The drawn circle itself stays dinner-only (MissionCircle).
+  const membersGathered = usePlaza((state) => state.missionMode !== null);
 
   const slots = useMemo(() => {
     // Picking a gift's people lines everyone up around the picks; otherwise the whistle decides.
@@ -37,10 +40,10 @@ export function PlazaCrowd() {
   }, [giftPick, whistleOn, sort, people, circles]);
   const missionSlots = useMemo(
     () =>
-      missionCircleOpen
+      membersGathered
         ? missionCircleSlots(missionMemberIds.filter((id) => people.some((person) => person.id === id)))
         : {},
-    [missionCircleOpen, missionMemberIds, people],
+    [membersGathered, missionMemberIds, people],
   );
 
   useFrame(() => {
@@ -55,7 +58,7 @@ export function PlazaCrowd() {
           profile={profile}
           formationSlot={slots?.[profile.id] ?? null}
           missionSlot={missionSlots[profile.id] ?? null}
-          missionCircleOpen={missionCircleOpen}
+          missionCircleOpen={membersGathered}
         />
       ))}
       {giftPick && <GiftRoleMarkers pick={giftPick} />}

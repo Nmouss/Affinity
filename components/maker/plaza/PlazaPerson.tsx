@@ -108,7 +108,8 @@ export interface PlazaPersonProps {
   formationSlot: [number, number] | null;
   /** Stable spot inside the mission circle; members do not resume wandering. */
   missionSlot: [number, number] | null;
-  /** The circle only reserves floor space while dinner-plan participant selection is open. */
+  /** The circle only reserves floor space while members are gathered in it: dinner-plan participant
+   * selection, or a running council of either kind. */
   missionCircleOpen: boolean;
 }
 

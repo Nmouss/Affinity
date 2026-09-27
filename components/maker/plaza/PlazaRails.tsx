@@ -34,6 +34,25 @@ export type PlazaDropResult =
   | { kind: "move"; id: string; from: Circle; to: Circle }
   | null;
 
+export type DinnerPlanAction =
+  | { kind: "emptyRoster" }
+  | { kind: "open" }
+  | { kind: "needsPeople" }
+  | { kind: "launch"; invitedIds: string[] };
+
+/** The dinner card first opens participant selection, then launches once people are in the circle. */
+export function resolveDinnerPlanAction(
+  dinnerOpen: boolean,
+  peopleIds: readonly string[],
+  missionMemberIds: readonly string[],
+): DinnerPlanAction {
+  if (peopleIds.length === 0) return { kind: "emptyRoster" };
+  if (!dinnerOpen) return { kind: "open" };
+  const knownIds = new Set(peopleIds);
+  const invitedIds = missionMemberIds.filter((id) => knownIds.has(id));
+  return invitedIds.length === 0 ? { kind: "needsPeople" } : { kind: "launch", invitedIds };
+}
+
 /**
  * Pure mapping from a scene-reported drop (someone dragged onto a rail icon) to what should happen
  * — the same thing that icon's own click handler does. `null` means the drop can't be resolved
@@ -120,6 +139,9 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
   const [hint, setHint] = useState<string | null>(null);
   const giftPick = usePlaza((s) => s.giftPick);
   const setGiftPick = usePlaza((s) => s.setGiftPick);
+  const missionMode = usePlaza((s) => s.missionMode);
+  const setMissionMode = usePlaza((s) => s.setMissionMode);
+  const dinnerOpen = missionMode === "plan";
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -152,27 +174,41 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
     clearDrop();
   }, [dropAction, dispatch, setCircle, clearDrop]);
 
-  function launchCouncil(mode: "shopping" | "plan") {
+  function startGiftPickFlow() {
     if (people.length === 0) {
       showHint("Add someone to your world first");
       return;
     }
-    const knownIds = new Set(people.map((person) => person.id));
-    const invited = missionMemberIds.filter((id) => knownIds.has(id));
-    if (mode === "shopping") {
-      // Gifts are picked in the Plaza itself: who it's for, then who's buying. Every gift starts
-      // from a clean slate; the mission circle is dinner-plan furniture and never pre-fills buyers.
-      playBlip("select");
-      usePlaza.getState().select(null);
-      setGiftPick(startGiftPick());
+    // Gifts are picked in the Plaza itself: who it's for, then who's buying. Every gift starts
+    // from a clean slate; the mission circle is dinner-plan furniture and never pre-fills buyers.
+    playBlip("select");
+    usePlaza.getState().select(null);
+    setMissionMode(null);
+    setGiftPick(startGiftPick());
+  }
+
+  function handleDinnerPlan() {
+    const action = resolveDinnerPlanAction(
+      dinnerOpen,
+      people.map((person) => person.id),
+      missionMemberIds,
+    );
+    if (action.kind === "emptyRoster") {
+      showHint("Add someone to your world first");
       return;
     }
-    if (invited.length === 0) {
+    if (action.kind === "open") {
+      playBlip("select");
+      setGiftPick(null);
+      setMissionMode("plan");
+      return;
+    }
+    if (action.kind === "needsPeople") {
       showHint("Drag people into the mission circle first");
       return;
     }
     playBlip("select");
-    onLaunch(mode, invited);
+    onLaunch("plan", action.invitedIds);
   }
 
   // While picking, a click (or pinch) on a character in the scene is a pick, not a selection.
@@ -273,17 +309,34 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
       {!hideMissions && !giftPick && (
       <div className={styles.missionActions} aria-label="Plan with your connections">
         <p className={styles.missionLabel}>
-          {missionMemberIds.length === 0
-            ? "Build your mission circle"
-            : `${missionMemberIds.length} ${missionMemberIds.length === 1 ? "person" : "people"} in this mission`}
+          {!dinnerOpen
+            ? "Plan with your people"
+            : missionMemberIds.length === 0
+              ? "Drag people into the mission circle"
+              : `${missionMemberIds.length} ${missionMemberIds.length === 1 ? "person" : "people"} ready for dinner`}
         </p>
-        <button type="button" data-hand-target="plaza-shop" className={`${styles.missionButton} ${styles.shopMission}`} onClick={() => launchCouncil("shopping")}>
+        <button type="button" data-hand-target="plaza-shop" className={`${styles.missionButton} ${styles.shopMission}`} onClick={startGiftPickFlow}>
           <span className={styles.missionIcon}><ShopTogetherIcon size={28} /></span>
           <span><strong>Shop for a gift</strong><small>Pick who it's for, then who's buying</small></span>
         </button>
-        <button type="button" data-hand-target="plaza-dinner" className={`${styles.missionButton} ${styles.planMission}`} onClick={() => launchCouncil("plan")}>
+        <button
+          type="button"
+          data-hand-target="plaza-dinner"
+          className={`${styles.missionButton} ${styles.planMission} ${dinnerOpen ? styles.planMissionActive : ""}`}
+          aria-pressed={dinnerOpen}
+          onClick={handleDinnerPlan}
+        >
           <span className={styles.missionIcon}><DinnerPlanIcon size={28} /></span>
-          <span><strong>Make dinner plans</strong><small>Choose a place and activity</small></span>
+          <span>
+            <strong>{dinnerOpen ? "Start dinner plan" : "Make dinner plans"}</strong>
+            <small>
+              {dinnerOpen
+                ? missionMemberIds.length === 0
+                  ? "Drag people into the circle first"
+                  : `Continue with ${missionMemberIds.length} ${missionMemberIds.length === 1 ? "person" : "people"}`
+                : "Choose a place and activity"}
+            </small>
+          </span>
         </button>
       </div>
       )}

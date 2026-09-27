@@ -45,21 +45,21 @@ function randomDiscPoint(radius: number): [number, number] {
   return [Math.cos(theta) * r, Math.sin(theta) * r];
 }
 
-/** Roaming people stay out of the selection target so merely wandering across it never looks like
- * an invitation. Entering the circle is always a deliberate drag-and-drop action. */
-function roamingPoint(radius: number): [number, number] {
+/** While dinner participant selection is open, roaming people stay out of its target so entering
+ * the circle is always a deliberate drag-and-drop action. */
+function roamingPoint(radius: number, avoidMissionCircle: boolean): [number, number] {
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const point = randomDiscPoint(radius);
-    if (!isInsideMissionCircle(point[0], point[1])) return point;
+    if (!avoidMissionCircle || !isInsideMissionCircle(point[0], point[1])) return point;
   }
   return [Math.min(radius, MISSION_CIRCLE.radius + 0.5), 0];
 }
 
 /** A random point in the disc that isn't already crowded by another agent, so a fresh spawn (or a
  * new wander goal) doesn't land right on top of somebody else. */
-function spreadPoint(radius: number, minDist: number): [number, number] {
+function spreadPoint(radius: number, minDist: number, avoidMissionCircle: boolean): [number, number] {
   for (let attempt = 0; attempt < 14; attempt += 1) {
-    const [x, z] = roamingPoint(radius);
+    const [x, z] = roamingPoint(radius, avoidMissionCircle);
     let ok = true;
     for (const other of getAgents("plaza")) {
       if (Math.hypot(other.x - x, other.z - z) < minDist) {
@@ -69,7 +69,7 @@ function spreadPoint(radius: number, minDist: number): [number, number] {
     }
     if (ok) return [x, z];
   }
-  return roamingPoint(radius);
+  return roamingPoint(radius, avoidMissionCircle);
 }
 
 // --- Shared, app-lifetime resources (never disposed — same convention as CharacterModel's module-
@@ -108,9 +108,11 @@ export interface PlazaPersonProps {
   formationSlot: [number, number] | null;
   /** Stable spot inside the mission circle; members do not resume wandering. */
   missionSlot: [number, number] | null;
+  /** The circle only reserves floor space while dinner-plan participant selection is open. */
+  missionCircleOpen: boolean;
 }
 
-export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPersonProps) {
+export function PlazaPerson({ profile, formationSlot, missionSlot, missionCircleOpen }: PlazaPersonProps) {
   const { id, name } = profile;
   const look = useLook(id) ?? STARTER_LOOKS[id] ?? BLANK_LOOK;
   const circle = useRoster((state) => state.circles[id]);
@@ -149,10 +151,11 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
   const wasWhistleOn = useRef(false);
 
   useEffect(() => {
-    const [x, z] = spreadPoint(PLAZA.radius * 0.9, SPREAD_MIN_DIST);
+    const avoidMissionCircle = usePlaza.getState().missionMode === "plan";
+    const [x, z] = spreadPoint(PLAZA.radius * 0.9, SPREAD_MIN_DIST, avoidMissionCircle);
     const agent = registerAgent("plaza", { id, x, z, vx: 0, vz: 0, radius: hitRadius, pinned: false });
     agentRef.current = agent;
-    goal.current = roamingPoint(PLAZA.radius * 0.88);
+    goal.current = roamingPoint(PLAZA.radius * 0.88, avoidMissionCircle);
     idleUntil.current = Math.random() * IDLE_MAX;
     root.current?.position.set(x, 0, z);
     return () => {
@@ -231,7 +234,7 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
         agent.vx = 0;
         agent.vz = 0;
         if (!heldSlot && dist < ARRIVE_EPS && t >= idleUntil.current) {
-          goal.current = spreadPoint(PLAZA.radius * 0.88, SPREAD_MIN_DIST);
+          goal.current = spreadPoint(PLAZA.radius * 0.88, SPREAD_MIN_DIST, missionCircleOpen);
           idleUntil.current = t + IDLE_MIN + Math.random() * (IDLE_MAX - IDLE_MIN);
         }
       } else {
@@ -256,7 +259,7 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
     // can still cross it. Treat the circle as a physical boundary for non-members and give anyone
     // who reaches it a short around-the-edge waypoint. Deliberate dragging remains unrestricted.
     // Picked gift people may step into the circle: their line-up is the mission taking shape.
-    if (!dragging && missionSlot === null && !(pickingGift && formationSlot)) {
+    if (missionCircleOpen && !dragging && missionSlot === null && !(pickingGift && formationSlot)) {
       const [safeX, safeZ] = constrainOutsideMissionCircle(agent.x, agent.z, agent.radius + 0.12);
       if (safeX !== agent.x || safeZ !== agent.z) {
         agent.x = safeX;

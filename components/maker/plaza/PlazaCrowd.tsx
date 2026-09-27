@@ -26,6 +26,7 @@ export function PlazaCrowd() {
   const sort = usePlaza((state) => state.whistle.sort);
   const missionMemberIds = usePlaza((state) => state.missionMemberIds);
   const giftPick = usePlaza((state) => state.giftPick);
+  const missionCircleOpen = usePlaza((state) => state.missionMode === "plan");
 
   const slots = useMemo(() => {
     // Picking a gift's people lines everyone up around the picks; otherwise the whistle decides.
@@ -35,8 +36,11 @@ export function PlazaCrowd() {
     return formationSlots(order, circles, sort);
   }, [giftPick, whistleOn, sort, people, circles]);
   const missionSlots = useMemo(
-    () => missionCircleSlots(missionMemberIds.filter((id) => people.some((person) => person.id === id))),
-    [missionMemberIds, people],
+    () =>
+      missionCircleOpen
+        ? missionCircleSlots(missionMemberIds.filter((id) => people.some((person) => person.id === id)))
+        : {},
+    [missionCircleOpen, missionMemberIds, people],
   );
 
   useFrame(() => {
@@ -51,6 +55,7 @@ export function PlazaCrowd() {
           profile={profile}
           formationSlot={slots?.[profile.id] ?? null}
           missionSlot={missionSlots[profile.id] ?? null}
+          missionCircleOpen={missionCircleOpen}
         />
       ))}
       {giftPick && <GiftRoleMarkers pick={giftPick} />}

@@ -18,6 +18,10 @@ export function useMakerKeyboard(state: MakerState, dispatch: (action: MakerActi
       const typing = document.activeElement instanceof HTMLInputElement;
       if (event.key === "Escape") {
         event.preventDefault();
+        if (state.step === "plaza" && usePlaza.getState().missionMode === "plan") {
+          usePlaza.getState().setMissionMode(null);
+          return;
+        }
         dispatch({ type: "back" });
         return;
       }

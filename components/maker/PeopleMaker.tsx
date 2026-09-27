@@ -68,7 +68,10 @@ export function PeopleMaker() {
       if (action.type === "save") reactCelebrate();
       // Selection lives in the plaza seam (usePlaza), shared with the 3D scene track; clear it
       // whenever we leave the plaza so a stale selection doesn't linger under the editor.
-      if (action.type === "newPerson" || action.type === "editPerson") usePlaza.getState().select(null);
+      if (action.type === "newPerson" || action.type === "editPerson") {
+        usePlaza.getState().select(null);
+        usePlaza.getState().setMissionMode(null);
+      }
       dispatch(action);
     },
     [dispatch],

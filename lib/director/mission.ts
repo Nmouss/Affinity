@@ -56,7 +56,7 @@ export function buildGiftMission(input: GiftMissionInput): Mission {
   return {
     occasion,
     budget,
-    freeText: input.freeText?.trim() || `${occasion} gift: ${query}`,
+    freeText: input.freeText?.trim() || (/\bgift\b/i.test(query) ? query : `${occasion} gift: ${query}`),
     type: "gift",
     kind: "shopping",
     recipientId: input.recipientId,

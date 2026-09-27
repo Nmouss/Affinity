@@ -11,7 +11,7 @@ import { GestureStatus } from "@/components/controls/GestureStatus";
 import { MandateButton } from "@/components/controls/MandateButton";
 import { MissionForm } from "@/components/council/MissionForm";
 import { ProfileCard } from "@/components/sprites/ProfileCard";
-import { PlazaButton } from "@/components/ui";
+import { PlazaButton, SoundToggle } from "@/components/ui";
 import { hasSavedRoster, usePeople, useRosterHydration } from "@/lib/people/roster";
 import { DEFAULT_BUDGET } from "@/lib/director/mission";
 import { useDirector } from "@/lib/director/useDirector";
@@ -117,6 +117,7 @@ export function Hud() {
           </span>
         )}
         {flags?.cut90 && <span className={styles.badge}>90 s cut</span>}
+        <SoundToggle size="md" />
         <span className={styles.gesture}>
           <GestureStatus />
         </span>
@@ -204,6 +205,9 @@ export function Hud() {
         {phase === "lobby" && (
           <>
             <div className={styles.makerRow}>
+              <Link href="/" className={styles.makerLink}>
+                Plaza
+              </Link>
               <Link href="/create" className={styles.makerLink}>
                 People Maker
               </Link>

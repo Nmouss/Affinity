@@ -49,6 +49,12 @@
   cursor: pointer;
 }
 
+.motion:hover:not(:disabled),
+.motion[data-hand-hover]:not(:disabled) {
+  border-color: #76514a;
+  background: #76514a12;
+}
+
 .motion:disabled {
   opacity: 0.7;
 }
@@ -106,6 +112,7 @@
 }
 
 .palm:hover,
+.palm[data-hand-hover]:not(:disabled),
 .palm:focus-visible {
   background: #d3e3e24d;
   border-color: #567881;
@@ -180,7 +187,8 @@
   transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
 
-.enter:hover:not(:disabled) {
+.enter:hover:not(:disabled),
+.enter[data-hand-hover]:not(:disabled) {
   transform: translateY(-1px);
   background: #76514a12;
   box-shadow: 0 0 0 3px rgba(118, 81, 74, 0.14);

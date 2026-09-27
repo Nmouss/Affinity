@@ -104,6 +104,7 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
           <button
             type="button"
             className={styles.motion}
+            data-hand-target="welcome-motion"
             onClick={() => setPaused((was) => !was)}
             disabled={reduced || entering}
             aria-pressed={paused || reduced}

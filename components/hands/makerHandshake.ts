@@ -1,3 +1,6 @@
+import type { TargetId } from "@/types/stage";
+import { uiTargetId } from "./makerHitTest";
+
 // Pure change predicate for MakerHands' per-frame handshakeProgress write (BUG 2: nothing wrote
 // hand.handshakeProgress on `/`, so MandateButton's fill never moved). Kept separate from the
 // component so it's unit-testable without mounting anything.
@@ -14,4 +17,20 @@ export function handshakeProgressChanged(
   epsilon: number = HANDSHAKE_PROGRESS_EPSILON,
 ): boolean {
   return Math.abs(next - previous) > epsilon;
+}
+
+/** MandateButton's data-hand-target value. */
+export const MANDATE_HAND_TARGET = "mandate-approve";
+
+/**
+ * True while a Leap pinch is held over the enabled hold-to-approve button. MandateButton fills on a
+ * held pointer, but MakerHands only turns a pinch into element.click() — so without this, pinching
+ * the button did nothing and the only hand route to approval was the fist-roll handshake pose.
+ * MakerHands feeds this into the "pinch" handshake assist, the hand's version of holding the mouse.
+ */
+export function pinchHoldsMandate(
+  snapshot: { pinching: boolean; hover: TargetId | null },
+  buttonEnabled: boolean,
+): boolean {
+  return buttonEnabled && snapshot.pinching && snapshot.hover === uiTargetId(MANDATE_HAND_TARGET);
 }

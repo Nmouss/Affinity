@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { MANDATE_HAND_TARGET } from "@/components/hands/makerHandshake";
 import { handTarget } from "@/components/hands/makerHitTest";
 import { setHandshakeAssist } from "@/lib/gestures/live";
 import { isArmed, onGesture } from "@/lib/stage/bus";
@@ -95,7 +96,7 @@ export function MandateButton({
       type="button"
       className={`${styles.button} ${plaza ? styles.plaza : ""}`}
       disabled={!interactive}
-      {...handTarget("mandate-approve")}
+      {...handTarget(MANDATE_HAND_TARGET)}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
         // Belt-and-suspenders: the disabled attribute already blocks this while unarmed, but the

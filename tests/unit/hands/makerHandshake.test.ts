@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { HANDSHAKE_PROGRESS_EPSILON, handshakeProgressChanged } from "@/components/hands/makerHandshake";
+import {
+  HANDSHAKE_PROGRESS_EPSILON,
+  handshakeProgressChanged,
+  pinchHoldsMandate,
+} from "@/components/hands/makerHandshake";
 
 describe("handshakeProgressChanged", () => {
   it("is false when progress hasn't moved", () => {
@@ -25,5 +29,20 @@ describe("handshakeProgressChanged", () => {
   it("accepts a custom epsilon", () => {
     expect(handshakeProgressChanged(0, 0.1, 0.2)).toBe(false);
     expect(handshakeProgressChanged(0, 0.3, 0.2)).toBe(true);
+  });
+});
+
+describe("pinchHoldsMandate", () => {
+  const onMandate = { pinching: true, hover: "ui:mandate-approve" as const };
+
+  it("holds while pinching over the enabled approve button", () => {
+    expect(pinchHoldsMandate(onMandate, true)).toBe(true);
+  });
+
+  it("lets go when the pinch opens, the hand drifts off, or the button is still settling", () => {
+    expect(pinchHoldsMandate({ ...onMandate, pinching: false }, true)).toBe(false);
+    expect(pinchHoldsMandate({ ...onMandate, hover: "ui:cart-nav-next" }, true)).toBe(false);
+    expect(pinchHoldsMandate({ ...onMandate, hover: null }, true)).toBe(false);
+    expect(pinchHoldsMandate(onMandate, false)).toBe(false);
   });
 });

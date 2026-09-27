@@ -9,7 +9,7 @@ export const FRAME_STALE_MS = 250;
 /** Without frames for this long, the input source falls back to the keyboard. */
 export const SOURCE_TIMEOUT_MS = 1000;
 
-export type HandshakeAssistSource = "keyboard" | "button";
+export type HandshakeAssistSource = "keyboard" | "button" | "pinch";
 
 export const live = {
   frame: null as HandFrame | null,

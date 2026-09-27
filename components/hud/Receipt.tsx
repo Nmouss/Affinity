@@ -15,6 +15,17 @@ export function selectCheckoutUrl(carts: readonly CommerceCart[]): string | null
   return carts[0]?.checkoutUrl ?? null;
 }
 
+/**
+ * Opens checkout in a new tab, or in this one when the browser refuses the popup. A Leap pinch
+ * reaches this through MakerHands' element.click(), which carries no user activation, so the popup
+ * blocker drops window.open; navigating the current tab needs no activation.
+ */
+export function openCheckout(url: string, win: Pick<Window, "open" | "location"> = window): void {
+  const tab = win.open(url, "_blank");
+  if (tab) tab.opener = null;
+  else win.location.assign(url);
+}
+
 /** Shown only after LangGraph finalizes approval and any post-approval side effects. */
 export function Receipt({
   receipt,
@@ -66,7 +77,7 @@ export function Receipt({
             type="button"
             className={styles.checkoutButton}
             {...handTarget("receipt-checkout")}
-            onClick={() => window.open(checkoutUrl, "_blank", "noopener")}
+            onClick={() => openCheckout(checkoutUrl)}
           >
             Open Shopify checkout
           </button>

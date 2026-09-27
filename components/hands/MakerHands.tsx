@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { MachineContext } from "@/lib/gestures/detector";
 import { createGestureMachine } from "@/lib/gestures/detector";
 import { connectLeap, type LeapStatus } from "@/lib/gestures/leap";
-import { handshakeAssisted } from "@/lib/gestures/live";
+import { handshakeAssisted, setHandshakeAssist } from "@/lib/gestures/live";
 import { createPointerFilter } from "@/lib/gestures/pointer";
 import type { HandFrame } from "@/lib/gestures/types";
 import type { GestureEvent } from "@/types/stage";
@@ -15,7 +16,7 @@ import { emitGesture } from "@/lib/stage/bus";
 import { useStage } from "@/lib/stage/store";
 import { GrabbingHandGlyph, PointerHandGlyph } from "@/components/maker/plaza/plazaIcons";
 import { HAND_HOVER_ATTR, HAND_TARGET_ATTR, ndcToClient, uiTargetValue } from "./makerHitTest";
-import { handshakeProgressChanged } from "./makerHandshake";
+import { handshakeProgressChanged, pinchHoldsMandate } from "./makerHandshake";
 import { resolveHandTarget } from "./makerTargets";
 import styles from "./MakerHands.module.css";
 
@@ -40,7 +41,11 @@ import styles from "./MakerHands.module.css";
 // over a cart or plan item (data-hand-item, tagged by a different track) resolves to an `item:<id>`
 // target via makerTargets.resolveHandTarget, which the detector already turns into a `swipe` event
 // forwarded straight to the bus below — a pinch tap on an `item:` target never .click()s anything,
-// since uiTargetValue is null for it.
+// since uiTargetValue is null for it. A pinch *held* over the hold-to-approve button feeds the
+// "pinch" handshake assist (see makerHandshake.pinchHoldsMandate), so it fills like a mouse hold.
+//
+// The cursor is portalled to <body>: PeopleMaker's fixed root is its own stacking context, which
+// would otherwise trap the cursor beneath the welcome greeting (z-index 200) layered over it.
 
 const FRAME_STALE_MS = 250;
 const ORBIT_ZONE = "[data-orbit-zone]";
@@ -138,6 +143,7 @@ export function MakerHands() {
       const handshakeAssist = handshakeAssisted();
 
       if (!tracked) {
+        setHandshakeAssist("pinch", false);
         const snap = machine.step({ t: now, hand: null, handshakeAssist }, context);
         applyHandshakeProgress(snap.handshakeProgress);
         setPresent((was) => (was ? false : was));
@@ -169,6 +175,9 @@ export function MakerHands() {
         context,
       );
       applyHandshakeProgress(snap.handshakeProgress);
+      const hovered = hoveredElement.current;
+      const buttonEnabled = hovered instanceof HTMLButtonElement && !hovered.disabled;
+      setHandshakeAssist("pinch", pinchHoldsMandate(snap, buttonEnabled));
       const [x, y] = ndcToClient(pointer, window.innerWidth, window.innerHeight);
       lastClient.x = x;
       lastClient.y = y;
@@ -190,6 +199,7 @@ export function MakerHands() {
     return () => {
       cancelAnimationFrame(raf);
       disconnect();
+      setHandshakeAssist("pinch", false);
       if (hoveredElement.current) hoveredElement.current.removeAttribute(HAND_HOVER_ATTR);
       usePlaza.getState().setPointer(null, null);
       usePlaza.getState().setGrabbing(false);
@@ -198,10 +208,11 @@ export function MakerHands() {
   }, []);
 
   if (!present || !cursor) return null;
-  return (
+  return createPortal(
     <div className={styles.cursor} style={{ left: cursor.x, top: cursor.y }} aria-hidden>
       {pinching ? <GrabbingHandGlyph /> : <PointerHandGlyph />}
-    </div>
+    </div>,
+    document.body,
   );
 }
 

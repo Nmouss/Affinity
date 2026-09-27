@@ -98,6 +98,10 @@
   background: rgba(201, 162, 39, 0.45);
 }
 
+.action[data-hand-hover] {
+  background: rgba(160, 72, 38, 0.8);
+}
+
 .kbd {
   composes: kbd from "./Panel.module.css";
 }

@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { MandateButton } from "@/components/controls/MandateButton";
+import { handItem, handTarget } from "@/components/hands/makerHitTest";
 import type { Bundle, CatalogItem } from "@/types/domain";
 import styles from "./CartReview.module.css";
 
@@ -57,7 +59,12 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
       <aside className={`${styles.review} ${plaza ? styles.plaza : ""}`} aria-label="Cart decision">
         <p className={styles.eyebrow}>Cart decision</p>
         <h2>Nothing to review</h2>
-        <button type="button" className={styles.cancel} onClick={() => onCancel("empty-cart")}>
+        <button
+          type="button"
+          className={styles.cancel}
+          {...handTarget("cart-empty")}
+          onClick={() => onCancel("empty-cart")}
+        >
           Cancel proposal
         </button>
       </aside>
@@ -81,12 +88,13 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
             type="button"
             className={approvedIds.has(entry.id) ? styles.stepApproved : itemIndex === index ? styles.stepCurrent : styles.step}
             aria-label={`${entry.name}: ${approvedIds.has(entry.id) ? "approved" : "not reviewed"}`}
+            {...handTarget(`cart-step:${entry.id}`)}
             onClick={() => setIndex(itemIndex)}
           />
         ))}
       </div>
 
-      <div className={styles.product}>
+      <div className={styles.product} {...handItem(item.id)}>
         {item.imageUrl ? <img src={item.imageUrl} alt="" className={styles.image} /> : <div className={styles.placeholder}>No image</div>}
         <div className={styles.details}>
           <span className={approvedIds.has(item.id) ? styles.approved : styles.pending}>
@@ -100,10 +108,22 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
 
       {!complete && (
         <div className={styles.decisionActions}>
-          <button type="button" className={styles.approve} disabled={approvedIds.has(item.id) || swapping === item.id} onClick={() => approveItem(item)}>
+          <button
+            type="button"
+            className={styles.approve}
+            disabled={approvedIds.has(item.id) || swapping === item.id}
+            {...handTarget(`cart-item-approve:${item.id}`)}
+            onClick={() => approveItem(item)}
+          >
             {approvedIds.has(item.id) ? "✓ Item approved" : "✓ Approve item"}
           </button>
-          <button type="button" className={styles.swap} disabled={swapping === item.id} onClick={() => requestSwap(item)}>
+          <button
+            type="button"
+            className={styles.swap}
+            disabled={swapping === item.id}
+            {...handTarget(`cart-item-swap:${item.id}`)}
+            onClick={() => requestSwap(item)}
+          >
             {swapping === item.id ? "Agent is searching…" : "↻ Agent find another"}
           </button>
           <label className={styles.promptLabel}>
@@ -119,6 +139,7 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
             type="button"
             className={styles.promptSwap}
             disabled={!prompt.trim() || swapping === item.id}
+            {...handTarget(`cart-item-swap-prompt:${item.id}`)}
             onClick={() => requestSwap(item, prompt.trim())}
           >
             Search using my request
@@ -128,13 +149,12 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
 
       {complete && (
         <div className={styles.finalDecision}>
-          <p>Every item is approved. Shopify checkout will open after price and availability checks pass.</p>
-          <button type="button" className={styles.checkout} onClick={onApproveCart}>
-            Approve cart &amp; continue to checkout
-          </button>
+          <p>Every item is approved. Hold to sign, and Shopify checkout will open from the receipt.</p>
+          <MandateButton plaza={plaza} onApprove={onApproveCart} label="Hold to approve" />
           <button
             type="button"
             className={styles.swap}
+            {...handTarget(`cart-item-change:${item.id}`)}
             onClick={() => setApprovedIds((previous) => {
               const next = new Set(previous);
               next.delete(item.id);
@@ -147,14 +167,44 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
       )}
 
       <div className={styles.navigation}>
-        <button type="button" disabled={index === 0} onClick={() => setIndex((current) => current - 1)}>Previous</button>
-        <button type="button" disabled={index === bundle.items.length - 1} onClick={() => setIndex((current) => current + 1)}>Next</button>
+        <button
+          type="button"
+          disabled={index === 0}
+          {...handTarget("cart-nav-prev")}
+          onClick={() => setIndex((current) => current - 1)}
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          disabled={index === bundle.items.length - 1}
+          {...handTarget("cart-nav-next")}
+          onClick={() => setIndex((current) => current + 1)}
+        >
+          Next
+        </button>
         {!confirmCancel ? (
-          <button type="button" className={styles.cancel} onClick={() => setConfirmCancel(true)}>Cancel entire cart</button>
+          <button
+            type="button"
+            className={styles.cancel}
+            {...handTarget("cart-cancel-start")}
+            onClick={() => setConfirmCancel(true)}
+          >
+            Cancel entire cart
+          </button>
         ) : (
           <span className={styles.cancelConfirm}>
-            <button type="button" className={styles.cancel} onClick={() => onCancel(item.id)}>Yes, cancel</button>
-            <button type="button" onClick={() => setConfirmCancel(false)}>Keep cart</button>
+            <button
+              type="button"
+              className={styles.cancel}
+              {...handTarget(`cart-cancel:${item.id}`)}
+              onClick={() => onCancel(item.id)}
+            >
+              Yes, cancel
+            </button>
+            <button type="button" {...handTarget("cart-cancel-abort")} onClick={() => setConfirmCancel(false)}>
+              Keep cart
+            </button>
           </span>
         )}
       </div>

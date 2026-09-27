@@ -56,13 +56,22 @@
   margin-top: .8rem;
 }
 
-.checkoutLinks a {
+.checkoutButton {
   padding: .5rem .7rem;
   border: 1px solid rgba(255, 209, 138, .55);
   border-radius: .5rem;
+  background: rgba(255, 255, 255, .07);
   color: #ffe9c2;
   text-align: center;
-  text-decoration: none;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.checkoutButton:hover,
+.checkoutButton[data-hand-hover] {
+  background: rgba(255, 255, 255, .16);
+  box-shadow: 0 0 0 3px rgba(255, 209, 138, 0.22);
 }
 
 .reset {
@@ -83,12 +92,18 @@
 .plaza .heading { color: #2c241c; font-weight: 600; }
 .plaza .facts dt { color: #6b7349; }
 .plaza .note, .plaza .facts dd { color: #5c574c; }
-.plaza .checkoutLinks a {
+.plaza .checkoutButton {
   border: 1.5px solid rgba(44, 36, 28, 0.22);
   border-radius: 0.7rem;
   background: #eef0e4;
   color: #2c241c;
   font-weight: 600;
+  box-shadow: none;
+}
+
+.plaza .checkoutButton:hover,
+.plaza .checkoutButton[data-hand-hover] {
+  background: #e4e8d4;
   box-shadow: none;
 }
 

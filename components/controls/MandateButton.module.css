@@ -21,6 +21,12 @@
   cursor: not-allowed;
 }
 
+.button:hover:not(:disabled),
+.button[data-hand-hover]:not(:disabled) {
+  border-color: rgb(255 209 138 / 0.9);
+  box-shadow: 0 0 0 3px rgb(255 209 138 / 0.25);
+}
+
 .fill {
   position: absolute;
   inset: 0;
@@ -43,4 +49,10 @@
 
 .plaza .fill {
   background: linear-gradient(90deg, #dce4c8, #6b7349);
+}
+
+.plaza:hover:not(:disabled),
+.plaza[data-hand-hover]:not(:disabled) {
+  border-color: rgba(44, 36, 28, 0.4);
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.25), 0 12px 28px rgba(44, 36, 28, 0.12);
 }

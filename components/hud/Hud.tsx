@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { BundlePreview } from "@/components/bundle/BundlePreview";
 import { HappinessMeter } from "@/components/bundle/HappinessMeter";
 import { GestureStatus } from "@/components/controls/GestureStatus";
 import { MandateButton } from "@/components/controls/MandateButton";
+import { handTarget } from "@/components/hands/makerHitTest";
 import { MissionForm } from "@/components/council/MissionForm";
 import { PlanPreview } from "@/components/plan/PlanPreview";
 import { ProfileCard } from "@/components/sprites/ProfileCard";
@@ -83,8 +84,11 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
   useEffect(() => setShowMakerHint(!hasSavedRoster()), []);
 
   const closeProfile = useCallback(() => useStage.getState().openProfile(null), []);
+  // Shared onApprove for both mandate flows: MandateButton only calls this once the shared handshake
+  // meter (hand pose, Space, or holding the button) actually completes, so there's nothing left for
+  // Hud to do here beyond the director's own bus listener, which is already subscribed and signs the
+  // mandate. Checkout itself is opened later from the Receipt, once a real checkoutUrl exists.
   const approve = useCallback(() => emitGesture({ type: "handshakeComplete" }), []);
-  const checkoutTab = useRef<Window | null>(null);
 
   useEffect(() => {
     setSwapping(null);
@@ -100,39 +104,10 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
   const handleCancelCart = useCallback(
     (itemId: string) => {
       if (!director) return;
-      checkoutTab.current?.close();
-      checkoutTab.current = null;
       void director.cancelProposal(itemId);
     },
     [director],
   );
-  const approveCart = useCallback(() => {
-    // Opening synchronously from the click preserves browser user activation. The backend does not
-    // return a safe Shopify checkout URL until after signature verification and preflight, so the
-    // tab waits here and is navigated by the carts event below.
-    const tab = window.open("", "affinity-shopify-checkout");
-    if (tab) {
-      tab.opener = null;
-      tab.document.title = "Preparing Shopify checkout…";
-      tab.document.body.textContent = "Affinity is verifying price and availability before opening Shopify checkout…";
-      checkoutTab.current = tab;
-    }
-    if (!emitGesture({ type: "handshakeComplete" })) {
-      tab?.close();
-      checkoutTab.current = null;
-      useStage.getState().setError("The cart is still settling. Try approval again in a moment.");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (receipt?.status !== "approved" || carts.length === 0) return;
-    const checkoutUrl = carts[0]?.checkoutUrl;
-    if (!checkoutUrl) return;
-    const waiting = checkoutTab.current;
-    if (waiting && !waiting.closed) waiting.location.replace(checkoutUrl);
-    else window.open(checkoutUrl, "_blank", "noopener,noreferrer");
-    checkoutTab.current = null;
-  }, [carts, receipt]);
 
   const openProfile = people.find((profile) => profile.id === profileOpenId);
   const participants = participantIds({ sprites, opinions, mission });
@@ -161,7 +136,12 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
       </header>}
 
       {!plaza && <nav className={flags?.lab ? styles.actionsLab : styles.actions} aria-label="Stage controls">
-        <button type="button" className={styles.action} onClick={() => emitGesture({ type: "reset" })}>
+        <button
+          type="button"
+          className={styles.action}
+          {...handTarget("hud-reset")}
+          onClick={() => emitGesture({ type: "reset" })}
+        >
           Reset <span className={styles.kbd}>R</span>
         </button>
       </nav>}
@@ -247,7 +227,7 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
               swapping={swapping}
               onSwap={handleSwap}
               onCancel={handleCancelCart}
-              onApproveCart={approveCart}
+              onApproveCart={approve}
             />
           )}
           {planDecision && plan && (

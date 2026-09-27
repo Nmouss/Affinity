@@ -2,15 +2,16 @@
 # AFFINITY: SETUP CHECKLIST AND PROJECT PLANS  (branch: mvp/integration)
 # =====================================================================================
 #
-# This file is a readable doc, not a list of Python packages. Every line is a comment,
-# so `pip install -r requirements.txt` installs nothing. The frontend is Node: JavaScript
-# libraries are pinned in package.json + package-lock.json and installed with `npm ci`.
-# The agents run on the Python backend in backend/; its packages are pinned in
-# backend/requirements.txt. Set it up with:
+# The frontend is Node: JavaScript libraries are pinned in package.json + package-lock.json
+# and installed with `npm ci`. The agents run on the Python backend in backend/; its
+# packages are pinned in backend/requirements.txt and included here so either requirements
+# path works. Set it up with:
 #   uv venv .venv --python 3.12
-#   uv pip install --python .venv/bin/python -r backend/requirements.txt
+#   uv pip install --python .venv/bin/python -r requirements.txt
 #   .venv/bin/python -m uvicorn backend.api:app --port 8000 --env-file .env.local
 #
+-r backend/requirements.txt
+
 # Affinity (HackGT 13): each family member has a "sprite", an AI agent that speaks for
 # them. The sprites hold a council in a cozy 3D living room, agree on a bundle (the demo
 # is a family Christmas tree under $200), and only a hand-tracked handshake read by a

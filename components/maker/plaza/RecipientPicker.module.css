@@ -60,6 +60,11 @@
   cursor: default;
 }
 
+.choice[data-hand-hover]:not(:disabled) {
+  background: #dce4c8;
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.28);
+}
+
 .on {
   background: #dce4c8;
   border-color: rgba(107, 115, 73, 0.55);
@@ -90,8 +95,18 @@
   cursor: default;
 }
 
+.primary[data-hand-hover]:not(:disabled) {
+  background: #c7d2a8;
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.28);
+}
+
 .secondary {
   border: 1.5px solid rgba(44, 36, 28, 0.22);
   background: transparent;
   color: #2c241c;
+}
+
+.secondary[data-hand-hover] {
+  background: #eef0e4;
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.28);
 }

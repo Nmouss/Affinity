@@ -6,6 +6,7 @@ import { emitGesture } from "@/lib/stage/bus";
 import { getPeople, getPerson } from "@/lib/people/roster";
 import { MAX_SEATS } from "@/lib/stage/layout";
 import { useStage } from "@/lib/stage/store";
+import { handTarget } from "@/components/hands/makerHitTest";
 import styles from "./EmbeddedCouncil.module.css";
 
 export type MissionMode = "shopping" | "plan";
@@ -58,7 +59,7 @@ export function EmbeddedCouncil({
   return (
     <>
       <Hud plaza />
-      <button type="button" className={styles.back} onClick={returnToWorld}>
+      <button type="button" {...handTarget("council-stop")} className={styles.back} onClick={returnToWorld}>
         Stop agents
       </button>
     </>

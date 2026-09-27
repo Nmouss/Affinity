@@ -4,6 +4,7 @@ import { useCircle } from "@/lib/people/roster";
 import { emitGesture } from "@/lib/stage/bus";
 import { useStage } from "@/lib/stage/store";
 import type { FamilyProfile } from "@/types/domain";
+import { handTarget } from "@/components/hands/makerHitTest";
 import styles from "./InviteChips.module.css";
 
 function Chip({
@@ -22,6 +23,7 @@ function Chip({
     <li className={seated ? styles.seated : styles.chip} style={{ borderColor: profile.colors[0] }}>
       <button
         type="button"
+        {...handTarget(`invite:${profile.id}`)}
         className={styles.toggle}
         aria-pressed={seated}
         onClick={() =>
@@ -34,6 +36,7 @@ function Chip({
       </button>
       <button
         type="button"
+        {...handTarget(`invite-info:${profile.id}`)}
         className={styles.info}
         aria-label={`${profile.name}'s profile`}
         aria-pressed={profileOpenId === profile.id}

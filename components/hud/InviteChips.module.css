@@ -55,7 +55,9 @@
 }
 
 .toggle:focus-visible,
-.info:focus-visible {
+.info:focus-visible,
+.toggle[data-hand-hover],
+.info[data-hand-hover] {
   outline: 2px solid #ffd18a;
   border-radius: 999px;
 }

@@ -236,6 +236,12 @@
   cursor: default;
 }
 
+.swap[data-hand-hover]:not(:disabled) {
+  outline: 2px solid #ffd18a;
+  outline-offset: 1px;
+  background: rgba(255, 209, 138, 0.18);
+}
+
 @keyframes rise {
   from {
     opacity: 0;

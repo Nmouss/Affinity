@@ -8,6 +8,7 @@
 .people, .links { display: flex; gap: .35rem; align-items: center; }
 .dot { width: .5rem; height: .5rem; border-radius: 50%; }
 .links a, .links button { border: 1px solid rgba(255,209,138,.35); border-radius: 999px; padding: .12rem .4rem; background: transparent; color: #ffe9c2; font: inherit; text-decoration: none; }
+.links button[data-hand-hover] { outline: 2px solid #ffd18a; outline-offset: 1px; background: rgba(255, 209, 138, .18); }
 .credit { color: #9f8d80; font-size: .58rem; }
 .credit a { color: inherit; }
 .warning { margin: 0; color: #cbb8aa; font-size: .65rem; }
@@ -22,5 +23,10 @@
   color: #2c241c;
   font-weight: 600;
   box-shadow: none;
+}
+.plaza .links button[data-hand-hover] {
+  outline: none;
+  background: #eef0e4;
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.28);
 }
 .plaza .credit, .plaza .warning { color: #6b665c; }

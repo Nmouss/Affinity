@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { MakerHands } from "@/components/hands/MakerHands";
 import { useRosterHydration } from "@/lib/people/roster";
@@ -13,6 +13,7 @@ import { useMakerKeyboard } from "./useMakerKeyboard";
 import { playBlip } from "./sound";
 import { reactCelebrate, reactPick } from "./reactions";
 import { PlazaRails } from "./plaza/PlazaRails";
+import { EmbeddedCouncil, type MissionMode } from "@/components/stage/EmbeddedCouncil";
 import { WhoCirclePanel, WhoSizePanel } from "./WhoPanel";
 import { StartPanel } from "./StartPanel";
 import { EditorPanel } from "./EditorPanel";
@@ -43,6 +44,7 @@ const PICK_ACTIONS = new Set<MakerAction["type"]>([
 export function PeopleMaker() {
   useRosterHydration();
   const [state, dispatch] = useMakerFlow();
+  const [activeMission, setActiveMission] = useState<{ mode: MissionMode; invitedIds: string[] } | null>(null);
   useMakerKeyboard(state, dispatch);
 
   const wrappedDispatch = useCallback(
@@ -66,7 +68,23 @@ export function PeopleMaker() {
         <MakerCanvas step={state.step} draft={state.draft} />
       </div>
 
-      {state.step === "plaza" && <PlazaRails state={state} dispatch={wrappedDispatch} />}
+      {state.step === "plaza" && (
+        <PlazaRails
+          state={state}
+          dispatch={wrappedDispatch}
+          onLaunch={(mode, invitedIds) => {
+            if (!activeMission) setActiveMission({ mode, invitedIds });
+          }}
+        />
+      )}
+
+      {activeMission && (
+        <EmbeddedCouncil
+          mode={activeMission.mode}
+          invitedIds={activeMission.invitedIds}
+          onBack={() => setActiveMission(null)}
+        />
+      )}
 
       {(state.step === "who-circle" || state.step === "who-size" || state.step === "start") && (
         <div className={styles.overlay}>

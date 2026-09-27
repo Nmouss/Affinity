@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FORMATION, PLAZA, formationSlots, sortForWhistle } from "@/components/maker/plaza/formation";
+import { FORMATION, PLAZA, formationSlots, missionCircleSlots, sortForWhistle } from "@/components/maker/plaza/formation";
+import { MISSION_CIRCLE, isInsideMissionCircle } from "@/components/maker/plaza/plazaState";
 import type { Circle } from "@/types/character";
 import type { FamilyProfile } from "@/types/domain";
 
@@ -135,5 +136,23 @@ describe("formationSlots", () => {
       expect(seen.has(key)).toBe(false);
       seen.add(key);
     }
+  });
+});
+
+describe("missionCircleSlots", () => {
+  it("gives each invited person a stable, unique place inside the mission circle", () => {
+    const ids = ["a", "b", "c", "d", "e", "f"];
+    const first = missionCircleSlots(ids);
+    expect(missionCircleSlots(ids)).toEqual(first);
+    expect(Object.keys(first)).toEqual(ids);
+    const positions = Object.values(first);
+    expect(new Set(positions.map(([x, z]) => `${x},${z}`)).size).toBe(ids.length);
+    for (const [x, z] of positions) expect(isInsideMissionCircle(x, z)).toBe(true);
+  });
+
+  it("uses the visible circle boundary for drop membership", () => {
+    expect(isInsideMissionCircle(0, 0)).toBe(true);
+    expect(isInsideMissionCircle(MISSION_CIRCLE.radius, 0)).toBe(true);
+    expect(isInsideMissionCircle(MISSION_CIRCLE.radius + 0.01, 0)).toBe(false);
   });
 });

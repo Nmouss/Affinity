@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { BundlePreview } from "@/components/bundle/BundlePreview";
@@ -19,6 +19,7 @@ import { useStage } from "@/lib/stage/store";
 import type { StagePhase } from "@/types/stage";
 import { InviteChips } from "./InviteChips";
 import { Receipt } from "./Receipt";
+import { CartRejected, CartReview } from "./CartReview";
 import styles from "./Hud.module.css";
 
 const CAPTIONS: Record<StagePhase, string> = {
@@ -47,11 +48,12 @@ const BeatTuner = dynamic(() => import("./BeatTuner").then((module) => module.Be
 
 // DOM overlay around the edges of the room: panels hug the sides so the council ring stays clear.
 // Mounting the Hud mounts the director.
-export function Hud() {
+export function Hud({ plaza = false }: { plaza?: boolean }) {
   useRosterHydration();
   const { director, flags } = useDirector();
   const people = usePeople();
   const [showMakerHint, setShowMakerHint] = useState(false);
+  const [swapping, setSwapping] = useState<string | null>(null);
   const phase = useStage((state) => state.phase);
   const sprites = useStage((state) => state.sprites);
   const opinions = useStage((state) => state.opinions);
@@ -71,6 +73,7 @@ export function Hud() {
 
   useEffect(() => {
     if (!error) return;
+    setSwapping(null);
     const timer = window.setTimeout(() => useStage.getState().setError(null), ERROR_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
   }, [error]);
@@ -80,19 +83,55 @@ export function Hud() {
 
   const closeProfile = useCallback(() => useStage.getState().openProfile(null), []);
   const approve = useCallback(() => emitGesture({ type: "handshakeComplete" }), []);
+  const checkoutTab = useRef<Window | null>(null);
 
-  const [swapping, setSwapping] = useState<string | null>(null);
   useEffect(() => {
     setSwapping(null);
   }, [bundle, plan]);
   const handleSwap = useCallback(
-    (itemId: string) => {
+    (itemId: string, prompt?: string) => {
       if (!director) return;
       setSwapping(itemId);
-      void director.swapItem(itemId);
+      void director.swapItem(itemId, prompt);
     },
     [director],
   );
+  const handleCancelCart = useCallback(
+    (itemId: string) => {
+      if (!director) return;
+      checkoutTab.current?.close();
+      checkoutTab.current = null;
+      void director.cancelProposal(itemId);
+    },
+    [director],
+  );
+  const approveCart = useCallback(() => {
+    // Opening synchronously from the click preserves browser user activation. The backend does not
+    // return a safe Shopify checkout URL until after signature verification and preflight, so the
+    // tab waits here and is navigated by the carts event below.
+    const tab = window.open("", "affinity-shopify-checkout");
+    if (tab) {
+      tab.opener = null;
+      tab.document.title = "Preparing Shopify checkout…";
+      tab.document.body.textContent = "Affinity is verifying price and availability before opening Shopify checkout…";
+      checkoutTab.current = tab;
+    }
+    if (!emitGesture({ type: "handshakeComplete" })) {
+      tab?.close();
+      checkoutTab.current = null;
+      useStage.getState().setError("The cart is still settling. Try approval again in a moment.");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (receipt?.status !== "approved" || carts.length === 0) return;
+    const checkoutUrl = carts[0]?.checkoutUrl;
+    if (!checkoutUrl) return;
+    const waiting = checkoutTab.current;
+    if (waiting && !waiting.closed) waiting.location.replace(checkoutUrl);
+    else window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+    checkoutTab.current = null;
+  }, [carts, receipt]);
 
   const openProfile = people.find((profile) => profile.id === profileOpenId);
   const participants = participantIds({ sprites, opinions, mission });
@@ -100,25 +139,25 @@ export function Hud() {
   const deliberating = DELIBERATING.includes(phase);
 
   return (
-    <div className={styles.hud}>
+    <div className={`${styles.hud} ${plaza ? styles.plazaHud : ""}`}>
       {director && flags?.lab && <BeatTuner director={director} />}
 
-      <header className={styles.top}>
+      {!plaza && <header className={styles.top}>
         <strong className={styles.brand}>Affinity</strong>
         <span className={styles.phase}>{phase}</span>
         {flags?.cut90 && <span className={styles.badge}>90 s cut</span>}
         <span className={styles.gesture}>
           <GestureStatus />
         </span>
-      </header>
+      </header>}
 
-      <nav className={flags?.lab ? styles.actionsLab : styles.actions} aria-label="Stage controls">
+      {!plaza && <nav className={flags?.lab ? styles.actionsLab : styles.actions} aria-label="Stage controls">
         <button type="button" className={styles.action} onClick={() => emitGesture({ type: "reset" })}>
           Reset <span className={styles.kbd}>R</span>
         </button>
-      </nav>
+      </nav>}
 
-      {deliberating && (
+      {!plaza && deliberating && (
         <div className={styles.deliberating} role="status">
           <span className={styles.deliberatingDot} />
           The council is deliberating…
@@ -132,7 +171,7 @@ export function Hud() {
       )}
 
       <div className={styles.left}>
-        {bundle && !plan && (
+        {!plaza && bundle && !plan && (
           <section className={styles.cart} aria-label="Cart and happiness">
             <h2 className={styles.title}>Cart</h2>
             <BundlePreview
@@ -175,13 +214,23 @@ export function Hud() {
 
       <div className={styles.right}>
         {phase === "lobby" && openProfile && <ProfileCard profile={openProfile} onClose={closeProfile} />}
-        {phase === "receipt" && mandate && receipt && (
+        {phase === "awaitMandate" && bundle && !plan && (
+          <CartReview
+            bundle={bundle}
+            swapping={swapping}
+            onSwap={handleSwap}
+            onCancel={handleCancelCart}
+            onApproveCart={approveCart}
+          />
+        )}
+        {phase === "receipt" && receipt?.status === "rejected" && <CartRejected />}
+        {phase === "receipt" && receipt?.status === "approved" && mandate && (
           <Receipt receipt={receipt} mandate={mandate} carts={carts} notifications={notifications} />
         )}
       </div>
 
       <div className={styles.bottom}>
-        {phase === "lobby" && (
+        {!plaza && phase === "lobby" && (
           <>
             <div className={styles.makerRow}>
               <Link href="/create" className={styles.makerLink}>
@@ -193,11 +242,11 @@ export function Hud() {
             <MissionForm />
           </>
         )}
-        {caption && <p className={styles.caption}>{caption}</p>}
-        {phase === "merge" && searchPlan && <p className={styles.caption}>Searching {searchPlan.slots.length} planned {searchPlan.slots.length === 1 ? "query group" : "query groups"}…</p>}
+        {!plaza && caption && <p className={styles.caption}>{caption}</p>}
+        {!plaza && phase === "merge" && searchPlan && <p className={styles.caption}>Searching {searchPlan.slots.length} planned {searchPlan.slots.length === 1 ? "query group" : "query groups"}…</p>}
         {repair && phase !== "receipt" && <p className={styles.caption}>{repair.autonomous ? "The agent is finding another option…" : "Applying your replacement request…"}</p>}
         {preflight && phase === "signing" && <p className={styles.caption}>Preflight: {preflight.status}{preflight.changes.length ? ` · ${preflight.changes.join(" ")}` : ""}</p>}
-        {phase === "awaitMandate" && (
+        {phase === "awaitMandate" && plan && (
           <div className={styles.mandate}>
             <MandateButton onApprove={approve} />
           </div>

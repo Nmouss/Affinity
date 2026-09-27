@@ -5,16 +5,18 @@ import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { easing } from "maath";
 import * as THREE from "three";
+import { SpeechBubble } from "@/components/council/SpeechBubble";
 import { CharacterModel } from "@/components/sprites/CharacterModel";
 import { characterForLook, characterTuning, createMotion, MODEL_HEIGHT } from "@/components/sprites/characterPose";
 import { getAgents, radiusForScale, registerAgent, steer, unregisterAgent, type CrowdAgent } from "@/lib/people/crowd";
 import { useLook, useRoster } from "@/lib/people/roster";
+import { useStage } from "@/lib/stage/store";
 import { BLANK_LOOK, STARTER_LOOKS } from "@/lib/people/starters";
 import type { FamilyProfile } from "@/types/domain";
 import type { SpriteMood } from "@/types/stage";
 import { PLAZA } from "./formation";
 import { registerHit, unregisterHit } from "./plazaHits";
-import { usePlaza } from "./plazaState";
+import { isInsideMissionCircle, MISSION_CIRCLE, usePlaza } from "./plazaState";
 import { consumeDragOutcome, plazaPointerFloor } from "./plazaSignals";
 import styles from "./PlazaPerson.module.css";
 
@@ -42,11 +44,21 @@ function randomDiscPoint(radius: number): [number, number] {
   return [Math.cos(theta) * r, Math.sin(theta) * r];
 }
 
+/** Roaming people stay out of the selection target so merely wandering across it never looks like
+ * an invitation. Entering the circle is always a deliberate drag-and-drop action. */
+function roamingPoint(radius: number): [number, number] {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const point = randomDiscPoint(radius);
+    if (!isInsideMissionCircle(point[0], point[1])) return point;
+  }
+  return [Math.min(radius, MISSION_CIRCLE.radius + 0.5), 0];
+}
+
 /** A random point in the disc that isn't already crowded by another agent, so a fresh spawn (or a
  * new wander goal) doesn't land right on top of somebody else. */
 function spreadPoint(radius: number, minDist: number): [number, number] {
   for (let attempt = 0; attempt < 14; attempt += 1) {
-    const [x, z] = randomDiscPoint(radius);
+    const [x, z] = roamingPoint(radius);
     let ok = true;
     for (const other of getAgents("plaza")) {
       if (Math.hypot(other.x - x, other.z - z) < minDist) {
@@ -56,7 +68,7 @@ function spreadPoint(radius: number, minDist: number): [number, number] {
     }
     if (ok) return [x, z];
   }
-  return randomDiscPoint(radius);
+  return roamingPoint(radius);
 }
 
 // --- Shared, app-lifetime resources (never disposed — same convention as CharacterModel's module-
@@ -93,9 +105,11 @@ export interface PlazaPersonProps {
   profile: FamilyProfile;
   /** This id's slot while the whistle is on; null wanders instead. */
   formationSlot: [number, number] | null;
+  /** Stable spot inside the mission circle; members do not resume wandering. */
+  missionSlot: [number, number] | null;
 }
 
-export function PlazaPerson({ profile, formationSlot }: PlazaPersonProps) {
+export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPersonProps) {
   const { id, name } = profile;
   const look = useLook(id) ?? STARTER_LOOKS[id] ?? BLANK_LOOK;
   const circle = useRoster((state) => state.circles[id]);
@@ -107,6 +121,10 @@ export function PlazaPerson({ profile, formationSlot }: PlazaPersonProps) {
   const selected = usePlaza((state) => state.selectedId === id);
   const dragging = usePlaza((state) => state.draggingId === id);
   const whistleOn = usePlaza((state) => state.whistle.on);
+  const councilBubble = useStage((state) => state.sprites[id]?.bubble ?? null);
+  const councilMood = useStage((state) => state.sprites[id]?.mood ?? "idle");
+  const councilPhase = useStage((state) => state.phase);
+  const councilActive = missionSlot !== null && councilPhase !== "lobby";
 
   const root = useRef<THREE.Group>(null);
   const facing = useRef<THREE.Group>(null);
@@ -131,7 +149,7 @@ export function PlazaPerson({ profile, formationSlot }: PlazaPersonProps) {
     const [x, z] = spreadPoint(PLAZA.radius * 0.9, SPREAD_MIN_DIST);
     const agent = registerAgent("plaza", { id, x, z, vx: 0, vz: 0, radius: hitRadius, pinned: false });
     agentRef.current = agent;
-    goal.current = randomDiscPoint(PLAZA.radius * 0.88);
+    goal.current = roamingPoint(PLAZA.radius * 0.88);
     idleUntil.current = Math.random() * IDLE_MAX;
     root.current?.position.set(x, 0, z);
     return () => {
@@ -157,6 +175,7 @@ export function PlazaPerson({ profile, formationSlot }: PlazaPersonProps) {
     const delta = Math.min(rawDelta, 0.05);
     const t = state.clock.elapsedTime;
     agent.radius = hitRadius;
+    if (!dragging) agent.pinned = missionSlot !== null;
 
     if (dragging && !wasDragging.current) {
       pickupPos.current = [agent.x, agent.z];
@@ -168,7 +187,7 @@ export function PlazaPerson({ profile, formationSlot }: PlazaPersonProps) {
         agent.x = pickupPos.current[0];
         agent.z = pickupPos.current[1];
       }
-      agent.pinned = false;
+      agent.pinned = missionSlot !== null;
       agent.vx = 0;
       agent.vz = 0;
       motion.current.landAt = t;
@@ -200,13 +219,14 @@ export function PlazaPerson({ profile, formationSlot }: PlazaPersonProps) {
       movedZ = agent.z - prevZ;
       moved = Math.hypot(movedX, movedZ);
     } else {
-      const [goalX, goalZ] = whistleOn && formationSlot ? formationSlot : goal.current;
+      const heldSlot = missionSlot ?? (whistleOn ? formationSlot : null);
+      const [goalX, goalZ] = heldSlot ?? goal.current;
       const dist = Math.hypot(goalX - agent.x, goalZ - agent.z);
-      const waiting = whistleOn && formationSlot ? dist < ARRIVE_EPS : t < idleUntil.current || dist < ARRIVE_EPS;
+      const waiting = heldSlot ? dist < ARRIVE_EPS : t < idleUntil.current || dist < ARRIVE_EPS;
       if (waiting) {
         agent.vx = 0;
         agent.vz = 0;
-        if (!whistleOn && dist < ARRIVE_EPS && t >= idleUntil.current) {
+        if (!heldSlot && dist < ARRIVE_EPS && t >= idleUntil.current) {
           goal.current = spreadPoint(PLAZA.radius * 0.88, SPREAD_MIN_DIST);
           idleUntil.current = t + IDLE_MIN + Math.random() * (IDLE_MAX - IDLE_MIN);
         }
@@ -245,14 +265,21 @@ export function PlazaPerson({ profile, formationSlot }: PlazaPersonProps) {
       easing.dampAngle(facing.current.rotation, "y", angle, walking ? 0.18 : 0.32, delta);
     }
 
-    mood.current = dragging ? "held" : hovered ? "hovered" : "idle";
+    mood.current = dragging ? "held" : hovered ? "hovered" : councilActive ? councilMood : "idle";
 
     ringGlow.current = THREE.MathUtils.damp(ringGlow.current, hovered || selected ? 1 : 0, 10, delta);
     if (ringMatRef.current) ringMatRef.current.opacity = ringGlow.current * 0.75;
   });
 
   const chipClass = circle === "family" ? styles.chipFamily : styles.chipFriend;
-  const showTag = hovered || selected;
+  const showTag = (hovered || selected) && !councilBubble;
+  const bubbleAlign = missionSlot
+    ? missionSlot[0] < -0.2
+      ? "left"
+      : missionSlot[0] > 0.2
+        ? "right"
+        : "center"
+    : "center";
 
   return (
     <group ref={root}>
@@ -280,6 +307,17 @@ export function PlazaPerson({ profile, formationSlot }: PlazaPersonProps) {
       <group ref={facing}>
         <CharacterModel profile={profile} mood={mood} gaze={gaze} motion={motion} look={look} />
       </group>
+      {councilActive && (councilBubble || councilMood === "thinking") && (
+        <Html position={[0, height + LABEL_MARGIN + 0.35, 0]} zIndexRange={[30, 0]} pointerEvents="none">
+          <SpeechBubble
+            speaker={name}
+            text={councilBubble}
+            thinking={councilMood === "thinking"}
+            accent={profile.colors[0] ?? "#c9a227"}
+            align={bubbleAlign}
+          />
+        </Html>
+      )}
       {showTag && (
         <Html position={[0, height + LABEL_MARGIN, 0]} zIndexRange={[0, 0]} pointerEvents="none">
           <div className={styles.tag}>

@@ -1,5 +1,9 @@
-import { AffinityStage } from "@/components/stage/AffinityStage";
+import { PeopleMaker } from "@/components/maker/PeopleMaker";
 
 export default function Home() {
-  return <main><AffinityStage /></main>;
+  return (
+    <main>
+      <PeopleMaker />
+    </main>
+  );
 }

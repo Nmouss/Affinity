@@ -36,6 +36,8 @@ export interface Director {
   readonly beats: BeatDurations;
   /** Asks the backend to replace one cart item with a different option for the same slot. */
   swapItem: (itemId: string, prompt?: string) => Promise<void>;
+  /** Permanently rejects the current proposal; the backend creates no merchant carts. */
+  cancelProposal: (itemId: string) => Promise<void>;
   dispose: () => void;
 }
 
@@ -210,6 +212,33 @@ export function createDirector(options: DirectorOptions): Director {
     }
   }
 
+  async function cancelProposal(itemId: string) {
+    const state = get();
+    const threadId = state.threadId;
+    if (!threadId) {
+      state.setError("Can't cancel yet — the council session hasn't started.");
+      return;
+    }
+    const runId = run;
+    state.setError(null);
+    try {
+      const response = await fetchImpl("/api/council/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+        body: JSON.stringify({ threadId, action: "reject", itemId }),
+      });
+      if (!response.ok || !response.body) throw new Error(`Cancellation failed (${response.status})`);
+      for await (const event of readSseStream(response.body)) {
+        if (runId !== run) return;
+        if (event.type === "run_state" || event.type === "error") get().applyCouncilEvent(event);
+        else queue.push({ kind: "event", event });
+      }
+    } catch (error) {
+      if (runId !== run) return;
+      get().setError(error instanceof Error ? `Cancellation failed: ${error.message}` : "Cancellation failed");
+    }
+  }
+
   function reset() {
     run += 1;
     council?.abort();
@@ -295,6 +324,7 @@ export function createDirector(options: DirectorOptions): Director {
       Object.assign(beats, patch);
     },
     swapItem,
+    cancelProposal,
     dispose: () => {
       unsubscribe();
       restorePolicy();

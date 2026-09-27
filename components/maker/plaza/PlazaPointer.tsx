@@ -6,7 +6,8 @@ import * as THREE from "three";
 import { getHitObjects, hitPersonId } from "./plazaHits";
 import { ndcToClientPx, shouldStartDrag } from "./plazaPick";
 import { plazaPointerFloor, signalDragOutcome } from "./plazaSignals";
-import { PLAZA_DROP_ATTR, usePlaza, type PlazaDrop } from "./plazaState";
+import { isInsideMissionCircle, PLAZA_DROP_ATTR, usePlaza, type PlazaDrop } from "./plazaState";
+import { useStage } from "@/lib/stage/store";
 
 // Turns usePlaza's single pointer (mouse today, written by MakerCanvas; the hand track feeds the
 // same field) into hover, tap/select, and drag/drop against the registered PlazaPerson hit
@@ -37,6 +38,12 @@ export function PlazaPointer() {
 
   useFrame((state) => {
     const store = usePlaza.getState();
+    if (useStage.getState().phase !== "lobby") {
+      if (store.hoveredId !== null) store.setHovered(null);
+      if (store.draggingId !== null) store.setDragging(null);
+      press.current = null;
+      return;
+    }
     const pointer = store.pointer;
 
     if (pointer) {
@@ -76,6 +83,15 @@ export function PlazaPointer() {
         const draggedId = store.draggingId;
         const px = pointer?.[0] ?? current.lastX;
         const py = pointer?.[1] ?? current.lastY;
+        // Recompute the ground point from the actual release coordinate. Pointer capture can clear
+        // the live pointer before this frame, so the prior frame's floor point is not precise enough
+        // at the mission-circle boundary.
+        ndcScratch.set(px, py);
+        raycaster.setFromCamera(ndcScratch, camera);
+        if (raycaster.ray.intersectPlane(groundPlane, groundScratch)) {
+          plazaPointerFloor.x = groundScratch.x;
+          plazaPointerFloor.z = groundScratch.z;
+        }
         const [cx, cy] = ndcToClientPx([px, py], size.width, size.height);
         const el = typeof document !== "undefined" ? document.elementFromPoint(cx, cy) : null;
         const dropTarget = el?.closest(`[${PLAZA_DROP_ATTR}]`) as HTMLElement | null;
@@ -85,6 +101,7 @@ export function PlazaPointer() {
           store.requestDrop(dropValue, draggedId);
         } else {
           signalDragOutcome(draggedId, "floor");
+          store.setMissionMember(draggedId, isInsideMissionCircle(plazaPointerFloor.x, plazaPointerFloor.z));
         }
         store.setDragging(null);
       } else {

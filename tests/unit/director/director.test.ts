@@ -325,4 +325,37 @@ describe("swap", () => {
     await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.bundle);
     expect(state().bundle?.items[0]?.id).toBe("b");
   });
+
+  it("passes a human replacement request to the same repair loop", async () => {
+    const resume = vi.fn(async (init?: RequestInit) => {
+      expect(JSON.parse(String(init?.body))).toEqual({
+        threadId: "thread-1",
+        action: "replace_agent",
+        itemId: "a",
+        prompt: "Find a blue one under $20",
+      });
+      return sse([bundleV2]);
+    });
+    const d = start({ fetchImpl: fakeFetch(async () => sse([bundleV1, runState]), resume) });
+    seatAllAndConvene();
+    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.bundle);
+    await d.swapItem("a", "Find a blue one under $20");
+    expect(resume).toHaveBeenCalledOnce();
+  });
+
+  it("permanently rejects the proposal without approving or creating a cart", async () => {
+    const resume = vi.fn(async (init?: RequestInit) => {
+      expect(JSON.parse(String(init?.body))).toEqual({ threadId: "thread-1", action: "reject", itemId: "a" });
+      return sse([{ type: "receipt", payload: { status: "rejected", threadId: "thread-1", rejectedItemId: "a" } }]);
+    });
+    const d = start({ fetchImpl: fakeFetch(async () => sse([bundleV1, runState]), resume) });
+    seatAllAndConvene();
+    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.bundle);
+    await d.cancelProposal("a");
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(state().receipt).toMatchObject({ status: "rejected", rejectedItemId: "a" });
+    expect(state().phase).toBe("receipt");
+    expect(state().carts).toEqual([]);
+    expect(state().mandate).toBeNull();
+  });
 });

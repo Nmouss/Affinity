@@ -1,0 +1,23 @@
+.back {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
+  color: #3b2415;
+  font: 700 0.9rem/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  background: rgba(255, 248, 230, 0.94);
+  border: 1px solid rgba(108, 64, 24, 0.28);
+  border-radius: 999px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  cursor: pointer;
+}
+
+.back:hover {
+  background: #fff;
+  transform: translateY(-1px);
+}

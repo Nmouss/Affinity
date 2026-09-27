@@ -10,6 +10,7 @@ import type { SpriteMood } from "@/types/stage";
 import type { DraftPerson, MakerStep } from "./flow";
 import { PlazaCrowd } from "./plaza/PlazaCrowd";
 import { PlazaFloor } from "./plaza/PlazaFloor";
+import { MissionCircle } from "./plaza/MissionCircle";
 import { PlazaPointer } from "./plaza/PlazaPointer";
 import { usePlaza } from "./plaza/plazaState";
 import { reactions } from "./reactions";
@@ -24,6 +25,7 @@ function PlazaScene() {
   return (
     <group>
       <PlazaFloor />
+      <MissionCircle />
       <PlazaCrowd />
       <PlazaPointer />
     </group>

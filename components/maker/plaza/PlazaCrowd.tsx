@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import { getAgents, resolveOverlaps } from "@/lib/people/crowd";
 import { usePeople, useRoster } from "@/lib/people/roster";
-import { formationSlots, sortForWhistle } from "./formation";
+import { formationSlots, missionCircleSlots, sortForWhistle } from "./formation";
 import { PlazaPerson } from "./PlazaPerson";
 import { usePlaza } from "./plazaState";
 
@@ -22,12 +22,17 @@ export function PlazaCrowd() {
   const circles = useRoster((state) => state.circles);
   const whistleOn = usePlaza((state) => state.whistle.on);
   const sort = usePlaza((state) => state.whistle.sort);
+  const missionMemberIds = usePlaza((state) => state.missionMemberIds);
 
   const slots = useMemo(() => {
     if (!whistleOn) return null;
     const order = sortForWhistle(people, circles, sort);
     return formationSlots(order, circles, sort);
   }, [whistleOn, sort, people, circles]);
+  const missionSlots = useMemo(
+    () => missionCircleSlots(missionMemberIds.filter((id) => people.some((person) => person.id === id))),
+    [missionMemberIds, people],
+  );
 
   useFrame(() => {
     resolveOverlaps(getAgents("plaza"));
@@ -36,7 +41,12 @@ export function PlazaCrowd() {
   return (
     <group>
       {people.map((profile) => (
-        <PlazaPerson key={profile.id} profile={profile} formationSlot={slots?.[profile.id] ?? null} />
+        <PlazaPerson
+          key={profile.id}
+          profile={profile}
+          formationSlot={slots?.[profile.id] ?? null}
+          missionSlot={missionSlots[profile.id] ?? null}
+        />
       ))}
     </group>
   );

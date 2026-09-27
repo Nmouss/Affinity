@@ -1,0 +1,15 @@
+.label {
+  display: grid;
+  justify-items: center;
+  gap: .08rem;
+  padding: .35rem .75rem;
+  border: 2px solid rgba(142, 91, 29, .42);
+  border-radius: 999px;
+  background: rgba(255, 250, 241, .9);
+  color: #5e3b14;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 5px 14px rgba(85, 51, 14, .14);
+}
+.label strong { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+.label span { font-size: .62rem; }

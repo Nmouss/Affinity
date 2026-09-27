@@ -2,7 +2,6 @@
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- classic JSX runtime needs React in scope
 import React, { useEffect, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { getCircle, getLook, getPerson, MAX_PEOPLE, useRoster } from "@/lib/people/roster";
 import { playBlip, playWhistle } from "@/components/maker/sound";
 import type { MakerAction, MakerState } from "@/components/maker/flow";
@@ -67,6 +66,7 @@ export function resolvePlazaDrop(action: PlazaDrop, personId: string, lookup: Pe
 export interface PlazaRailsProps {
   state: MakerState;
   dispatch: (action: MakerAction) => void;
+  onLaunch: (mode: "shopping" | "plan", invitedIds: string[]) => void;
 }
 
 const HINT_MS = 1600;
@@ -112,17 +112,17 @@ function RailButton({
   );
 }
 
-export function PlazaRails({ state, dispatch }: PlazaRailsProps) {
-  const router = useRouter();
-
+export function PlazaRails({ state, dispatch, onLaunch }: PlazaRailsProps) {
   const selectedId = usePlaza((s) => s.selectedId);
   const select = usePlaza((s) => s.select);
   const dropAction = usePlaza((s) => s.dropAction);
   const clearDrop = usePlaza((s) => s.clearDrop);
   const whistle = usePlaza((s) => s.whistle);
   const setWhistle = usePlaza((s) => s.setWhistle);
+  const missionMemberIds = usePlaza((s) => s.missionMemberIds);
 
   const total = useRoster((s) => s.people.length);
+  const people = useRoster((s) => s.people);
   const setCircle = useRoster((s) => s.setCircle);
   const selectedPerson = useRoster((s) => (selectedId ? s.people.find((p) => p.id === selectedId) ?? null : null));
   const selectedCircle = useRoster((s) => (selectedId ? s.circles[selectedId] : undefined));
@@ -167,7 +167,22 @@ export function PlazaRails({ state, dispatch }: PlazaRailsProps) {
 
   function handleBack() {
     playBlip("save");
-    router.push("/");
+    showHint("Profiles saved");
+  }
+
+  function launchCouncil(mode: "shopping" | "plan") {
+    if (people.length === 0) {
+      showHint("Add someone to your world first");
+      return;
+    }
+    const knownIds = new Set(people.map((person) => person.id));
+    const invited = missionMemberIds.filter((id) => knownIds.has(id));
+    if (invited.length === 0) {
+      showHint("Drag people into the mission circle first");
+      return;
+    }
+    playBlip("select");
+    onLaunch(mode, invited);
   }
 
   function handleEdit() {
@@ -197,6 +212,7 @@ export function PlazaRails({ state, dispatch }: PlazaRailsProps) {
     }
     playBlip("select");
     if (confirmingSelected) {
+      usePlaza.getState().setMissionMember(selectedId, false);
       dispatch({ type: "confirmRemove" });
       select(null);
     } else {
@@ -217,6 +233,7 @@ export function PlazaRails({ state, dispatch }: PlazaRailsProps) {
 
   function handleConfirmRemove() {
     playBlip("select");
+    if (state.plazaConfirmRemoveId) usePlaza.getState().setMissionMember(state.plazaConfirmRemoveId, false);
     dispatch({ type: "confirmRemove" });
     select(null);
   }
@@ -245,7 +262,7 @@ export function PlazaRails({ state, dispatch }: PlazaRailsProps) {
   return (
     <>
       <div className={styles.railLeft}>
-        <RailButton targetId="plaza-back" label="Done" onClick={handleBack}>
+        <RailButton targetId="plaza-back" label="Saved" onClick={handleBack}>
           <BackIcon />
         </RailButton>
         <RailButton targetId="plaza-edit" dropAction="edit" label="View/Edit" dim={!selectedId} onClick={handleEdit}>
@@ -267,6 +284,22 @@ export function PlazaRails({ state, dispatch }: PlazaRailsProps) {
         <RailButton targetId="plaza-help" label="Help" active={helpOpen} onClick={() => setHelpOpen((was) => !was)}>
           <HelpIcon />
         </RailButton>
+      </div>
+
+      <div className={styles.missionActions} aria-label="Plan with your connections">
+        <p className={styles.missionLabel}>
+          {missionMemberIds.length === 0
+            ? "Build your mission circle"
+            : `${missionMemberIds.length} ${missionMemberIds.length === 1 ? "person" : "people"} in this mission`}
+        </p>
+        <button type="button" data-hand-target="plaza-shop" className={styles.missionButton} onClick={() => launchCouncil("shopping")}>
+          <span aria-hidden="true">🛍️</span>
+          <span><strong>Shop together</strong><small>Find something everyone agrees on</small></span>
+        </button>
+        <button type="button" data-hand-target="plaza-dinner" className={styles.missionButton} onClick={() => launchCouncil("plan")}>
+          <span aria-hidden="true">🍽️</span>
+          <span><strong>Make a dinner plan</strong><small>Choose dinner and an activity</small></span>
+        </button>
       </div>
 
       <div className={styles.railRight}>

@@ -5,6 +5,15 @@
   font-size: 0.9rem;
 }
 
+/* In the home-world council, keep result widgets clear of the plaza's permanent icon rails. */
+.plazaHud .left {
+  left: 7.5rem;
+}
+
+.plazaHud .right {
+  right: 7.5rem;
+}
+
 /* Only the panels themselves take clicks; the columns around them let the canvas through. */
 .top,
 .actions,

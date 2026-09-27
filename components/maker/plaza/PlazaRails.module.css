@@ -22,6 +22,58 @@
   right: 1.1rem;
 }
 
+.missionActions {
+  position: absolute;
+  left: 8rem;
+  bottom: 1.4rem;
+  z-index: 20;
+  display: grid;
+  width: min(20rem, calc(100vw - 10rem));
+  gap: .55rem;
+}
+
+.missionLabel {
+  margin: 0 0 .1rem;
+  color: #5f472e;
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.missionButton {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr;
+  gap: .65rem;
+  align-items: center;
+  width: 100%;
+  padding: .7rem .85rem;
+  border: 3px solid #8b755c;
+  border-radius: 1rem;
+  background: rgba(255, 253, 246, .94);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .18);
+  color: #402503;
+  cursor: pointer;
+  text-align: left;
+}
+
+.missionButton:hover,
+.missionButton[data-hand-hover] {
+  border-color: #ffb347;
+  background: #fff8e8;
+  transform: translateY(-1px);
+}
+
+.missionButton > span:first-child { font-size: 1.65rem; }
+.missionButton > span:last-child { display: grid; gap: .12rem; }
+.missionButton strong { font-size: .9rem; }
+.missionButton small { color: #765f47; font-size: .68rem; }
+
+@media (max-width: 760px) {
+  .missionActions { left: 7.2rem; right: 1rem; width: auto; }
+  .missionButton small { display: none; }
+}
+
 .whistleWrap {
   position: absolute;
   right: 1.1rem;

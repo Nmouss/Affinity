@@ -10,6 +10,7 @@ import type { GestureEvent } from "@/types/stage";
 import { addYaw } from "@/components/maker/turntable";
 import { playBlip } from "@/components/maker/sound";
 import { usePlaza } from "@/components/maker/plaza/plazaState";
+import { emitGesture } from "@/lib/stage/bus";
 import { GrabbingHandGlyph, PointerHandGlyph } from "@/components/maker/plaza/plazaIcons";
 import { HAND_HOVER_ATTR, HAND_TARGET_ATTR, ndcToClient, uiTargetId, uiTargetValue } from "./makerHitTest";
 import styles from "./MakerHands.module.css";
@@ -62,6 +63,10 @@ export function MakerHands() {
           }
         } else if (event.type === "orbit") {
           if (document.elementFromPoint(lastClient.x, lastClient.y)?.closest(ORBIT_ZONE)) addYaw(event.dx);
+        } else {
+          // While an in-place council is running, forward handshake/swipe semantics to the same
+          // director bus used by the room stage. The plaza and its Leap cursor stay mounted.
+          emitGesture(event);
         }
       },
     });

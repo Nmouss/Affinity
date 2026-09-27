@@ -99,3 +99,19 @@ export function formationSlots(
   }
   return out;
 }
+
+/** Stable compact floor spots for people held inside the mission circle. */
+export function missionCircleSlots(ids: string[]): Record<string, [number, number]> {
+  const out: Record<string, [number, number]> = {};
+  if (ids.length === 0) return out;
+  const columns = Math.ceil(Math.sqrt(ids.length));
+  const rows = Math.ceil(ids.length / columns);
+  const spacing = Math.min(1.25, 4.4 / Math.max(1, columns - 1), 4.4 / Math.max(1, rows - 1));
+  ids.forEach((id, index) => {
+    const row = Math.floor(index / columns);
+    const countInRow = Math.min(columns, ids.length - row * columns);
+    const col = index % columns;
+    out[id] = [(col - (countInRow - 1) / 2) * spacing, (row - (rows - 1) / 2) * spacing];
+  });
+  return out;
+}

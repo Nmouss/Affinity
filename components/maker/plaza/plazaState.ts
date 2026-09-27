@@ -10,7 +10,7 @@ export type WhistleSort = "name" | "circle";
 /** Icons a person can be dropped on (or that act on the selected person). */
 export type PlazaDrop = "edit" | "remove" | "move";
 
-/** The persistent group-building area drawn in the middle of the world. */
+/** The dinner-planning group target drawn in the middle of the world while that mode is open. */
 export const MISSION_CIRCLE = { x: 0, z: 0, radius: 3.15 } as const;
 
 export function isInsideMissionCircle(x: number, z: number): boolean {
@@ -50,7 +50,7 @@ export interface PlazaState {
   htmlHost: HTMLElement | null;
   /** Picking who a gift is for and who's buying; the scene lines people up and badges them while set. */
   giftPick: GiftPickState | null;
-  /** The council running over the plaza, if any. The mission circle is dinner-plan furniture. */
+  /** The open mission flow; `plan` also covers dinner participant selection before council launch. */
   missionMode: "shopping" | "plan" | null;
   setHtmlHost: (htmlHost: HTMLElement | null) => void;
   setGiftPick: (giftPick: GiftPickState | null) => void;

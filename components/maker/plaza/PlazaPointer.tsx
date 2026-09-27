@@ -101,7 +101,9 @@ export function PlazaPointer() {
           store.requestDrop(dropValue, draggedId);
         } else {
           signalDragOutcome(draggedId, "floor");
-          store.setMissionMember(draggedId, isInsideMissionCircle(plazaPointerFloor.x, plazaPointerFloor.z));
+          if (store.missionMode === "plan") {
+            store.setMissionMember(draggedId, isInsideMissionCircle(plazaPointerFloor.x, plazaPointerFloor.z));
+          }
         }
         store.setDragging(null);
       } else {

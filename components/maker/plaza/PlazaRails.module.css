@@ -74,6 +74,11 @@
   background: #f7f1e8;
 }
 
+.planMissionActive {
+  background: #e4e8d4;
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.28), 0 12px 28px rgba(44, 36, 28, 0.12);
+}
+
 .missionButton:hover,
 .missionButton[data-hand-hover] {
   background: #e4e8d4;

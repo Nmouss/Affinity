@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { CharacterLook } from "@/types/character";
-import { resolvePlazaDrop, type PersonLookup } from "@/components/maker/plaza/PlazaRails";
+import {
+  resolveDinnerPlanAction,
+  resolvePlazaDrop,
+  type PersonLookup,
+} from "@/components/maker/plaza/PlazaRails";
 
 // resolvePlazaDrop is the pure heart of PlazaRails' drop handling: given what the plaza scene
 // reports (someone dropped on the edit/remove/move icon) it decides what should happen, without
@@ -69,5 +73,26 @@ describe("resolvePlazaDrop", () => {
   it("move resolves to null when the person isn't in any circle", () => {
     const result = resolvePlazaDrop("move", "ghost-id", lookupFor("ava-id"));
     expect(result).toBeNull();
+  });
+});
+
+describe("resolveDinnerPlanAction", () => {
+  it("opens participant selection before trying to launch", () => {
+    expect(resolveDinnerPlanAction(false, ["ava"], [])).toEqual({ kind: "open" });
+  });
+
+  it("asks for people when the open mission circle is empty", () => {
+    expect(resolveDinnerPlanAction(true, ["ava"], [])).toEqual({ kind: "needsPeople" });
+  });
+
+  it("launches with known mission-circle members only", () => {
+    expect(resolveDinnerPlanAction(true, ["ava", "sam"], ["ghost", "sam"])).toEqual({
+      kind: "launch",
+      invitedIds: ["sam"],
+    });
+  });
+
+  it("keeps the add-person hint when the roster is empty", () => {
+    expect(resolveDinnerPlanAction(false, [], [])).toEqual({ kind: "emptyRoster" });
   });
 });

@@ -84,11 +84,11 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
   useEffect(() => setShowMakerHint(!hasSavedRoster()), []);
 
   const closeProfile = useCallback(() => useStage.getState().openProfile(null), []);
-  // Shared onApprove for both mandate flows: MandateButton only calls this once the shared handshake
-  // meter (hand pose, Space, or holding the button) actually completes, so there's nothing left for
-  // Hud to do here beyond the director's own bus listener, which is already subscribed and signs the
-  // mandate. Checkout itself is opened later from the Receipt, once a real checkoutUrl exists.
-  const approve = useCallback(() => emitGesture({ type: "handshakeComplete" }), []);
+  // Shared onApprove for both mandate flows. MandateButton calls it after the handshake meter (hand
+  // pose, Space, or holding the button) has already emitted handshakeComplete and the director's bus
+  // listener has signed the mandate, so it must not emit again (that would re-enter every listener).
+  // Checkout opens later from the Receipt, once a real checkoutUrl exists.
+  const approve = useCallback(() => {}, []);
 
   useEffect(() => {
     setSwapping(null);

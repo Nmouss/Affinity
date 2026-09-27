@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { attachKeyboard, type KeyAction } from "@/lib/gestures/keyboard";
 import { setHandshakeAssist } from "@/lib/gestures/live";
 import { emitGesture } from "@/lib/stage/bus";
@@ -16,11 +16,9 @@ import type { GestureEvent } from "@/types/stage";
 // attachKeyboard already ignores keys while typing in a form field (isTypingTarget), so this can't
 // steal Enter from the mission form.
 //
-// R only emits `reset`: the director's reset() (lib/director/director.ts) already clears the
-// council, hand, and scene back to `lobby`, which is enough to let another mission be launched from
-// the plaza rails. It deliberately does NOT call EmbeddedCouncil's `returnToWorld` (the "Stop
-// agents" button) — that also unmounts the Hud/council UI and steps back out of the plaza's mission
-// view, which is a bigger action than a stage keyboard reset should take silently.
+// R emits `reset` (the director's reset() clears the council, hand and scene back to `lobby`) and
+// then calls `onReset`, which EmbeddedCouncil wires to its "Stop agents" action so the mission
+// overlay closes too instead of leaving an empty council on screen.
 //
 // Renders nothing; EmbeddedCouncil mounts it for as long as a mission is running.
 
@@ -34,14 +32,19 @@ export function filterPlazaKeyAction(action: KeyAction): PlazaKeyEffect | null {
   return null;
 }
 
-export function PlazaCouncilKeys() {
+export function PlazaCouncilKeys({ onReset }: { onReset?: () => void }) {
+  const resetRef = useRef(onReset);
+  resetRef.current = onReset;
   useEffect(() => {
     const detach = attachKeyboard({
       onAction(action) {
         const effect = filterPlazaKeyAction(action);
         if (!effect) return;
         if (effect.kind === "handshake") setHandshakeAssist("keyboard", effect.held);
-        else emitGesture(effect.event);
+        else {
+          emitGesture(effect.event);
+          if (effect.event.type === "reset") resetRef.current?.();
+        }
       },
     });
     return () => {

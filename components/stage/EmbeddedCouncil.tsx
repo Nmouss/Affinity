@@ -60,7 +60,7 @@ export function EmbeddedCouncil({
   return (
     <>
       <Hud plaza />
-      <PlazaCouncilKeys />
+      <PlazaCouncilKeys onReset={returnToWorld} />
       <button type="button" {...handTarget("council-stop")} className={styles.back} onClick={returnToWorld}>
         Stop agents
       </button>

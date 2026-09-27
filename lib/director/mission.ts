@@ -1,6 +1,12 @@
-import type { Mission } from "@/types/domain";
+import { getPerson } from "@/lib/people/roster";
+import type { Mission, ShoppingSlot } from "@/types/domain";
 
 export const DEFAULT_BUDGET = 200;
+
+/** Local catalog slots used one-per-recipient so a multi-person shop is multiple products. */
+export const GIFT_CATALOG_SLOTS = ["centerpiece", "extra", "wrapping", "card"] as const;
+
+export const MAX_SHOP_RECIPIENTS = GIFT_CATALOG_SLOTS.length;
 
 const OCCASIONS = ["christmas", "hanukkah", "birthday", "anniversary", "thanksgiving", "halloween", "easter"];
 const PLAN_WORDS = /\b(dinner|restaurant|reservation|activity|activities|outing|date night|things to do|itinerary|plan a)\b/i;
@@ -31,7 +37,11 @@ export function parseOccasion(text: string): string {
 }
 
 /** Mission text plus the seated sprites (in seat order) become the intent the council works on. */
-export function buildMission(text: string, invitedSpriteIds: string[]): Mission {
+export function buildMission(
+  text: string,
+  invitedSpriteIds: string[],
+  options?: { recipientIds?: string[] },
+): Mission {
   const freeText = text.trim();
   if (isPlanPrompt(freeText)) {
     const wantsDinner = /\b(dinner|restaurant|reservation|date night|food)\b/i.test(freeText);
@@ -55,12 +65,31 @@ export function buildMission(text: string, invitedSpriteIds: string[]): Mission 
       planSlots,
     };
   }
+  const recipientIds = [...new Set(options?.recipientIds ?? [])]
+    .filter((id) => invitedSpriteIds.includes(id))
+    .slice(0, MAX_SHOP_RECIPIENTS);
+  const shoppingSlots: ShoppingSlot[] | undefined =
+    recipientIds.length === 0
+      ? undefined
+      : recipientIds.map((id, index) => {
+          const person = getPerson(id);
+          const name = person?.name ?? id;
+          const loves = person?.loves?.slice(0, 3).join(", ");
+          return {
+            id: GIFT_CATALOG_SLOTS[index]!,
+            query: loves ? `gift for ${name}: ${loves}` : `thoughtful gift for ${name}`,
+            quantity: 1,
+          };
+        });
   return {
     occasion: parseOccasion(text),
     budget: parseBudget(text),
     freeText,
-    type: "shared",
+    type: recipientIds.length === 1 ? "gift" : "shared",
+    recipientId: recipientIds[0],
+    recipientIds: recipientIds.length ? recipientIds : undefined,
     invitedSpriteIds,
     kind: "shopping",
+    shoppingSlots,
   };
 }

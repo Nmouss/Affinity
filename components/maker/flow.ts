@@ -48,9 +48,9 @@ export const SIZE_RELATIONSHIP: Record<BodySize, string> = {
 /** STARTER_LOOKS keys, with the Mii-channel-style label shown on their "start from a preset" tile. */
 export const PRESET_KEYS = ["wife", "daughter", "son"] as const;
 export const PRESET_LABELS: Record<string, string> = {
-  wife: "Maya-style",
-  daughter: "Ava-style",
-  son: "Leo-style",
+  wife: "Nabil-style",
+  daughter: "Ray-style",
+  son: "Jonathan-style",
 };
 
 export interface DraftPerson {

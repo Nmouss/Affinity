@@ -13,10 +13,12 @@ export interface CartReviewProps {
   onSwap: (itemId: string, prompt?: string) => void;
   onCancel: (itemId: string) => void;
   onApproveCart: () => void;
+  /** Cream plaza dialog; leave unset for the dark living-room HUD. */
+  plaza?: boolean;
 }
 
 /** Human review gate between the council's proposal and creation of a real merchant cart. */
-export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart }: CartReviewProps) {
+export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, plaza = false }: CartReviewProps) {
   const [index, setIndex] = useState(0);
   const [approvedIds, setApprovedIds] = useState<Set<string>>(() => new Set());
   const [prompt, setPrompt] = useState("");
@@ -52,7 +54,7 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart }
 
   if (!item) {
     return (
-      <aside className={styles.review} aria-label="Cart decision">
+      <aside className={`${styles.review} ${plaza ? styles.plaza : ""}`} aria-label="Cart decision">
         <p className={styles.eyebrow}>Cart decision</p>
         <h2>Nothing to review</h2>
         <button type="button" className={styles.cancel} onClick={() => onCancel("empty-cart")}>
@@ -63,7 +65,7 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart }
   }
 
   return (
-    <aside className={styles.review} aria-label="Review proposed cart">
+    <aside className={`${styles.review} ${plaza ? styles.plaza : ""}`} aria-label="Review proposed cart">
       <div className={styles.header}>
         <div>
           <p className={styles.eyebrow}>Your decision</p>
@@ -160,12 +162,12 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart }
   );
 }
 
-export function CartRejected() {
+export function CartRejected({ plaza = false }: { plaza?: boolean }) {
   return (
-    <aside className={styles.review} aria-label="Cart rejected" role="status">
+    <aside className={`${styles.review} ${plaza ? styles.plaza : ""}`} aria-label="Cart cancelled" role="status">
       <p className={styles.eyebrow}>Your decision</p>
       <h2>Cart cancelled</h2>
-      <p className={styles.rejectedCopy}>Nothing was purchased and no Shopify cart was created.</p>
+      <p className={styles.rejectedCopy}>Nothing was purchased and no checkout was created.</p>
     </aside>
   );
 }

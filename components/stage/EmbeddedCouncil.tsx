@@ -3,12 +3,18 @@
 import { useEffect } from "react";
 import { Hud } from "@/components/hud/Hud";
 import { emitGesture } from "@/lib/stage/bus";
-import { getPeople } from "@/lib/people/roster";
+import { getPeople, getPerson } from "@/lib/people/roster";
 import { MAX_SEATS } from "@/lib/stage/layout";
 import { useStage } from "@/lib/stage/store";
 import styles from "./EmbeddedCouncil.module.css";
 
 export type MissionMode = "shopping" | "plan";
+
+function shoppingPrompt(recipientIds: string[]): string {
+  const names = recipientIds.map((id) => getPerson(id)?.name ?? id);
+  if (names.length === 1) return `Find a gift for ${names[0]} under $200`;
+  return `Find a separate gift for each of ${names.join(", ")} under $200`;
+}
 
 const DEFAULT_MISSIONS: Record<MissionMode, string> = {
   shopping: "Find something everyone in this mission circle will love under $200",
@@ -19,10 +25,12 @@ const DEFAULT_MISSIONS: Record<MissionMode, string> = {
 export function EmbeddedCouncil({
   mode,
   invitedIds,
+  recipientIds = [],
   onBack,
 }: {
   mode: MissionMode;
   invitedIds: string[];
+  recipientIds?: string[];
   onBack: () => void;
 }) {
   useEffect(() => {
@@ -32,13 +40,15 @@ export function EmbeddedCouncil({
       .slice(0, MAX_SEATS);
     const stage = useStage.getState();
     stage.resetCouncil();
-    stage.setMissionText(DEFAULT_MISSIONS[mode]);
+    const recipients = recipientIds.filter((id) => requested.has(id));
+    stage.setRecipientIds(mode === "shopping" ? recipients : []);
+    stage.setMissionText(mode === "shopping" && recipients.length > 0 ? shoppingPrompt(recipients) : DEFAULT_MISSIONS[mode]);
     invited.forEach((person, index) => stage.seatSprite(person.id, index));
 
     // Let Hud install the director listener before the synthetic convene gesture starts the graph.
     const timer = window.setTimeout(() => emitGesture({ type: "convene" }), 100);
     return () => window.clearTimeout(timer);
-  }, [invitedIds, mode]);
+  }, [invitedIds, mode, recipientIds]);
 
   function returnToWorld() {
     useStage.getState().resetCouncil();
@@ -49,7 +59,7 @@ export function EmbeddedCouncil({
     <>
       <Hud plaza />
       <button type="button" className={styles.back} onClick={returnToWorld}>
-        End council
+        Stop agents
       </button>
     </>
   );

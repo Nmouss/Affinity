@@ -11,11 +11,11 @@ export function MissionCircle() {
     <group position={[MISSION_CIRCLE.x, 0, MISSION_CIRCLE.z]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .006, 0]}>
         <ringGeometry args={[MISSION_CIRCLE.radius - .12, MISSION_CIRCLE.radius, 80]} />
-        <meshBasicMaterial color="#ee9b32" transparent opacity={.85} />
+        <meshBasicMaterial color="#6b7349" transparent opacity={.78} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .004, 0]}>
         <circleGeometry args={[MISSION_CIRCLE.radius - .13, 80]} />
-        <meshBasicMaterial color="#ffd88a" transparent opacity={.12} depthWrite={false} />
+        <meshBasicMaterial color="#c5cbb0" transparent opacity={.18} depthWrite={false} />
       </mesh>
       <Html position={[0, .05, -MISSION_CIRCLE.radius + .35]} center pointerEvents="none" zIndexRange={[0, 0]}>
         <div className={styles.label}>

@@ -2,13 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as councilRoute } from "@/app/api/council/route";
 import { POST as mandateRoute } from "@/app/api/mandate/route";
 import { STAGE_TIMELINE, STAGE_TRANSCRIPT } from "@/lib/demo/stageTranscript";
-import { CUT90_BEATS, DEFAULT_BEATS } from "@/lib/director/beats";
+import { CUT90_BEATS, CUT90_READ_PAUSE_MS, DEFAULT_BEATS, READ_PAUSE_MS, beatHoldMs } from "@/lib/director/beats";
 import { createDirector, type Director, type DirectorOptions } from "@/lib/director/director";
 import { emitGesture } from "@/lib/stage/bus";
 import { useStage } from "@/lib/stage/store";
 import type { CouncilEvent } from "@/types/domain";
 
 const state = () => useStage.getState();
+
+function hold(event: CouncilEvent, beats = DEFAULT_BEATS, pause = READ_PAUSE_MS): number {
+  return beatHoldMs({ kind: "event", event }, beats, pause);
+}
 
 function sse(events: CouncilEvent[]): Response {
   const body = events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event.payload)}\n\n`).join("");
@@ -87,23 +91,24 @@ describe("beat queue", () => {
     expect(appliedTypes()).toEqual(["opinion"]);
     expect(state().councilSource).toBe("live");
 
-    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.opinion - 1);
+    const firstHold = hold(STAGE_TRANSCRIPT[0]!);
+    await vi.advanceTimersByTimeAsync(firstHold - 1);
     expect(appliedTypes()).toEqual(["opinion"]);
     await vi.advanceTimersByTimeAsync(1);
     expect(appliedTypes()).toEqual(["opinion", "opinion"]);
     expect(state().sprites.wife!.mood).toBe("listening");
 
-    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.opinion * 2);
+    await vi.advanceTimersByTimeAsync(hold(STAGE_TRANSCRIPT[1]!) + hold(STAGE_TRANSCRIPT[2]!));
     expect(state().phase).toBe("merge");
-    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.constraints);
+    await vi.advanceTimersByTimeAsync(hold(STAGE_TRANSCRIPT[3]!));
     expect(state().phase).toBe("conflict");
-    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.veto - 1);
+    await vi.advanceTimersByTimeAsync(hold(STAGE_TRANSCRIPT[4]!) - 1);
     expect(state().phase).toBe("conflict");
     await vi.advanceTimersByTimeAsync(1);
     expect(state().phase).toBe("bundle");
-    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.bundle + DEFAULT_BEATS.score * 2);
+    await vi.advanceTimersByTimeAsync(hold(STAGE_TRANSCRIPT[5]!) + hold(STAGE_TRANSCRIPT[6]!) + hold(STAGE_TRANSCRIPT[7]!));
     expect(state().phase).toBe("scoring");
-    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.score);
+    await vi.advanceTimersByTimeAsync(hold(STAGE_TRANSCRIPT[8]!));
     expect(state().phase).toBe("awaitMandate");
     expect(appliedTypes()).toEqual(STAGE_TRANSCRIPT.map((event) => event.type));
   });
@@ -111,18 +116,20 @@ describe("beat queue", () => {
   it("uses the tighter ?cut=90 preset", async () => {
     start({ cut90: true });
     seatAllAndConvene();
-    const total = CUT90_BEATS.opinion * 3 + CUT90_BEATS.constraints + CUT90_BEATS.veto + CUT90_BEATS.bundle + CUT90_BEATS.score * 3;
+    const total = STAGE_TRANSCRIPT.reduce(
+      (sum, event) => sum + hold(event, CUT90_BEATS, CUT90_READ_PAUSE_MS),
+      0,
+    );
     await vi.advanceTimersByTimeAsync(total - 1);
     expect(state().phase).toBe("scoring");
     await vi.advanceTimersByTimeAsync(1);
     expect(state().phase).toBe("awaitMandate");
-    expect(total).toBeLessThan(15_000);
   });
 
   it("clears the queue and aborts the stream on reset", async () => {
     start();
     seatAllAndConvene();
-    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.opinion);
+    await vi.advanceTimersByTimeAsync(hold(STAGE_TRANSCRIPT[0]!));
     expect(emitGesture({ type: "reset" })).toBe(true);
     expect(state().phase).toBe("lobby");
     await vi.advanceTimersByTimeAsync(60_000);

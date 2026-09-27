@@ -7,7 +7,15 @@ import type { StageStore } from "@/lib/stage/store";
 import type { Bundle, CartMandate, FamilyProfile, Mission } from "@/types/domain";
 import type { GestureEvent } from "@/types/stage";
 import { isGestureArmed, type ArmingContext } from "./arming";
-import { BeatQueue, CUT90_BEATS, DEFAULT_BEATS, type Beat, type BeatDurations } from "./beats";
+import {
+  BeatQueue,
+  CUT90_BEATS,
+  CUT90_READ_PAUSE_MS,
+  DEFAULT_BEATS,
+  READ_PAUSE_MS,
+  type Beat,
+  type BeatDurations,
+} from "./beats";
 import { runCouncil, type CouncilRunOptions } from "./councilClient";
 import { classifyEnvironment } from "./environmentClassifier";
 import { buildMission } from "./mission";
@@ -86,6 +94,7 @@ export function createDirector(options: DirectorOptions): Director {
   const queue = new BeatQueue({
     apply: applyBeat,
     durations: () => beats,
+    readPauseMs: () => (options.cut90 ? CUT90_READ_PAUSE_MS : READ_PAUSE_MS),
     onBeatEnd: (beat) => {
       if (beat.kind === "event" && (beat.event.type === "opinion" || beat.event.type === "deliberation")) {
         const id = beat.event.payload.spriteId;
@@ -97,7 +106,7 @@ export function createDirector(options: DirectorOptions): Director {
   async function convene() {
     const state = get();
     const invited = seatedInOrder(state);
-    const mission = buildMission(state.missionText, invited);
+    const mission = buildMission(state.missionText, invited, { recipientIds: state.recipientIds });
     const profiles = invited.map((id) => getPerson(id)).filter((p): p is FamilyProfile => p != null);
     const threadId = crypto.randomUUID();
     const runId = ++run;
@@ -146,7 +155,10 @@ export function createDirector(options: DirectorOptions): Director {
       return;
     }
     const mission =
-      state.mission ?? buildMission(state.missionText, [...new Set([...seatedInOrder(state), ...Object.keys(state.opinions)])]);
+      state.mission ??
+      buildMission(state.missionText, [...new Set([...seatedInOrder(state), ...Object.keys(state.opinions)])], {
+        recipientIds: state.recipientIds,
+      });
     const runId = run;
     state.setError(null);
     state.advancePhase("handshakeComplete");

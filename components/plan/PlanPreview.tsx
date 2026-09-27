@@ -6,10 +6,11 @@ export interface PlanPreviewProps {
   family: FamilyProfile[];
   onSwap?: (placeId: string) => void;
   swapping?: string | null;
+  plaza?: boolean;
 }
 
 /** A Google Places itinerary. Photos are proxied so the browser never receives the API key. */
-export function PlanPreview({ plan, family, onSwap, swapping }: PlanPreviewProps) {
+export function PlanPreview({ plan, family, onSwap, swapping, plaza = false }: PlanPreviewProps) {
   const servedBy = (placeId: string) =>
     Object.entries(plan.serves)
       .filter(([, places]) => places.includes(placeId))
@@ -17,7 +18,7 @@ export function PlanPreview({ plan, family, onSwap, swapping }: PlanPreviewProps
       .filter((member): member is FamilyProfile => Boolean(member));
 
   return (
-    <section className={styles.plan} aria-label="Proposed itinerary">
+    <section className={`${styles.plan} ${plaza ? styles.plaza : ""}`} aria-label="Proposed itinerary">
       <p className={styles.location}>{plan.location}{plan.when ? ` · ${plan.when}` : ""}</p>
       <ol className={styles.stops}>
         {plan.stops.map((stop) => (

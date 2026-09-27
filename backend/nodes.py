@@ -64,6 +64,19 @@ from .notifications import SmtpEmailError, SmtpEmailSender
 REQUIRED_SLOTS = ("tree", "lights", "ornaments", "topper")
 
 
+def _recipients(mission: Mission) -> list[str]:
+    """Gift targets in slot order; one product is shopped for each id."""
+    ids = [str(item) for item in mission.get("recipientIds") or [] if str(item).strip()]
+    extra = mission.get("recipientId")
+    if extra and extra not in ids:
+        ids.insert(0, str(extra))
+    return ids
+
+
+def _wish_weight(mission: Mission, sprite_id: str) -> float:
+    return 2.0 if sprite_id in set(_recipients(mission)) else 1.0
+
+
 def _emit(event_type: str, payload: Any) -> None:
     """Publish a UI event when the graph is running in custom stream mode."""
     try:
@@ -117,6 +130,9 @@ def intake_node(state: CouncilState) -> CouncilState:
         raise ValueError(f"Unknown sprite IDs: {', '.join(unknown)}")
     if mission["type"] == "gift" and mission.get("recipientId") not in invited:
         raise ValueError("A gift recipient must be one of the invited sprites")
+    unknown_recipients = [sprite_id for sprite_id in _recipients(mission) if sprite_id not in invited]
+    if unknown_recipients:
+        raise ValueError(f"Unknown gift recipients: {', '.join(unknown_recipients)}")
 
     normalized_mission: Mission = {
         **mission,
@@ -274,10 +290,7 @@ def merge_node(state: CouncilState) -> dict[str, ConstraintSet]:
     wishes: list[WeightedWish] = []
     for opinion in opinions:
         for wish in opinion["wishes"]:
-            weight = 2.0 if (
-                state["mission"]["type"] == "gift"
-                and state["mission"].get("recipientId") == opinion["spriteId"]
-            ) else 1.0
+            weight = _wish_weight(state["mission"], opinion["spriteId"])
             wishes.append({"spriteId": opinion["spriteId"], "wish": wish, "weight": weight})
 
     constraints: ConstraintSet = {
@@ -328,10 +341,7 @@ def reconcile_deliberations_node(state: CouncilState) -> dict[str, ConstraintSet
     wishes = list(state["constraints"]["wishes"])
     seen = {(wish["spriteId"], wish["wish"].casefold()) for wish in wishes}
     for response in deliberations:
-        weight = 2.0 if (
-            state["mission"]["type"] == "gift"
-            and state["mission"].get("recipientId") == response["spriteId"]
-        ) else 1.0
+        weight = _wish_weight(state["mission"], response["spriteId"])
         for wish in response["compromiseWishes"]:
             normalized = wish.strip()
             key = (response["spriteId"], normalized.casefold())
@@ -871,14 +881,28 @@ async def shop_node(state: CouncilState) -> dict[str, Bundle]:
         raise ValueError("No in-budget bundle can satisfy every required slot")
 
     _, selected_items, total = best
-    serves = {
-        sprite_id: [
-            item["id"]
-            for item in selected_items
-            if _item_relevance(item, desires_by_sprite[sprite_id]) > 0
-        ]
-        for sprite_id in invited
+    mission = state["mission"]
+    recipients = _recipients(mission)
+    slot_owner = {
+        str(slot["id"]): recipients[index]
+        for index, slot in enumerate(_shopping_slots(mission))
+        if index < len(recipients)
     }
+    if slot_owner:
+        serves = {sprite_id: [] for sprite_id in invited}
+        for item in selected_items:
+            owner = slot_owner.get(str(item["slot"]))
+            if owner:
+                serves.setdefault(owner, []).append(item["id"])
+    else:
+        serves = {
+            sprite_id: [
+                item["id"]
+                for item in selected_items
+                if _item_relevance(item, desires_by_sprite[sprite_id]) > 0
+            ]
+            for sprite_id in invited
+        }
     items: list[CatalogItem] = []
     for item in selected_items:
         matched = [

@@ -8,7 +8,7 @@
 
 .label {
   font-weight: 600;
-  color: #6b4a2b;
+  color: #2c241c;
 }
 
 .buttons {
@@ -17,25 +17,25 @@
 }
 
 .button {
-  min-width: 3.25rem;
-  min-height: 3.25rem;
-  border-radius: 0.9rem;
-  border: none;
-  background: #fff3e0;
-  color: #6b4a2b;
-  font-size: 1.25rem;
-  font-weight: 700;
+  min-width: 3rem;
+  min-height: 3rem;
+  border-radius: 0.7rem;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  background: #eef0e4;
+  color: #2c241c;
+  font-size: 1.2rem;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
 }
 
 .button:hover,
 .button[data-hand-hover] {
-  background: #ffe3bd;
+  background: #e4e8d4;
 }
 
 .button:focus-visible {
-  outline: 3px solid #ffb347;
+  outline: 2px solid #6b7349;
   outline-offset: 2px;
 }
 

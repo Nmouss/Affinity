@@ -116,7 +116,6 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
   const motion = useRef(createMotion());
 
   const bubble = useStage((state) => state.sprites[id]?.bubble ?? null);
-  const thinking = useStage((state) => state.sprites[id]?.mood === "thinking");
   const celebrating = useStage((state) => state.phase === "receipt");
   const seat = useStage((state) => state.sprites[id]?.seat ?? null);
   const seatedTotal = useStage((state) => seatedCount(state.sprites));
@@ -364,9 +363,11 @@ export function SpriteToken({ profile }: SpriteTokenProps) {
           </group>
         </group>
 
-        <Html position={[0, bubbleY, 0]} zIndexRange={[0, 0]} pointerEvents="none">
-          <SpeechBubble speaker={name} text={bubble} thinking={thinking} accent={palette.accent} align={bubbleAlign} />
-        </Html>
+        {bubble ? (
+          <Html position={[0, bubbleY, 0]} zIndexRange={[80, 0]} pointerEvents="none">
+            <SpeechBubble speaker={name} text={bubble} accent={palette.accent} align={bubbleAlign} active />
+          </Html>
+        ) : null}
         <Html position={[0, LABEL_Y, LABEL_Z]} zIndexRange={[0, 0]} pointerEvents="none">
           <div className={styles.label} style={{ "--accent": palette.accent, "--core": palette.core } as CSSProperties}>
             <span className={styles.dot} />

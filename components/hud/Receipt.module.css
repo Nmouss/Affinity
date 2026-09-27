@@ -71,6 +71,27 @@
   color: #b9a494;
 }
 
+.plaza {
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  border-radius: 0.9rem;
+  background: #f7f1e8;
+  box-shadow: 0 12px 28px rgba(44, 36, 28, 0.12);
+  color: #2c241c;
+}
+
+.plaza .seal { color: #6b7349; text-shadow: none; }
+.plaza .heading { color: #2c241c; font-weight: 600; }
+.plaza .facts dt { color: #6b7349; }
+.plaza .note, .plaza .facts dd { color: #5c574c; }
+.plaza .checkoutLinks a {
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  border-radius: 0.7rem;
+  background: #eef0e4;
+  color: #2c241c;
+  font-weight: 600;
+  box-shadow: none;
+}
+
 .kbd {
   composes: kbd from "./Panel.module.css";
 }

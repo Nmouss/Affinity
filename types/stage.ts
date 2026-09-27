@@ -72,9 +72,9 @@ export interface SpriteStageState {
  * when the agents send them, matching heuristics otherwise). Room and sprites render the beat from it.
  */
 export interface ConflictAttribution {
-  /** Sprite whose wish was vetoed (Leo in the demo). */
+  /** Sprite whose wish was vetoed (Jonathan in the demo). */
   wishBy: string | null;
-  /** Sprite whose house rule vetoed it (Maya in the demo). */
+  /** Sprite whose house rule vetoed it (Nabil in the demo). */
   ruleBy: string | null;
   /** Catalog item that broke the rule (inflatable-trex). */
   itemId: string | null;

@@ -32,3 +32,15 @@
 .label {
   position: relative;
 }
+
+.plaza {
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  background: #f7f1e8;
+  color: #2c241c;
+  font-weight: 600;
+  box-shadow: 0 12px 28px rgba(44, 36, 28, 0.12);
+}
+
+.plaza .fill {
+  background: linear-gradient(90deg, #dce4c8, #6b7349);
+}

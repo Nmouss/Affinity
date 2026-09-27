@@ -20,6 +20,7 @@ import type { StagePhase } from "@/types/stage";
 import { InviteChips } from "./InviteChips";
 import { Receipt } from "./Receipt";
 import { CartRejected, CartReview } from "./CartReview";
+import { ItemRanking } from "./ItemRanking";
 import styles from "./Hud.module.css";
 
 const CAPTIONS: Record<StagePhase, string> = {
@@ -135,8 +136,16 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
 
   const openProfile = people.find((profile) => profile.id === profileOpenId);
   const participants = participantIds({ sprites, opinions, mission });
+  const rankingAgents = participants
+    .map((id) => people.find((member) => member.id === id))
+    .filter((profile): profile is NonNullable<typeof profile> => Boolean(profile));
   const caption = CAPTIONS[phase];
   const deliberating = DELIBERATING.includes(phase);
+  const shoppingDecision = phase === "awaitMandate" && Boolean(bundle) && !plan;
+  const planDecision = phase === "awaitMandate" && Boolean(plan);
+  const receiptDecision =
+    phase === "receipt" && (receipt?.status === "rejected" || (receipt?.status === "approved" && Boolean(mandate)));
+  const decisionOpen = shoppingDecision || planDecision || receiptDecision;
 
   return (
     <div className={`${styles.hud} ${plaza ? styles.plazaHud : ""}`}>
@@ -171,6 +180,19 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
       )}
 
       <div className={styles.left}>
+        {plaza && (bundle || plan) && phase !== "lobby" && (
+          <ItemRanking
+            title={plan ? "Stops" : "Items"}
+            items={
+              plan
+                ? plan.stops.map((stop) => ({ id: stop.id, name: stop.name }))
+                : (bundle?.items ?? []).map((item) => ({ id: item.id, name: item.name }))
+            }
+            agents={rankingAgents}
+            scores={scores}
+            pending={!SETTLED.includes(phase)}
+          />
+        )}
         {!plaza && bundle && !plan && (
           <section className={styles.cart} aria-label="Cart and happiness">
             <h2 className={styles.title}>Cart</h2>
@@ -198,7 +220,7 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
             </div>
           </section>
         )}
-        {plan && (
+        {plan && !planDecision && (
           <section className={styles.cart} aria-label="Plan and happiness">
             <h2 className={styles.title}>Plan</h2>
             <PlanPreview plan={plan} family={people} onSwap={handleSwap} swapping={swapping} />
@@ -214,20 +236,55 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
 
       <div className={styles.right}>
         {phase === "lobby" && openProfile && <ProfileCard profile={openProfile} onClose={closeProfile} />}
-        {phase === "awaitMandate" && bundle && !plan && (
-          <CartReview
-            bundle={bundle}
-            swapping={swapping}
-            onSwap={handleSwap}
-            onCancel={handleCancelCart}
-            onApproveCart={approveCart}
-          />
-        )}
-        {phase === "receipt" && receipt?.status === "rejected" && <CartRejected />}
-        {phase === "receipt" && receipt?.status === "approved" && mandate && (
-          <Receipt receipt={receipt} mandate={mandate} carts={carts} notifications={notifications} />
-        )}
       </div>
+
+      {decisionOpen && (
+        <div className={styles.decisionOverlay} role="dialog" aria-modal="true" aria-label="Your decision">
+          {shoppingDecision && bundle && (
+            <CartReview
+              plaza={plaza}
+              bundle={bundle}
+              swapping={swapping}
+              onSwap={handleSwap}
+              onCancel={handleCancelCart}
+              onApproveCart={approveCart}
+            />
+          )}
+          {planDecision && plan && (
+            <section className={styles.decisionCard} aria-label="Your decision">
+              <h2 className={styles.title}>Your decision</h2>
+              <PlanPreview plaza={plaza} plan={plan} family={people} onSwap={handleSwap} swapping={swapping} />
+              <div className={styles.meters}>
+                {participants.map((id) => {
+                  const profile = people.find((member) => member.id === id);
+                  return (
+                    <HappinessMeter
+                      key={id}
+                      plaza={plaza}
+                      name={profile?.name ?? id}
+                      color={profile?.colors[0] ?? "#ffd18a"}
+                      score={scores[id]?.score ?? null}
+                      say={scores[id]?.say}
+                      pending={false}
+                    />
+                  );
+                })}
+              </div>
+              <div className={styles.mandate}>
+                <MandateButton
+                  plaza={plaza}
+                  onApprove={approve}
+                  label={plaza ? "Hold to approve" : undefined}
+                />
+              </div>
+            </section>
+          )}
+          {phase === "receipt" && receipt?.status === "rejected" && <CartRejected plaza={plaza} />}
+          {phase === "receipt" && receipt?.status === "approved" && mandate && (
+            <Receipt plaza={plaza} receipt={receipt} mandate={mandate} carts={carts} notifications={notifications} />
+          )}
+        </div>
+      )}
 
       <div className={styles.bottom}>
         {!plaza && phase === "lobby" && (
@@ -244,12 +301,17 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
         )}
         {!plaza && caption && <p className={styles.caption}>{caption}</p>}
         {!plaza && phase === "merge" && searchPlan && <p className={styles.caption}>Searching {searchPlan.slots.length} planned {searchPlan.slots.length === 1 ? "query group" : "query groups"}…</p>}
-        {repair && phase !== "receipt" && <p className={styles.caption}>{repair.autonomous ? "The agent is finding another option…" : "Applying your replacement request…"}</p>}
-        {preflight && phase === "signing" && <p className={styles.caption}>Preflight: {preflight.status}{preflight.changes.length ? ` · ${preflight.changes.join(" ")}` : ""}</p>}
-        {phase === "awaitMandate" && plan && (
-          <div className={styles.mandate}>
-            <MandateButton onApprove={approve} />
-          </div>
+        {repair && phase !== "receipt" && (
+          <p className={styles.caption}>
+            {repair.autonomous ? "Finding another option…" : "Applying your replacement request…"}
+          </p>
+        )}
+        {preflight && phase === "signing" && (
+          <p className={styles.caption}>
+            {plaza
+              ? `Checking availability${preflight.changes.length ? ` · ${preflight.changes.join(" ")}` : "…"}`
+              : `Preflight: ${preflight.status}${preflight.changes.length ? ` · ${preflight.changes.join(" ")}` : ""}`}
+          </p>
         )}
       </div>
     </div>

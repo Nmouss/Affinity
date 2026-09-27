@@ -1,7 +1,12 @@
+import { typingDuration } from "@/components/sprites/typewriter";
 import type { CouncilEvent } from "@/types/domain";
 
 /** Minimum on-screen time per beat, in ms, so an instant dump from the route still plays as a show. */
 export type BeatDurations = Record<CouncilEvent["type"] | "streamEnd", number>;
+
+/** Extra time after a line finishes typing so a person can read it before the next speaker. */
+export const READ_PAUSE_MS = 2200;
+export const CUT90_READ_PAUSE_MS = 800;
 
 export const DEFAULT_BEATS: BeatDurations = {
   mission: 0,
@@ -60,11 +65,33 @@ export function beatKey(beat: Beat): keyof BeatDurations {
   return beat.kind === "event" ? beat.event.type : "streamEnd";
 }
 
+export function eventSay(event: CouncilEvent): string | undefined {
+  const payload = event.payload;
+  if (payload && typeof payload === "object" && "say" in payload && typeof payload.say === "string") {
+    return payload.say;
+  }
+  return undefined;
+}
+
+/** Hold at least the beat floor, and for spoken lines wait until typing plus a read pause. */
+export function speechHoldMs(say: string | undefined, baseMs: number, readPauseMs = READ_PAUSE_MS): number {
+  const floor = Math.max(0, baseMs);
+  if (!say) return floor;
+  return Math.max(floor, Math.ceil(typingDuration(say) * 1000) + readPauseMs);
+}
+
+export function beatHoldMs(beat: Beat, durations: BeatDurations, readPauseMs = READ_PAUSE_MS): number {
+  const base = Math.max(0, durations[beatKey(beat)]);
+  if (beat.kind !== "event") return base;
+  return speechHoldMs(eventSay(beat.event), base, readPauseMs);
+}
+
 export interface BeatQueueOptions {
   apply: (beat: Beat) => void;
   /** Called when a beat's hold time runs out, just before the next beat is applied. */
   onBeatEnd?: (beat: Beat) => void;
   durations: () => BeatDurations;
+  readPauseMs?: () => number;
 }
 
 /** Applies beats in order, holding each one on screen for at least its duration. */
@@ -101,7 +128,7 @@ export class BeatQueue {
     this.current = beat;
     this.options.apply(beat);
     if (this.current !== beat) return; // apply() reset the stage and cleared the queue
-    const hold = Math.max(0, this.options.durations()[beatKey(beat)]);
+    const hold = beatHoldMs(beat, this.options.durations(), this.options.readPauseMs?.() ?? READ_PAUSE_MS);
     this.timer = setTimeout(() => {
       const finished = this.current;
       this.current = null;

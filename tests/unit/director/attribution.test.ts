@@ -16,7 +16,7 @@ const opinions: Record<string, SpriteOpinion> = Object.fromEntries(
 const veto = events.find((event) => event.type === "veto")!.payload as { rule: string; wish: string; resolution: string };
 
 describe("attributeVeto", () => {
-  it("attributes the demo veto: Jordan's oversized lamp, Priya's height rule, the desk lamp swap", () => {
+  it("attributes the demo veto: Jonathan's oversized lamp, Nabil's height rule, the desk lamp swap", () => {
     expect(attributeVeto(veto, opinions, FAMILY, CATALOG)).toEqual({
       wishBy: "son",
       ruleBy: "wife",

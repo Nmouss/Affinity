@@ -44,7 +44,11 @@ const PICK_ACTIONS = new Set<MakerAction["type"]>([
 export function PeopleMaker() {
   useRosterHydration();
   const [state, dispatch] = useMakerFlow();
-  const [activeMission, setActiveMission] = useState<{ mode: MissionMode; invitedIds: string[] } | null>(null);
+  const [activeMission, setActiveMission] = useState<{
+    mode: MissionMode;
+    invitedIds: string[];
+    recipientIds?: string[];
+  } | null>(null);
   useMakerKeyboard(state, dispatch);
 
   const wrappedDispatch = useCallback(
@@ -71,8 +75,8 @@ export function PeopleMaker() {
       {state.step === "plaza" && (
         <PlazaRails
           dispatch={wrappedDispatch}
-          onLaunch={(mode, invitedIds) => {
-            if (!activeMission) setActiveMission({ mode, invitedIds });
+          onLaunch={(mode, invitedIds, recipientIds) => {
+            if (!activeMission) setActiveMission({ mode, invitedIds, recipientIds });
           }}
         />
       )}
@@ -81,6 +85,7 @@ export function PeopleMaker() {
         <EmbeddedCouncil
           mode={activeMission.mode}
           invitedIds={activeMission.invitedIds}
+          recipientIds={activeMission.recipientIds}
           onBack={() => setActiveMission(null)}
         />
       )}

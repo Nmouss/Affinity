@@ -52,7 +52,9 @@ export interface Mission {
   budget: number;
   freeText: string;
   type: MissionType;
-  recipientId?: string;
+    recipientId?: string;
+  /** Who each shopping slot is for; one product is filled per id. */
+  recipientIds?: string[];
   invitedSpriteIds: string[];
   kind?: "shopping" | "plan";
   shoppingSlots?: ShoppingSlot[];

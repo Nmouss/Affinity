@@ -7,13 +7,14 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.3rem 0.75rem 0.3rem 0.35rem;
+  padding: 0.28rem 0.7rem 0.28rem 0.32rem;
   border-radius: 999px;
-  background: #fffdf8;
-  box-shadow: 0 0.2rem 0.6rem rgba(60, 42, 20, 0.28);
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #4a3b2a;
+  background: #f7f1e8;
+  border: 1.5px solid rgba(44, 36, 28, 0.16);
+  box-shadow: 0 10px 22px rgba(44, 36, 28, 0.1);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #2c241c;
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
@@ -24,19 +25,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.12rem 0.5rem;
+  padding: 0.1rem 0.45rem;
   border-radius: 999px;
   font-size: 0.62rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #fff8ec;
+  font-weight: 600;
+  color: #f7f1e8;
 }
 
 .chipFamily {
-  background: #e0693f;
+  background: #6b7349;
 }
 
 .chipFriend {
-  background: #2f8fd1;
+  background: #5a6a78;
+}
+
+.speaking {
+  border-color: #6b7349;
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.35), 0 10px 22px rgba(44, 36, 28, 0.1);
 }

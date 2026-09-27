@@ -9,6 +9,7 @@ import type { CharacterLook, Circle } from "@/types/character";
 import { PLAZA_DROP_ATTR, usePlaza, type PlazaDrop } from "./plazaState";
 import { DinnerPlanIcon, HelpIcon, MoveIcon, NewIcon, ShopTogetherIcon } from "./plazaIcons";
 import { HelpOverlay } from "./HelpOverlay";
+import { RecipientPicker } from "./RecipientPicker";
 import styles from "./PlazaRails.module.css";
 
 // Replaces the old text-button toolbar and the Family/Friends name panels: the plaza now shows only
@@ -55,7 +56,7 @@ export function resolvePlazaDrop(action: PlazaDrop, personId: string, lookup: Pe
 
 export interface PlazaRailsProps {
   dispatch: (action: MakerAction) => void;
-  onLaunch: (mode: "shopping" | "plan", invitedIds: string[]) => void;
+  onLaunch: (mode: "shopping" | "plan", invitedIds: string[], recipientIds?: string[]) => void;
 }
 
 const HINT_MS = 1600;
@@ -114,6 +115,7 @@ export function PlazaRails({ dispatch, onLaunch }: PlazaRailsProps) {
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const [shopPicker, setShopPicker] = useState<{ invited: string[]; selected: string[] } | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -158,6 +160,14 @@ export function PlazaRails({ dispatch, onLaunch }: PlazaRailsProps) {
       return;
     }
     playBlip("select");
+    if (mode === "shopping") {
+      if (invited.length === 1) {
+        onLaunch(mode, invited, invited);
+        return;
+      }
+      setShopPicker({ invited, selected: [] });
+      return;
+    }
     onLaunch(mode, invited);
   }
 
@@ -195,11 +205,11 @@ export function PlazaRails({ dispatch, onLaunch }: PlazaRailsProps) {
             : `${missionMemberIds.length} ${missionMemberIds.length === 1 ? "person" : "people"} in this mission`}
         </p>
         <button type="button" data-hand-target="plaza-shop" className={`${styles.missionButton} ${styles.shopMission}`} onClick={() => launchCouncil("shopping")}>
-          <span className={styles.missionIcon}><ShopTogetherIcon size={38} /></span>
-          <span><strong>Shop together</strong><small>Pick something for your circle</small></span>
+          <span className={styles.missionIcon}><ShopTogetherIcon size={28} /></span>
+          <span><strong>Shop together</strong><small>Choose who the gifts are for</small></span>
         </button>
         <button type="button" data-hand-target="plaza-dinner" className={`${styles.missionButton} ${styles.planMission}`} onClick={() => launchCouncil("plan")}>
-          <span className={styles.missionIcon}><DinnerPlanIcon size={38} /></span>
+          <span className={styles.missionIcon}><DinnerPlanIcon size={28} /></span>
           <span><strong>Make dinner plans</strong><small>Choose a place and activity</small></span>
         </button>
       </div>
@@ -220,6 +230,30 @@ export function PlazaRails({ dispatch, onLaunch }: PlazaRailsProps) {
         <div className={styles.hintBubble} role="status">
           {hint}
         </div>
+      )}
+
+      {shopPicker && (
+        <RecipientPicker
+          candidateIds={shopPicker.invited}
+          selectedIds={shopPicker.selected}
+          onToggle={(id) =>
+            setShopPicker((current) => {
+              if (!current) return current;
+              const on = current.selected.includes(id);
+              return {
+                ...current,
+                selected: on ? current.selected.filter((entry) => entry !== id) : [...current.selected, id],
+              };
+            })
+          }
+          onConfirm={() => {
+            if (shopPicker.selected.length === 0) return;
+            playBlip("select");
+            onLaunch("shopping", shopPicker.invited, shopPicker.selected);
+            setShopPicker(null);
+          }}
+          onCancel={() => setShopPicker(null)}
+        />
       )}
 
       {helpOpen && <HelpOverlay onClose={() => setHelpOpen(false)} />}

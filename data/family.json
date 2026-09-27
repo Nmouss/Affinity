@@ -1,7 +1,7 @@
 [
   {
     "id": "wife",
-    "name": "Priya",
+    "name": "Nabil",
     "relationship": "roommate",
     "look": "sprite_03",
     "colors": ["#e8dcc8", "#7c9885"],
@@ -12,7 +12,7 @@
   },
   {
     "id": "daughter",
-    "name": "Sam",
+    "name": "Ray",
     "relationship": "close friend",
     "look": "sprite_07",
     "colors": ["#9b8aa6", "#e8dcc8"],
@@ -23,7 +23,7 @@
   },
   {
     "id": "son",
-    "name": "Jordan",
+    "name": "Jonathan",
     "relationship": "close friend",
     "look": "sprite_11",
     "colors": ["#7b98a6", "#a68a64"],

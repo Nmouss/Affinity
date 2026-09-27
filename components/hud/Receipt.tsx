@@ -7,26 +7,28 @@ export function Receipt({
   mandate,
   carts,
   notifications,
+  plaza = false,
 }: {
   receipt: ReceiptResult;
   mandate: SignedMandate;
   carts: CommerceCart[];
   notifications: NotificationDelivery[];
+  plaza?: boolean;
 }) {
   const approved = new Date(mandate.approvedAt);
   const isCart = "bundle" in mandate;
   return (
-    <aside className={styles.receipt} aria-label="Signed mandate receipt" aria-live="polite">
+    <aside className={`${styles.receipt} ${plaza ? styles.plaza : ""}`} aria-label="Approved proposal" aria-live="polite">
       <p className={styles.seal} aria-hidden>
         ✦
       </p>
-      <h2 className={styles.heading}>Mandate signed</h2>
+      <h2 className={styles.heading}>{plaza ? "You're all set" : "Mandate signed"}</h2>
       <dl className={styles.facts}>
         <dt>Intent</dt>
         <dd>
           {mandate.mission.freeText} · budget ${mandate.mission.budget}
         </dd>
-        <dt>{isCart ? "Cart mandate" : "Plan mandate"}</dt>
+        <dt>{isCart ? "Cart" : "Plan"}</dt>
         <dd>
           {isCart
             ? `${mandate.bundle.items.length} items · $${mandate.bundle.total}`
@@ -34,10 +36,14 @@ export function Receipt({
         </dd>
         <dt>Approved</dt>
         <dd>{Number.isNaN(approved.getTime()) ? mandate.approvedAt : approved.toLocaleString()}</dd>
-        <dt>Signature</dt>
-        <dd className={styles.mono}>{mandate.signature.slice(0, 24)}…</dd>
-        <dt>Receipt</dt>
-        <dd className={styles.mono}>{receipt.threadId}</dd>
+        {!plaza && (
+          <>
+            <dt>Signature</dt>
+            <dd className={styles.mono}>{mandate.signature.slice(0, 24)}…</dd>
+            <dt>Receipt</dt>
+            <dd className={styles.mono}>{receipt.threadId}</dd>
+          </>
+        )}
       </dl>
       {carts.length > 0 && (
         <div className={styles.checkoutLinks}>
@@ -54,12 +60,19 @@ export function Receipt({
         </p>
       )}
       <p className={styles.note}>
-        Human-present flow: your handshake signed this proposal with this device&apos;s ECDSA P-256 key.
-        {isCart ? " Checkout remains a separate handoff; no payment was submitted." : " The approved plan is now finalized."}
+        {plaza
+          ? isCart
+            ? "Checkout opens separately. Nothing was charged from here."
+            : "The plan is saved. Open Map or Website on a stop to continue."
+          : `Human-present flow: your handshake signed this proposal with this device's ECDSA P-256 key.${
+              isCart ? " Checkout remains a separate handoff; no payment was submitted." : " The approved plan is now finalized."
+            }`}
       </p>
-      <p className={styles.reset}>
-        Press <span className={styles.kbd}>R</span> to start over
-      </p>
+      {!plaza && (
+        <p className={styles.reset}>
+          Press <span className={styles.kbd}>R</span> to start over
+        </p>
+      )}
     </aside>
   );
 }

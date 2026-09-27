@@ -49,8 +49,11 @@ describe("phase walk over the stage transcript", () => {
     state().applyCouncilEvent(wife!);
     expect(state().sprites.wife).toMatchObject({ mood: "speaking", bubble: expect.stringContaining("under $25") });
     state().applyCouncilEvent(daughter!);
-    expect(state().sprites.wife!.mood).toBe("listening");
+    expect(state().sprites.wife).toMatchObject({ mood: "listening", bubble: null });
+    expect(state().sprites.daughter).toMatchObject({ mood: "speaking", bubble: expect.any(String) });
     state().applyCouncilEvent(son!);
+    expect(state().sprites.daughter!.bubble).toBeNull();
+    expect(state().sprites.son!.mood).toBe("speaking");
     state().applyCouncilEvent(constraints!);
     expect(state().sprites.son!.mood).toBe("listening");
 

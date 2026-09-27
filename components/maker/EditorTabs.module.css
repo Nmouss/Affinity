@@ -7,14 +7,15 @@
 .subheading {
   margin: 0.25rem 0 0;
   font-size: 0.85rem;
-  font-weight: 700;
-  color: #8a5a36;
+  font-weight: 600;
+  color: #5c574c;
 }
 
 .hint {
   margin: 0;
-  color: #8a5a36;
+  color: #5c574c;
   font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .adjustRow {
@@ -25,45 +26,43 @@
 
 .toggle {
   align-self: flex-start;
-  min-height: 3rem;
-  padding: 0.5rem 1.25rem;
+  min-height: 2.75rem;
+  padding: 0.45rem 1.15rem;
   border-radius: 999px;
-  border: none;
-  background: #fff3e0;
-  color: #6b4a2b;
-  font-weight: 700;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  background: #eef0e4;
+  color: #2c241c;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
 }
 
 .toggleOn {
-  background: #ffb347;
-  color: #402503;
+  background: #dce4c8;
+  color: #2c241c;
 }
 
 .toggle:focus-visible {
-  outline: 3px solid #ffb347;
+  outline: 2px solid #6b7349;
   outline-offset: 2px;
 }
 
 .nameFieldLabel {
-  font-weight: 700;
-  color: #6b4a2b;
+  font-weight: 600;
+  color: #2c241c;
 }
 
 .nameField {
-  font-size: 1.5rem;
-  padding: 0.6rem 1rem;
-  border-radius: 0.75rem;
-  border: 2px solid #e8c79a;
-  background: #fffaf1;
-  color: #402503;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 1.35rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.7rem;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  background: #f7f1e8;
+  color: #2c241c;
 }
 
 .nameField:focus-visible {
-  outline: 3px solid #ffb347;
+  outline: 2px solid #6b7349;
   outline-offset: 2px;
 }
 
@@ -93,22 +92,22 @@
 .key {
   min-width: 2.6rem;
   min-height: 2.6rem;
-  border-radius: 0.6rem;
-  border: none;
-  background: #fff3e0;
-  color: #6b4a2b;
-  font-weight: 700;
+  border-radius: 0.55rem;
+  border: 1.5px solid rgba(44, 36, 28, 0.16);
+  background: #eef0e4;
+  color: #2c241c;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  box-shadow: none;
 }
 
 .key:hover,
 .key[data-hand-hover] {
-  background: #ffe3bd;
+  background: #e4e8d4;
 }
 
 .key:focus-visible {
-  outline: 3px solid #ffb347;
+  outline: 2px solid #6b7349;
   outline-offset: 2px;
 }
 

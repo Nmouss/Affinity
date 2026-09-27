@@ -92,6 +92,7 @@ class Mission(TypedDict):
     type: Literal["shared", "gift"]
     invitedSpriteIds: list[str]
     recipientId: NotRequired[str]
+    recipientIds: NotRequired[list[str]]
     shoppingSlots: NotRequired[list[ShoppingSlot]]
     kind: NotRequired[Literal["shopping", "plan"]]
     location: NotRequired[PlanLocation]

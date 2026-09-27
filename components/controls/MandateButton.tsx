@@ -15,10 +15,12 @@ export function MandateButton({
   onApprove,
   label = "Hold Space or shake hands to approve",
   disabled = false,
+  plaza = false,
 }: {
   onApprove?: () => void;
   label?: string;
   disabled?: boolean;
+  plaza?: boolean;
 }) {
   const button = useRef<HTMLButtonElement>(null);
   const approve = useRef(onApprove);
@@ -55,7 +57,7 @@ export function MandateButton({
     <button
       ref={button}
       type="button"
-      className={styles.button}
+      className={`${styles.button} ${plaza ? styles.plaza : ""}`}
       disabled={disabled}
       onPointerDown={(event) => {
         if (event.button !== 0) return;

@@ -8,6 +8,10 @@
 /* In the home-world council, keep result widgets clear of the plaza's permanent icon rails. */
 .plazaHud .left {
   left: 7.5rem;
+  z-index: 80;
+  width: 13.75rem;
+  top: 4.5rem;
+  bottom: auto;
 }
 
 .plazaHud .right {
@@ -19,6 +23,7 @@
 .actions,
 .actionsLab,
 .toast,
+.decisionOverlay,
 .left > *,
 .right > *,
 .bottom > * {
@@ -99,6 +104,7 @@
 
 .toast {
   position: absolute;
+  z-index: 80;
   top: 5.4rem;
   left: 50%;
   margin: 0;
@@ -195,6 +201,56 @@
   overflow: hidden;
 }
 
+.decisionOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(18, 13, 11, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.decisionOverlay > * {
+  max-height: min(42rem, calc(100vh - 2.5rem));
+  overflow: auto;
+}
+
+.decisionCard {
+  composes: panel from "./Panel.module.css";
+  width: min(32rem, calc(100vw - 2.5rem));
+  border-color: rgba(255, 209, 138, 0.55);
+  background: linear-gradient(160deg, rgba(64, 38, 22, 0.97), rgba(25, 16, 13, 0.97));
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.45);
+}
+
+.plazaHud .decisionOverlay {
+  left: 21.5rem;
+  background: rgba(44, 36, 28, 0.32);
+  backdrop-filter: blur(4px);
+}
+
+.plazaHud .decisionCard {
+  width: min(32rem, calc(100vw - 2.5rem));
+  padding: 1.15rem 1.25rem 1.3rem;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  border-radius: 0.9rem;
+  background: #f7f1e8;
+  box-shadow: 0 12px 28px rgba(44, 36, 28, 0.12);
+  color: #2c241c;
+}
+
+.plazaHud .decisionCard .title {
+  color: #6b7349;
+  font-weight: 600;
+}
+
+.plazaHud .meters {
+  color: #2c241c;
+}
+
 .bottom {
   position: absolute;
   left: 50%;
@@ -216,8 +272,18 @@
   animation: fadeIn 300ms ease-out;
 }
 
+.plazaHud .caption {
+  background: #f7f1e8;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  box-shadow: 0 12px 28px rgba(44, 36, 28, 0.12);
+  color: #2c241c;
+  font-weight: 500;
+}
+
 .mandate {
-  margin-top: 0.6rem;
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: center;
 }
 
 .makerRow {

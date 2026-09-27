@@ -13,11 +13,20 @@ export interface SpeechBubbleProps {
   accent?: string;
   /** Which way the bubble grows from the tail. */
   align?: "left" | "center" | "right";
+  /** Current speaker — full contrast. Off = a leftover line that should recede. */
+  active?: boolean;
 }
 
 // DOM bubble rendered inside drei <Html>. The typewriter writes textContent from rAF, so typing
 // never re-renders React.
-export function SpeechBubble({ speaker, text, thinking = false, accent, align = "center" }: SpeechBubbleProps) {
+export function SpeechBubble({
+  speaker,
+  text,
+  thinking = false,
+  accent,
+  align = "center",
+  active = true,
+}: SpeechBubbleProps) {
   const typed = useRef<HTMLSpanElement>(null);
   const rest = useRef<HTMLSpanElement>(null);
   const line = text ? clampBubble(text) : "";

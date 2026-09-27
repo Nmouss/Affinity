@@ -73,6 +73,10 @@
   color: #dcc8b7;
 }
 
+.plazaMeter .score { color: #6b7349; }
+.plazaMeter .track { background: rgba(44, 36, 28, 0.1); }
+.plazaMeter .say { color: #5c574c; }
+
 @keyframes shimmer {
   from {
     transform: translateX(-100%);

@@ -6,8 +6,8 @@ import React from "react";
 // the thick outline, and the fill — these components draw only the glyph). Plain function
 // components with no hooks, like partIcons.tsx, so they render fine in a static-markup test.
 
-export const PLAZA_ICON_STROKE = "#6f7470";
-const SW = 3.2;
+export const PLAZA_ICON_STROKE = "#5c574c";
+const SW = 2.4;
 
 interface IconProps {
   /** Rendered width and height in px. */

@@ -9,6 +9,11 @@
 html, body { min-height: 100%; margin: 0; }
 button, input, select { font: inherit; }
 
+/* Next.js DevTools badge sits bottom-left and turns red when the overlay has errors. */
+nextjs-portal {
+  display: none !important;
+}
+
 .stage-shell {
   min-height: 100vh;
   display: grid;

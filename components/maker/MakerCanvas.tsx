@@ -125,7 +125,7 @@ function EditorScene({ draft }: { draft: DraftPerson }) {
       <directionalLight position={[3, 5, 4]} intensity={1} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
         <circleGeometry args={[2.4, 32]} />
-        <meshStandardMaterial color="#ffe9c7" />
+        <meshStandardMaterial color="#e8dfd2" />
       </mesh>
     </group>
   );

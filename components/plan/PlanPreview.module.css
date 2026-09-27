@@ -11,3 +11,16 @@
 .credit { color: #9f8d80; font-size: .58rem; }
 .credit a { color: inherit; }
 .warning { margin: 0; color: #cbb8aa; font-size: .65rem; }
+
+.plaza .location { color: #6b7349; }
+.plaza .details { color: #5c574c; }
+.plaza .details strong { color: #2c241c; }
+.plaza .photo, .plaza .placeholder { background: #e4e8d4; }
+.plaza .links a, .plaza .links button {
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  background: #f7f1e8;
+  color: #2c241c;
+  font-weight: 600;
+  box-shadow: none;
+}
+.plaza .credit, .plaza .warning { color: #6b665c; }

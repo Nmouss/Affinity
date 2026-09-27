@@ -10,34 +10,34 @@
   flex-wrap: wrap;
   gap: 0.35rem;
   padding-bottom: 0.5rem;
-  border-bottom: 2px solid #f0dcc0;
+  border-bottom: 1.5px solid rgba(44, 36, 28, 0.14);
 }
 
 .tab {
   position: relative;
-  min-height: 2.75rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.9rem 0.9rem 0 0;
+  min-height: 2.5rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.7rem 0.7rem 0 0;
   border: none;
   background: transparent;
-  color: #8a5a36;
-  font-weight: 700;
+  color: #5c574c;
+  font-weight: 600;
   cursor: pointer;
 }
 
 .tab:hover,
 .tab[data-hand-hover] {
-  background: #fff3e0;
+  background: #eef0e4;
 }
 
 .tab:focus-visible {
-  outline: 3px solid #ffb347;
+  outline: 2px solid #6b7349;
   outline-offset: 2px;
 }
 
 .tabActive {
-  background: #ffe3bd;
-  color: #402503;
+  background: #e4e8d4;
+  color: #2c241c;
 }
 
 .dot {
@@ -47,7 +47,7 @@
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 50%;
-  background: #d64545;
+  background: #8a4a42;
 }
 
 .content {
@@ -61,42 +61,42 @@
   justify-content: flex-end;
   gap: 0.75rem;
   padding-top: 0.5rem;
-  border-top: 2px solid #f0dcc0;
+  border-top: 1.5px solid rgba(44, 36, 28, 0.14);
 }
 
 .quitButton,
 .saveButton {
   min-width: 7rem;
-  min-height: 3rem;
-  border-radius: 0.9rem;
-  border: none;
-  font-weight: 700;
+  min-height: 2.75rem;
+  border-radius: 0.7rem;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  font-weight: 600;
   cursor: pointer;
 }
 
 .quitButton {
-  background: #fff3e0;
-  color: #6b4a2b;
+  background: #f7f1e8;
+  color: #2c241c;
 }
 
 .quitButton:hover,
 .quitButton[data-hand-hover] {
-  background: #ffe3bd;
+  background: #eef0e4;
 }
 
 .saveButton {
-  background: #4caf6d;
-  color: #fff;
-  box-shadow: 0 4px 10px rgba(60, 150, 90, 0.35);
+  background: #dce4c8;
+  color: #2c241c;
+  box-shadow: none;
 }
 
 .saveButton:hover,
 .saveButton[data-hand-hover] {
-  background: #3f9b5c;
+  background: #cfd8b8;
 }
 
 .quitButton:focus-visible,
 .saveButton:focus-visible {
-  outline: 3px solid #ffb347;
+  outline: 2px solid #6b7349;
   outline-offset: 2px;
 }

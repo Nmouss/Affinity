@@ -7,28 +7,28 @@
 .tile {
   min-height: 4.5rem;
   padding: 0.75rem 1rem;
-  border-radius: 1.1rem;
-  border: none;
-  background: #fff3e0;
-  color: #6b4a2b;
-  font-weight: 700;
+  border-radius: 0.9rem;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  background: #eef0e4;
+  color: #2c241c;
+  font-weight: 600;
   font-size: 1rem;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 12px 28px rgba(44, 36, 28, 0.08);
 }
 
 .tile:hover,
 .tile[data-hand-hover] {
   transform: translateY(-2px);
-  background: #ffe3bd;
+  background: #e4e8d4;
 }
 
 .tile:focus-visible {
-  outline: 3px solid #ffb347;
+  outline: 2px solid #6b7349;
   outline-offset: 2px;
 }
 
 .random {
-  background: linear-gradient(135deg, #ffd27a, #ff9d6c);
-  color: #402503;
+  background: #dce4c8;
+  color: #2c241c;
 }

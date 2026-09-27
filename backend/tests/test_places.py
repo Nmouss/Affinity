@@ -93,7 +93,7 @@ def test_plan_graph_searches_scores_and_interrupts(monkeypatch) -> None:
     assert paused["__interrupt__"][0].value["type"] == "plan_mandate"
     assert "bundle" not in paused["__interrupt__"][0].value
     assert paused["__interrupt__"][0].value["notificationPreview"] == [
-        {"spriteId": "wife", "name": "Priya", "email": "maya@example.com"}
+        {"spriteId": "wife", "name": "Nabil", "email": "maya@example.com"}
     ]
     assert sent == []
 

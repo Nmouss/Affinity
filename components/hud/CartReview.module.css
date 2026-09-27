@@ -1,5 +1,5 @@
 .review {
-  width: min(25rem, calc(100vw - 2.5rem));
+  width: min(28rem, calc(100vw - 2.5rem));
   padding: 1rem;
   border: 1px solid rgba(255, 209, 138, 0.55);
   border-radius: 1rem;
@@ -38,6 +38,43 @@
 .navigation .cancel { justify-self: end; border-color: rgba(235,97,77,.55); color: #ffd3cc; }
 .cancelConfirm { display: inline-flex; gap: .3rem; justify-self: end; }
 .review button:disabled { opacity: .45; cursor: default; }
+
+.plaza {
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  border-radius: 0.9rem;
+  background: #f7f1e8;
+  box-shadow: 0 12px 28px rgba(44, 36, 28, 0.12);
+  color: #2c241c;
+}
+
+.plaza .eyebrow { color: #6b7349; font-weight: 600; letter-spacing: 0.04em; }
+.plaza .progress, .plaza .details p, .plaza .details small, .plaza .promptLabel, .plaza .finalDecision p, .plaza .rejectedCopy { color: #5c574c; }
+.plaza .header h2, .plaza h2, .plaza .details h3 { color: #2c241c; font-weight: 600; }
+.plaza .step { background: rgba(44, 36, 28, 0.12); }
+.plaza .product { background: #eef0e4; border: 1.5px solid rgba(44, 36, 28, 0.14); }
+.plaza .placeholder { background: #e4e8d4; color: #5c574c; }
+.plaza .pending { color: #6b7349; }
+.plaza .approved { color: #4a6b3a; }
+.plaza .approve, .plaza .swap, .plaza .promptSwap, .plaza .checkout, .plaza .cancel, .plaza .navigation button {
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  border-radius: 0.7rem;
+  background: #f7f1e8;
+  color: #2c241c;
+  box-shadow: none;
+  font-weight: 600;
+}
+.plaza .approve, .plaza .checkout { background: #dce4c8; border-color: rgba(107, 115, 73, 0.55); }
+.plaza .swap, .plaza .promptSwap { background: #eef0e4; }
+.plaza .navigation .cancel { color: #6b3a32; border-color: rgba(107, 58, 50, 0.35); background: #f3e6e2; box-shadow: none; }
+.plaza .promptLabel textarea {
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  border-radius: 0.7rem;
+  color: #2c241c;
+  background: #f7f1e8;
+}
+.plaza .approve:hover, .plaza .swap:hover, .plaza .promptSwap:hover, .plaza .checkout:hover, .plaza .cancel:hover, .plaza .navigation button:hover {
+  background: #e4e8d4;
+}
 
 @media (max-height: 760px) {
   .review { max-height: calc(100vh - 7rem); overflow: auto; }

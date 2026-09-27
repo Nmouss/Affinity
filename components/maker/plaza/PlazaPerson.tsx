@@ -291,8 +291,12 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
 
     mood.current = dragging ? "held" : hovered ? "hovered" : councilActive ? councilMood : "idle";
 
-    ringGlow.current = THREE.MathUtils.damp(ringGlow.current, hovered || selected ? 1 : 0, 10, delta);
-    if (ringMatRef.current) ringMatRef.current.opacity = ringGlow.current * 0.75;
+    const featured = councilActive && Boolean(councilBubble);
+    ringGlow.current = THREE.MathUtils.damp(ringGlow.current, hovered || selected || featured ? 1 : 0, 10, delta);
+    if (ringMatRef.current) {
+      ringMatRef.current.color.set(featured ? "#6b7349" : "#c4b89a");
+      ringMatRef.current.opacity = ringGlow.current * (featured ? 0.9 : 0.75);
+    }
   });
 
   const chipClass = circle === "family" ? styles.chipFamily : styles.chipFriend;
@@ -316,7 +320,7 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
       <mesh geometry={ringGeometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.014, 0]} scale={hitRadius * 2.2}>
         <meshBasicMaterial
           ref={ringMatRef}
-          color="#ffd88a"
+          color="#c4b89a"
           transparent
           opacity={0}
           depthWrite={false}
@@ -330,23 +334,25 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
       <group ref={facing}>
         <CharacterModel profile={profile} mood={mood} gaze={gaze} motion={motion} look={look} />
       </group>
-      {councilActive && (councilBubble || councilMood === "thinking") && (
-        <Html position={[0, height + LABEL_MARGIN + 0.35, 0]} zIndexRange={[30, 0]} pointerEvents="none">
+      {councilActive && councilBubble && (
+        <Html position={[0, height + LABEL_MARGIN + 0.72, 0]} zIndexRange={[80, 0]} pointerEvents="none">
           <SpeechBubble
             speaker={name}
             text={councilBubble}
-            thinking={councilMood === "thinking"}
-            accent={profile.colors[0] ?? "#c9a227"}
+            accent={profile.colors[0] ?? "#6b7349"}
             align={bubbleAlign}
+            active
           />
         </Html>
       )}
-      <Html position={[0, height + LABEL_MARGIN, 0]} zIndexRange={[0, 0]} pointerEvents="none">
-        <div className={styles.tag}>
-          <span className={chipClass}>{circle === "family" ? "Family" : "Friend"}</span>
-          {name}
-        </div>
-      </Html>
+      {!councilBubble && (
+        <Html position={[0, height + LABEL_MARGIN, 0]} zIndexRange={[0, 0]} pointerEvents="none">
+          <div className={`${styles.tag} ${councilActive && councilMood === "speaking" ? styles.speaking : ""}`}>
+            <span className={chipClass}>{circle === "family" ? "Family" : "Friend"}</span>
+            {name}
+          </div>
+        </Html>
+      )}
     </group>
   );
 }

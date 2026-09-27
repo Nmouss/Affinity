@@ -71,6 +71,8 @@ export interface CouncilSlice {
   /** Friend ids currently in the living room (walked in from the doorway, seated or not). Family
    *  are always present and never appear here. */
   visitors: string[];
+  /** Who a shopping run is buying for (one product each). Empty for dinner plans. */
+  recipientIds: string[];
   error: string | null;
   applyCouncilEvent: (event: CouncilEvent) => void;
   setPhase: (phase: StagePhase) => void;
@@ -81,6 +83,7 @@ export interface CouncilSlice {
   /** Seats or unseats a sprite. Seating a friend who isn't visiting yet makes them visit. */
   seatSprite: (spriteId: string, seat: number | null) => void;
   setMissionText: (text: string) => void;
+  setRecipientIds: (ids: string[]) => void;
   setMission: (mission: Mission | null) => void;
   setThreadId: (threadId: string | null) => void;
   setMandate: (mandate: SignedMandate | null) => void;
@@ -124,6 +127,7 @@ function initialCouncil() {
     bundleShownAt: null,
     threadId: null,
     visitors: [] as string[],
+    recipientIds: [] as string[],
     error: null,
   };
 }
@@ -183,8 +187,16 @@ export function participantIds(state: Pick<CouncilSlice, "sprites" | "opinions" 
   return [...ids].filter((id) => alive(id));
 }
 
+/** Only one line is on-stage at a time: previous speakers listen, and their bubbles drop so they
+ *  cannot stack on top of the current speaker. */
 const quietSpeakers = (sprites: Record<string, SpriteStageState>, except?: string) =>
-  mapSprites(sprites, (id, sprite) => (sprite.mood === "speaking" && id !== except ? { mood: "listening" } : null));
+  mapSprites(sprites, (id, sprite) => {
+    if (id === except) return null;
+    const patch: Partial<SpriteStageState> = {};
+    if (sprite.mood === "speaking") patch.mood = "listening";
+    if (sprite.bubble) patch.bubble = null;
+    return Object.keys(patch).length ? patch : null;
+  });
 
 export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> = (set) => {
   // Keeps `sprites`/`visitors` in sync with the roster: a new person gets a blank sprite entry, a
@@ -256,7 +268,9 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
               phase,
               bundle: event.payload,
               bundleShownAt: Date.now(),
-              sprites: mapSprites(state.sprites, (id) => (participants.includes(id) ? { mood: "scoring" } : null)),
+              sprites: mapSprites(quietSpeakers(state.sprites), (id) =>
+                participants.includes(id) ? { mood: "scoring" } : null,
+              ),
             };
           }
           case "plan": {
@@ -266,7 +280,9 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
               phase,
               plan: event.payload,
               bundleShownAt: Date.now(),
-              sprites: mapSprites(state.sprites, (id) => (participants.includes(id) ? { mood: "scoring" } : null)),
+              sprites: mapSprites(quietSpeakers(state.sprites), (id) =>
+                participants.includes(id) ? { mood: "scoring" } : null,
+              ),
             };
           }
           case "score": {
@@ -276,7 +292,7 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
               eventLog,
               phase,
               scores: { ...state.scores, [spriteId]: event.payload },
-              sprites: patchSprite(state.sprites, spriteId, {
+              sprites: patchSprite(quietSpeakers(state.sprites, spriteId), spriteId, {
                 mood: score >= 7 ? "happy" : score < 6 ? "sad" : "listening",
                 bubble: say,
                 score,
@@ -286,7 +302,7 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
           case "revision":
             return { eventLog, phase, error: null };
           case "scores_complete":
-            return { eventLog, phase };
+            return { eventLog, phase, sprites: quietSpeakers(state.sprites) };
           case "awaiting_mandate":
             {
               const envelope = "requiredGesture" in event.payload ? event.payload : null;
@@ -297,6 +313,7 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
               bundle: envelope?.bundle ?? legacyBundle ?? state.bundle,
               plan: envelope?.plan ?? state.plan,
               bundleShownAt: state.bundleShownAt ?? Date.now(),
+              sprites: quietSpeakers(state.sprites),
             };
             }
           case "repair_requested":
@@ -311,7 +328,9 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
               eventLog,
               phase,
               receipt: event.payload,
-              sprites: mapSprites(state.sprites, (id) => (participants.includes(id) ? { mood: "celebrating" } : null)),
+              sprites: mapSprites(quietSpeakers(state.sprites), (id) =>
+                participants.includes(id) ? { mood: "celebrating" } : null,
+              ),
             };
           }
           case "carts":
@@ -347,6 +366,8 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
       }),
 
     setMissionText: (missionText) => set({ missionText }),
+
+    setRecipientIds: (recipientIds) => set({ recipientIds: [...new Set(recipientIds)] }),
 
     setMission: (mission) => set({ mission }),
 

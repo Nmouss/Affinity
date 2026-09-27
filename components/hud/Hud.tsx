@@ -31,13 +31,13 @@ import styles from "./Hud.module.css";
 const CAPTIONS: Record<StagePhase, string> = {
   lobby: "",
   convening: "The council is gathering by the hearth…",
-  opinions: "Each sprite shares what matters to them",
+  opinions: "Each character shares what matters to them",
   merge: "Merging wishes with house rules",
   conflict: "A house rule vetoes a wish",
-  bundle: "The shopper builds a cart within budget",
-  scoring: "The council scores the cart",
+  bundle: "Affinity picks something within budget",
+  scoring: "The council scores the pick",
   awaitMandate: "Look it over, then hold a handshake to approve",
-  signing: "Signing the cart mandate…",
+  signing: "Sending your approval…",
   receipt: "",
 };
 
@@ -286,8 +286,7 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
           )}
           {planDecision && plan && (
             <section className={styles.decisionCard} aria-label="Your decision">
-              <h2 className={styles.title}>Your decision</h2>
-              <p className={styles.decisionHeading}>Affinity&apos;s plan</p>
+              <h2 className={styles.decisionHeading}>Affinity&apos;s plan</h2>
               <PlanPreview plaza={plaza} plan={plan} family={people} onSwap={handleSwap} swapping={swapping} />
               <div className={styles.meters}>
                 <SupporterRow

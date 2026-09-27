@@ -1,6 +1,8 @@
 "use client";
 
 import type { FamilyProfile, SpriteScore } from "@/types/domain";
+import { SupporterRow } from "./SupporterRow";
+import { supportersForProposal } from "./supporters";
 import styles from "./ItemRanking.module.css";
 
 export interface RankedItem {
@@ -22,7 +24,7 @@ function shortName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? name;
 }
 
-/** Compact left-rail list of discussed items plus each agent's score for the proposal. */
+/** Compact left-rail list of the items on the table plus how warm each character is on them. */
 export function ItemRanking({ title, items, agents, scores, pending = true }: ItemRankingProps) {
   if (items.length === 0) return null;
   return (
@@ -45,18 +47,12 @@ export function ItemRanking({ title, items, agents, scores, pending = true }: It
           </li>
         ))}
       </ol>
-      <ul className={styles.ranks}>
-        {agents.map((agent) => {
-          const score = scores[agent.id]?.score;
-          return (
-            <li key={agent.id} className={styles.rank}>
-              <span className={styles.dot} style={{ background: agent.colors[0] ?? "#6b7349" }} aria-hidden />
-              <span className={styles.who}>{shortName(agent.name)}</span>
-              <span className={styles.score}>{score == null ? (pending ? "…" : "–") : score}</span>
-            </li>
-          );
-        })}
-      </ul>
+      <SupporterRow
+        supporters={supportersForProposal(agents.map((agent) => agent.id), {}, scores)}
+        nameOf={(id) => shortName(agents.find((agent) => agent.id === id)?.name ?? id)}
+        sentence={!pending}
+        ariaLabel="Who likes it so far"
+      />
     </section>
   );
 }

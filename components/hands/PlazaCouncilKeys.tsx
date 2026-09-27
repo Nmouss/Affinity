@@ -17,7 +17,7 @@ import type { GestureEvent } from "@/types/stage";
 // steal Enter from the mission form.
 //
 // R emits `reset` (the director's reset() clears the council, hand and scene back to `lobby`) and
-// then calls `onReset`, which EmbeddedCouncil wires to its "Stop agents" action so the mission
+// then calls `onReset`, which EmbeddedCouncil wires to its "Leave Affinity" action so the mission
 // overlay closes too instead of leaving an empty council on screen.
 //
 // Renders nothing; EmbeddedCouncil mounts it for as long as a mission is running.

@@ -8,7 +8,6 @@
   background: rgba(247, 241, 232, 0.94);
   box-shadow: 0 12px 28px rgba(44, 36, 28, 0.12);
   color: #2c241c;
-  animation: fadeIn 280ms ease-out;
 }
 
 .title {

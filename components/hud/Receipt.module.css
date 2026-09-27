@@ -28,9 +28,8 @@
 
 .facts dt {
   color: #ffd18a;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .facts dd {
@@ -90,21 +89,25 @@
 
 .plaza .seal { color: #6b7349; text-shadow: none; }
 .plaza .heading { color: #2c241c; font-weight: 600; }
-.plaza .facts dt { color: #6b7349; }
+.plaza .facts dt { color: #6b7349; font-size: 0.85rem; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.plaza .facts { font-size: 0.9rem; gap: 0.45rem 1rem; }
 .plaza .note, .plaza .facts dd { color: #5c574c; }
 .plaza .checkoutButton {
-  border: 1.5px solid rgba(44, 36, 28, 0.22);
-  border-radius: 0.7rem;
-  background: #eef0e4;
+  min-height: 2.75rem;
+  border: 1.5px solid rgba(107, 115, 73, 0.55);
+  border-radius: 999px;
+  background: #dce4c8;
   color: #2c241c;
   font-weight: 600;
-  box-shadow: none;
+  box-shadow: 0 8px 20px rgba(44, 36, 28, 0.08);
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
 
 .plaza .checkoutButton:hover,
 .plaza .checkoutButton[data-hand-hover] {
-  background: #e4e8d4;
-  box-shadow: none;
+  background: #eef0e4;
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.28), 0 12px 28px rgba(44, 36, 28, 0.12);
 }
 
 .kbd {

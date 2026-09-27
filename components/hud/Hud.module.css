@@ -180,7 +180,6 @@
   composes: panel from "./Panel.module.css";
   width: min(19rem, 100%);
   flex: none;
-  animation: fadeIn 400ms ease-out;
 }
 
 .title {
@@ -272,7 +271,6 @@
   color: #ffe9c2;
   font-size: 0.85rem;
   white-space: nowrap;
-  animation: fadeIn 300ms ease-out;
 }
 
 .plazaHud .caption {
@@ -310,7 +308,6 @@
   color: #ffe9c2;
   font-size: 0.78rem;
   white-space: nowrap;
-  animation: fadeIn 400ms ease-out;
 }
 
 @keyframes fadeIn {

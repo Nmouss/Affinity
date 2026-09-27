@@ -16,7 +16,7 @@ export function MissionForm() {
     event.preventDefault();
     if (emitGesture({ type: "convene" })) return;
     const { setError } = useStage.getState();
-    setError(missionText.trim() ? "Seat at least one sprite in the council ring first." : "Tell the council what to find.");
+    setError(missionText.trim() ? "Seat at least one character in the council ring first." : "Tell the council what to find.");
   };
 
   // Typing "r" or "d" here must not reset the stage or toggle reasoning via window key handlers.
@@ -47,7 +47,7 @@ export function MissionForm() {
       </div>
       <p className={styles.hint}>
         {seatedCount === 0
-          ? "Pinch-drag sprites into the ring (or press 1 · 2 · 3), then pinch the hearth."
+          ? "Pinch-drag characters into the ring (or press 1 · 2 · 3), then pinch the hearth."
           : `${seatedCount} seated. Pinch the hearth or press Enter to convene.`}
       </p>
     </form>

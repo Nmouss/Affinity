@@ -46,6 +46,17 @@ function FaceWithBubble({ bubble }: { bubble: React.ReactNode }) {
   );
 }
 
+/** Welcome: a little house with a waving-hand doorway, the way back to the greeting. */
+export function WelcomeIcon({ size }: IconProps) {
+  return (
+    <Glyph size={size}>
+      <path d="M8 22 L24 9 L40 22" />
+      <path d="M12 20 V38 H36 V20" />
+      <path d="M20 38 V29 H28 V38" />
+    </Glyph>
+  );
+}
+
 export function BackIcon({ size }: IconProps) {
   return (
     <Glyph size={size}>

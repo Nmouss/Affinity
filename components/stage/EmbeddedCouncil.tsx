@@ -8,6 +8,7 @@ import { getPeople, getPerson } from "@/lib/people/roster";
 import { MAX_SEATS } from "@/lib/stage/layout";
 import { useStage } from "@/lib/stage/store";
 import { handTarget } from "@/components/hands/makerHitTest";
+import { showWelcome } from "@/components/welcome/welcomeState";
 import styles from "./EmbeddedCouncil.module.css";
 
 export type MissionMode = "shopping" | "plan";
@@ -64,9 +65,22 @@ export function EmbeddedCouncil({
     <>
       <Hud plaza />
       <PlazaCouncilKeys onReset={returnToWorld} />
-      <button type="button" {...handTarget("council-stop")} className={styles.back} onClick={returnToWorld}>
-        Stop agents
-      </button>
+      <div className={styles.exits}>
+        <button type="button" {...handTarget("council-stop")} className={styles.back} onClick={returnToWorld}>
+          Leave Affinity
+        </button>
+        <button
+          type="button"
+          {...handTarget("council-welcome")}
+          className={`${styles.back} ${styles.quiet}`}
+          onClick={() => {
+            returnToWorld();
+            showWelcome();
+          }}
+        >
+          Back to welcome
+        </button>
+      </div>
     </>
   );
 }

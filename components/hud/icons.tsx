@@ -150,3 +150,67 @@ export function KeyboardIcon(props: IconProps) {
     </Glyph>
   );
 }
+
+export function ArrowUpIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M12 19V5M6 11l6-6 6 6" />
+    </Glyph>
+  );
+}
+
+export function ArrowDownIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M12 5v14M6 13l6 6 6-6" />
+    </Glyph>
+  );
+}
+
+export function ArrowLeftIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M19 12H5M11 6l-6 6 6 6" />
+    </Glyph>
+  );
+}
+
+export function ArrowRightIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </Glyph>
+  );
+}
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M12 5v14M5 12h14" />
+    </Glyph>
+  );
+}
+
+export function MinusIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M5 12h14" />
+    </Glyph>
+  );
+}
+
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M14.5 6l-6 6 6 6" />
+    </Glyph>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M9.5 6l6 6-6 6" />
+    </Glyph>
+  );
+}

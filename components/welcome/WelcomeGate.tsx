@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, type ReactNode } from "react";
 import { WelcomeScreen } from "./WelcomeScreen";
+import { useWelcome } from "./welcomeState";
 
 // Shows the family greeting once per browser session before the Plaza, then gets out of the way.
-// `/?welcome` brings it back on demand. The Plaza underneath keeps rendering (it's a fixed overlay),
-// so entering is a fade, not a route change, and its scene is ready the moment the greeting lifts.
+// `/?welcome`, the Plaza's Welcome rail button, and the council's exit bring it back on demand. The
+// Plaza underneath keeps rendering (it's a fixed overlay), so entering is a fade, not a route change,
+// and its scene is ready the moment the greeting lifts.
 
 const SESSION_KEY = "affinity.welcomed.v1";
 
@@ -21,9 +23,9 @@ function shouldShowWelcome(): boolean {
 
 export function WelcomeGate({ children }: { children: ReactNode }) {
   // Decided after mount so the server and first client render agree (no greeting flash on SSR).
-  const [show, setShow] = useState(false);
+  const show = useWelcome((state) => state.open);
   useEffect(() => {
-    setShow(shouldShowWelcome());
+    if (shouldShowWelcome()) useWelcome.getState().show();
   }, []);
 
   const enter = useCallback(() => {
@@ -33,7 +35,7 @@ export function WelcomeGate({ children }: { children: ReactNode }) {
       // Private browsing: the greeting simply shows again next visit.
     }
     if (window.location.search.includes("welcome")) window.history.replaceState(null, "", window.location.pathname);
-    setShow(false);
+    useWelcome.getState().hide();
   }, []);
 
   return (

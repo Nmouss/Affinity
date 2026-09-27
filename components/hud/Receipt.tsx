@@ -50,15 +50,15 @@ export function Receipt({
       </p>
       <h2 className={styles.heading}>{plaza ? "You're all set" : "Mandate signed"}</h2>
       <dl className={styles.facts}>
-        <dt>Intent</dt>
-        <dd>
-          {mandate.mission.freeText} · budget ${mandate.mission.budget}
-        </dd>
-        <dt>{isCart ? "Cart" : "Plan"}</dt>
+        <dt>Looking for</dt>
+        <dd>{mandate.mission.freeText}</dd>
+        <dt>Budget</dt>
+        <dd>${mandate.mission.budget}</dd>
+        <dt>{isCart ? "In the cart" : "The plan"}</dt>
         <dd>
           {isCart
-            ? `${mandate.bundle.items.length} items · $${mandate.bundle.total}`
-            : `${mandate.plan.stops.length} stops · ${mandate.plan.location}`}
+            ? `${mandate.bundle.items.length} ${mandate.bundle.items.length === 1 ? "item" : "items"}, $${mandate.bundle.total} in all`
+            : `${mandate.plan.stops.length} ${mandate.plan.stops.length === 1 ? "stop" : "stops"} in ${mandate.plan.location}`}
         </dd>
         <dt>Approved</dt>
         <dd>{Number.isNaN(approved.getTime()) ? mandate.approvedAt : approved.toLocaleString()}</dd>
@@ -79,20 +79,20 @@ export function Receipt({
             {...handTarget("receipt-checkout")}
             onClick={() => openCheckout(checkoutUrl)}
           >
-            Open Shopify checkout
+            Open checkout at Shopify
           </button>
         </div>
       )}
       {notifications.length > 0 && (
         <p className={styles.note}>
-          Plan notifications: {notifications.filter((item) => item.status !== "failed").length}/{notifications.length} delivered.
+          {notifications.filter((item) => item.status !== "failed").length} of {notifications.length} invitations sent.
         </p>
       )}
       <p className={styles.note}>
         {plaza
           ? isCart
-            ? "Checkout opens separately. Nothing was charged from here."
-            : "The plan is saved. Open Map or Website on a stop to continue."
+            ? "Checkout opens in its own tab. Nothing was charged from here."
+            : "The plan is saved. Open Map or Website on a stop to book."
           : `Human-present flow: your handshake signed this proposal with this device's ECDSA P-256 key.${
               isCart ? " Checkout remains a separate handoff; no payment was submitted." : " The approved plan is now finalized."
             }`}

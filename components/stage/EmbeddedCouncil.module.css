@@ -1,8 +1,13 @@
-.back {
+.exits {
   position: absolute;
   top: 1rem;
   left: 1rem;
   z-index: 80;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.back {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -30,4 +35,23 @@
 .back:active {
   transform: translateY(1px);
   box-shadow: 0 6px 16px rgba(44, 36, 28, 0.1);
+}
+
+/* The quieter exit: same pill, no fill or shadow, so "Leave Affinity" reads as the main way out. */
+.quiet {
+  background: transparent;
+  box-shadow: none;
+  border-color: rgba(44, 36, 28, 0.16);
+  color: #5c574c;
+}
+
+.quiet:hover,
+.quiet[data-hand-hover] {
+  background: #f7f1e8;
+  color: #2c241c;
+}
+
+.back:focus-visible {
+  outline: 2px solid #6b7349;
+  outline-offset: 3px;
 }

@@ -7,7 +7,8 @@ import { playBlip } from "@/components/maker/sound";
 import type { MakerAction, PersonPreferences } from "@/components/maker/flow";
 import type { CharacterLook, Circle } from "@/types/character";
 import { PLAZA_DROP_ATTR, usePlaza, type PlazaDrop } from "./plazaState";
-import { DinnerPlanIcon, HelpIcon, InterviewIcon, MoveIcon, NewIcon, ShopTogetherIcon } from "./plazaIcons";
+import { DinnerPlanIcon, HelpIcon, InterviewIcon, MoveIcon, NewIcon, ShopTogetherIcon, WelcomeIcon } from "./plazaIcons";
+import { showWelcome } from "@/components/welcome/welcomeState";
 import { HelpOverlay } from "./HelpOverlay";
 import { GiftPickBar } from "./GiftPickBar";
 import { giftPickBack, giftPickNext, invitedForPicks, personForKey, pickGiftPerson, startGiftPick } from "./giftPick";
@@ -329,6 +330,16 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
   return (
     <>
       <div className={styles.railLeft}>
+        <RailButton
+          targetId="plaza-welcome"
+          label="Welcome screen"
+          onClick={() => {
+            playBlip("select");
+            showWelcome();
+          }}
+        >
+          <WelcomeIcon />
+        </RailButton>
         <RailButton targetId="plaza-new" label="New person" disabled={total >= MAX_PEOPLE} onClick={handleNew}>
           <NewIcon />
         </RailButton>
@@ -338,14 +349,14 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
       </div>
 
       {!hideMissions && !giftPick && (
-      <div className={styles.missionActions} aria-label="Plan with your connections">
-        <p className={styles.missionLabel}>
-          {!dinnerOpen
-            ? "Plan with your people"
-            : missionMemberIds.length === 0
-              ? "Drag people into the mission circle"
-              : `${missionMemberIds.length} ${missionMemberIds.length === 1 ? "person" : "people"} ready for dinner`}
-        </p>
+      <div className={styles.missionActions} aria-label="Start something with your people">
+        {dinnerOpen && (
+          <p className={styles.missionLabel}>
+            {missionMemberIds.length === 0
+              ? "Drag everyone who's coming into the circle"
+              : `${missionMemberIds.length} ${missionMemberIds.length === 1 ? "person" : "people"} coming to dinner`}
+          </p>
+        )}
         <button type="button" data-hand-target="plaza-shop" className={`${styles.missionButton} ${styles.shopMission}`} onClick={startGiftPickFlow}>
           <span className={styles.missionIcon}><ShopTogetherIcon size={28} /></span>
           <span><strong>Shop for a gift</strong><small>Pick who it's for, then who's buying</small></span>

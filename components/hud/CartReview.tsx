@@ -9,7 +9,7 @@ import { useStage } from "@/lib/stage/store";
 import type { Bundle, CatalogItem } from "@/types/domain";
 import { SupporterRing } from "./SupporterRing";
 import { supportersFor, supportSentence } from "./supporters";
-import { CheckIcon, CrossIcon, GiftIcon, RefreshIcon } from "./icons";
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, CrossIcon, GiftIcon, RefreshIcon } from "./icons";
 import styles from "./CartReview.module.css";
 
 const money = (value: number, currency = "USD") =>
@@ -121,7 +121,6 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
   if (!item) {
     return (
       <aside className={shell} aria-label="Cart decision">
-        <p className={styles.eyebrow}>Cart decision</p>
         <h2>Nothing to review</h2>
         <button type="button" className={styles.cancel} {...handTarget("cart-empty")} onClick={() => onCancel("empty-cart")}>
           Cancel proposal
@@ -138,13 +137,12 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
   return (
     <aside className={shell} aria-label="Review proposed cart">
       <div className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Your decision</p>
-          <h2>{complete ? "Cart ready" : bundle.items.length === 1 ? "Affinity's pick" : `Pick ${index + 1} of ${bundle.items.length}`}</h2>
-        </div>
-        <span className={styles.progress}>
-          {approvedIds.size}/{bundle.items.length} approved
-        </span>
+        <h2>{complete ? "Ready to go" : bundle.items.length === 1 ? "Affinity's pick" : `Pick ${index + 1} of ${bundle.items.length}`}</h2>
+        {bundle.items.length > 1 && (
+          <span className={styles.progress}>
+            {approvedIds.size} of {bundle.items.length} approved
+          </span>
+        )}
       </div>
 
       {bundle.items.length > 1 && (
@@ -164,7 +162,7 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
 
       <div className={styles.hero} {...handItem(item.id)}>
         <Hero item={item} />
-        <span className={isApproved ? styles.approved : styles.pending}>{isApproved ? "Approved" : searching ? "Finding another…" : "Your approval needed"}</span>
+        <span className={isApproved ? styles.approved : styles.pending}>{isApproved ? "Approved" : searching ? "Finding another…" : "Waiting for you"}</span>
       </div>
 
       <div className={styles.details}>
@@ -172,7 +170,6 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
         <p className={styles.price}>
           {money(item.price, item.currency ?? "USD")}
           {quantity}
-          {item.merchantName && <small> · {item.merchantName}</small>}
           {reasons.length > 0 && (
             <button
               type="button"
@@ -187,6 +184,7 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
             </button>
           )}
         </p>
+        {item.merchantName && <p className={styles.merchant}>from {item.merchantName}</p>}
         {whyOpen && reasons.length > 0 && (
           <ul id="review-why-list" className={styles.reasons} aria-label="Why Affinity picked this">
             {reasons.map((reason) => (
@@ -230,7 +228,7 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
           {askOpen && (
             <div className={styles.ask}>
               <label className={styles.promptLabel}>
-                Tell the agent what to change
+                Tell the council what to change
                 <textarea
                   value={prompt}
                   onChange={(event) => setPrompt(event.target.value)}
@@ -254,7 +252,7 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
 
       {complete && (
         <div className={styles.finalDecision}>
-          <p>Every item is approved. Hold to sign, and Shopify checkout will open from the receipt.</p>
+          <p>Everything is approved. Hold to confirm, and checkout opens on the next screen.</p>
           <MandateButton plaza={plaza} onApprove={onApproveCart} label="Hold to approve" />
           <button
             type="button"
@@ -276,10 +274,10 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
       {bundle.items.length > 1 && (
         <div className={styles.navigation}>
           <button type="button" disabled={index === 0} {...handTarget("cart-nav-prev")} onClick={() => setIndex((current) => current - 1)}>
-            ‹ Previous
+            <ChevronLeftIcon size={16} /> Previous
           </button>
           <button type="button" disabled={index === bundle.items.length - 1} {...handTarget("cart-nav-next")} onClick={() => setIndex((current) => current + 1)}>
-            Next ›
+            Next <ChevronRightIcon size={16} />
           </button>
         </div>
       )}
@@ -290,7 +288,6 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
 export function CartRejected({ plaza = false }: { plaza?: boolean }) {
   return (
     <aside className={`${styles.review} ${plaza ? styles.plaza : ""}`} aria-label="Cart cancelled" role="status">
-      <p className={styles.eyebrow}>Your decision</p>
       <h2>Cart cancelled</h2>
       <p className={styles.rejectedCopy}>Nothing was purchased and no checkout was created.</p>
     </aside>

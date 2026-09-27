@@ -53,7 +53,7 @@ export interface UseInterviewResult {
   /** True after the mic has been open a while with nothing heard. */
   nudge: boolean;
   /** Which engines this run ended up with, for the status line. */
-  engines: { speaker: "deepgram" | "browser" | "none"; recognizer: "deepgram" | "browser" | "none" } | null;
+  engines: { speaker: "deepgram" | "browser" | "none"; recognizer: "deepgram" | "deepgramBatch" | "browser" | "none" } | null;
 }
 
 interface TokenCache {
@@ -83,11 +83,15 @@ export function useInterview({ name, existing, onFinish, engines: injected, fetc
     setNudge(false);
   }, []);
 
+  /** 503 means no Deepgram key at all; anything else means the key exists (prerecorded still works). */
+  const configuredRef = useRef<boolean | null>(null);
+
   const getToken = useCallback(async (): Promise<string | null> => {
     const cached = tokenRef.current;
     if (cached && cached.expiresAt - Date.now() > 10_000) return cached.token;
     try {
       const response = await doFetch("/api/voice/token", { method: "POST" });
+      configuredRef.current = response.status !== 503;
       if (!response.ok) return null;
       const body = (await response.json()) as { token?: string; expiresIn?: number };
       if (!body.token) return null;
@@ -222,13 +226,15 @@ export function useInterview({ name, existing, onFinish, engines: injected, fetc
       let engines = injected ?? null;
       let picked: UseInterviewResult["engines"] = null;
       if (!engines) {
-        const configured = (await getToken()) !== null;
+        const tokens = (await getToken()) !== null;
+        const configured = configuredRef.current ?? tokens;
         if (mySession !== session.current) return;
-        const capabilities = detectCapabilities(typeof window === "undefined" ? undefined : window, configured);
+        const capabilities = detectCapabilities(typeof window === "undefined" ? undefined : window, configured, tokens);
         const choices = chooseEngines(capabilities);
         picked = choices;
         engines = createEngines(choices, {
           deepgramRecognizer: { getToken },
+          deepgramBatch: {},
           deepgramSpeaker: {
             // The shared element was primed inside the Save click; HTMLAudioElement satisfies the engine's shape.
             createAudio: (() => sharedVoiceAudio() ?? document.createElement("audio")) as unknown as NonNullable<DeepgramSpeakerDeps["createAudio"]>,

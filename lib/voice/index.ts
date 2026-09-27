@@ -7,3 +7,5 @@ export type { DeepgramRecognizerDeps } from "./deepgramRecognizer";
 export { createDeepgramSpeaker, fetchSpeechFromRoute } from "./deepgramSpeaker";
 export type { DeepgramSpeakerDeps } from "./deepgramSpeaker";
 export { SILENT_WAV_DATA_URI } from "./silentAudio";
+export { createDeepgramBatchRecognizer, pickRecordingMime, transcribeViaRoute, BATCH_MIME_CANDIDATES, TRANSCRIBE_ROUTE } from "./deepgramBatchRecognizer";
+export type { DeepgramBatchRecognizerDeps } from "./deepgramBatchRecognizer";

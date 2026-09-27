@@ -1,3 +1,4 @@
+import { createDeepgramBatchRecognizer, pickRecordingMime, type DeepgramBatchRecognizerDeps } from "./deepgramBatchRecognizer";
 import { createDeepgramRecognizer, type DeepgramRecognizerDeps } from "./deepgramRecognizer";
 import { createDeepgramSpeaker, type DeepgramSpeakerDeps } from "./deepgramSpeaker";
 import { createVoiceStubs, type Recognizer, type Speaker } from "./types";
@@ -9,24 +10,38 @@ import { createWebSpeechRecognizer, createWebSpeechSpeaker, type RecognitionHost
 // or typing. Mic denial is discovered at runtime, not here.
 
 export interface VoiceCapabilities {
+  /** The server has a Deepgram key (the speak and transcribe routes work). */
   deepgramConfigured: boolean;
+  /** The server can also mint short-lived browser tokens (needs a Member-role key) for live streaming. */
+  deepgramTokens: boolean;
   webmOpus: boolean;
+  /** Some recordable audio type exists (webm, mp4, ogg): enough for prerecorded transcription. */
+  recordable: boolean;
   mediaDevices: boolean;
   webSpeechRecognition: boolean;
   speechSynthesis: boolean;
 }
 
-export type EngineChoice = "deepgram" | "browser" | "none";
+export type SpeakerChoice = "deepgram" | "browser" | "none";
+/** `deepgram` streams live; `deepgramBatch` records the whole answer and transcribes it afterwards. */
+export type RecognizerChoice = "deepgram" | "deepgramBatch" | "browser" | "none";
+export type EngineChoice = SpeakerChoice | RecognizerChoice;
 
 export interface EngineChoices {
-  speaker: EngineChoice;
-  recognizer: EngineChoice;
+  speaker: SpeakerChoice;
+  recognizer: RecognizerChoice;
 }
 
 export function chooseEngines(c: VoiceCapabilities): EngineChoices {
-  const speaker: EngineChoice = c.deepgramConfigured ? "deepgram" : c.speechSynthesis ? "browser" : "none";
-  const recognizer: EngineChoice =
-    c.deepgramConfigured && c.webmOpus && c.mediaDevices ? "deepgram" : c.webSpeechRecognition ? "browser" : "none";
+  const speaker: SpeakerChoice = c.deepgramConfigured ? "deepgram" : c.speechSynthesis ? "browser" : "none";
+  const recognizer: RecognizerChoice =
+    c.deepgramConfigured && c.deepgramTokens && c.webmOpus && c.mediaDevices
+      ? "deepgram"
+      : c.deepgramConfigured && c.recordable && c.mediaDevices
+        ? "deepgramBatch"
+        : c.webSpeechRecognition
+          ? "browser"
+          : "none";
   return { speaker, recognizer };
 }
 
@@ -41,14 +56,16 @@ interface WindowLike {
 
 export const WEBM_OPUS = "audio/webm;codecs=opus";
 
-export function detectCapabilities(win: WindowLike | undefined, deepgramConfigured: boolean): VoiceCapabilities {
+export function detectCapabilities(win: WindowLike | undefined, deepgramConfigured: boolean, deepgramTokens = deepgramConfigured): VoiceCapabilities {
   if (!win) {
-    return { deepgramConfigured, webmOpus: false, mediaDevices: false, webSpeechRecognition: false, speechSynthesis: false };
+    return { deepgramConfigured, deepgramTokens, webmOpus: false, recordable: false, mediaDevices: false, webSpeechRecognition: false, speechSynthesis: false };
   }
   const isTypeSupported = win.MediaRecorder?.isTypeSupported;
   return {
     deepgramConfigured,
+    deepgramTokens,
     webmOpus: Boolean(win.WebSocket) && typeof isTypeSupported === "function" && isTypeSupported(WEBM_OPUS),
+    recordable: Boolean(win.MediaRecorder) && pickRecordingMime(typeof isTypeSupported === "function" ? isTypeSupported : undefined) !== null,
     mediaDevices: typeof win.navigator?.mediaDevices?.getUserMedia === "function",
     webSpeechRecognition: Boolean(win.SpeechRecognition ?? win.webkitSpeechRecognition),
     speechSynthesis: Boolean(win.speechSynthesis),
@@ -57,6 +74,7 @@ export function detectCapabilities(win: WindowLike | undefined, deepgramConfigur
 
 export interface CreateEnginesDeps {
   deepgramRecognizer?: DeepgramRecognizerDeps;
+  deepgramBatch?: DeepgramBatchRecognizerDeps;
   deepgramSpeaker?: DeepgramSpeakerDeps;
   /** Injected for tests; defaults to the global window. */
   webSpeechHost?: RecognitionHost;
@@ -69,9 +87,11 @@ export function createEngines(choice: EngineChoices, deps: CreateEnginesDeps = {
   const recognizer =
     choice.recognizer === "deepgram" && deps.deepgramRecognizer
       ? createDeepgramRecognizer(deps.deepgramRecognizer)
-      : choice.recognizer === "browser"
-        ? createWebSpeechRecognizer({}, { window: deps.webSpeechHost })
-        : stubs.recognizer;
+      : choice.recognizer === "deepgramBatch"
+        ? createDeepgramBatchRecognizer(deps.deepgramBatch)
+        : choice.recognizer === "browser"
+          ? createWebSpeechRecognizer({}, { window: deps.webSpeechHost })
+          : stubs.recognizer;
   const speaker =
     choice.speaker === "deepgram"
       ? createDeepgramSpeaker(deps.deepgramSpeaker)

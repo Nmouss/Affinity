@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { chooseEngines, createEngines, detectCapabilities, type VoiceCapabilities } from "@/lib/voice/select";
 
-const all: VoiceCapabilities = { deepgramConfigured: true, webmOpus: true, mediaDevices: true, webSpeechRecognition: true, speechSynthesis: true };
+const all: VoiceCapabilities = { deepgramConfigured: true, deepgramTokens: true, webmOpus: true, recordable: true, mediaDevices: true, webSpeechRecognition: true, speechSynthesis: true };
 
 describe("chooseEngines", () => {
   it("uses Deepgram for both when configured and the browser records webm/opus", () => {
     expect(chooseEngines(all)).toEqual({ speaker: "deepgram", recognizer: "deepgram" });
   });
 
-  it("keeps the Deepgram voice but listens with Web Speech on Safari (no webm/opus)", () => {
-    expect(chooseEngines({ ...all, webmOpus: false })).toEqual({ speaker: "deepgram", recognizer: "browser" });
+  it("keeps the Deepgram voice and records whole answers on Safari (no webm/opus, but mp4 recordable)", () => {
+    expect(chooseEngines({ ...all, webmOpus: false })).toEqual({ speaker: "deepgram", recognizer: "deepgramBatch" });
+    expect(chooseEngines({ ...all, webmOpus: false, recordable: false })).toEqual({ speaker: "deepgram", recognizer: "browser" });
+  });
+
+  it("records whole answers when the key cannot mint browser tokens", () => {
+    expect(chooseEngines({ ...all, deepgramTokens: false })).toEqual({ speaker: "deepgram", recognizer: "deepgramBatch" });
   });
 
   it("falls back to the browser engines when Deepgram is not configured", () => {
@@ -17,7 +22,7 @@ describe("chooseEngines", () => {
   });
 
   it("is typed-only and silent when nothing is available", () => {
-    expect(chooseEngines({ deepgramConfigured: false, webmOpus: false, mediaDevices: false, webSpeechRecognition: false, speechSynthesis: false })).toEqual({
+    expect(chooseEngines({ deepgramConfigured: false, deepgramTokens: false, webmOpus: false, recordable: false, mediaDevices: false, webSpeechRecognition: false, speechSynthesis: false })).toEqual({
       speaker: "none",
       recognizer: "none",
     });
@@ -30,7 +35,7 @@ describe("chooseEngines", () => {
 
 describe("detectCapabilities", () => {
   it("reports nothing without a window", () => {
-    expect(detectCapabilities(undefined, true)).toEqual({ deepgramConfigured: true, webmOpus: false, mediaDevices: false, webSpeechRecognition: false, speechSynthesis: false });
+    expect(detectCapabilities(undefined, true)).toEqual({ deepgramConfigured: true, deepgramTokens: true, webmOpus: false, recordable: false, mediaDevices: false, webSpeechRecognition: false, speechSynthesis: false });
   });
 
   it("reads the browser globals", () => {
@@ -41,7 +46,7 @@ describe("detectCapabilities", () => {
       webkitSpeechRecognition: class {},
       speechSynthesis: {},
     };
-    expect(detectCapabilities(win, false)).toEqual({ deepgramConfigured: false, webmOpus: true, mediaDevices: true, webSpeechRecognition: true, speechSynthesis: true });
+    expect(detectCapabilities(win, false)).toEqual({ deepgramConfigured: false, deepgramTokens: false, webmOpus: true, recordable: true, mediaDevices: true, webSpeechRecognition: true, speechSynthesis: true });
   });
 });
 

@@ -16,6 +16,7 @@ import type { FamilyProfile } from "@/types/domain";
 import type { SpriteMood } from "@/types/stage";
 import { PLAZA } from "./formation";
 import { registerHit, unregisterHit } from "./plazaHits";
+import { giftRoleOf } from "./giftPick";
 import { constrainOutsideMissionCircle, isInsideMissionCircle, MISSION_CIRCLE, usePlaza, usePlazaHtmlPortal } from "./plazaState";
 import { consumeDragOutcome, plazaPointerFloor } from "./plazaSignals";
 import styles from "./PlazaPerson.module.css";
@@ -122,6 +123,7 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
   const dragging = usePlaza((state) => state.draggingId === id);
   const whistleOn = usePlaza((state) => state.whistle.on);
   const pickingGift = usePlaza((state) => state.giftPick !== null);
+  const giftRole = usePlaza((state) => (state.giftPick ? giftRoleOf(state.giftPick, id) : null));
   const councilBubble = useStage((state) => state.sprites[id]?.bubble ?? null);
   const councilMood = useStage((state) => state.sprites[id]?.mood ?? "idle");
   const councilPhase = useStage((state) => state.phase);
@@ -349,7 +351,7 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
           />
         </Html>
       )}
-      {!councilBubble && (
+      {!councilBubble && !giftRole && (
         <Html portal={htmlPortal} position={[0, height + LABEL_MARGIN, 0]} zIndexRange={[40, 0]} pointerEvents="none">
           <div className={`${styles.tag} ${councilActive && councilMood === "speaking" ? styles.speaking : ""}`}>
             <span className={chipClass}>{circle === "family" ? "Family" : "Friend"}</span>

@@ -75,6 +75,21 @@
 .details h3 { margin: 0; font-size: 1.05rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .price { margin: 0; font-size: 1.15rem; font-weight: 700; color: #ffd18a; }
 .price small { font-size: 0.8rem; font-weight: 500; color: #dcc8b7; }
+.why {
+  margin-left: 0.6rem;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid rgba(255, 209, 138, 0.45);
+  border-radius: 999px;
+  background: transparent;
+  color: #dcc8b7;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.why:hover, .why[data-hand-hover], .why[aria-expanded="true"] { background: rgba(255, 255, 255, 0.1); }
+.why:focus-visible { outline: 2px solid #ffd18a; outline-offset: 2px; }
 .reasons { list-style: none; margin: 0.15rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .reasons li {
   padding: 0.25rem 0.65rem;
@@ -173,6 +188,9 @@
 .plaza .pending { color: #6b7349; }
 .plaza .approved { color: #4a6b3a; }
 .plaza .reasons li { background: #eef0e4; border-color: rgba(44, 36, 28, 0.16); color: #2c241c; }
+.plaza .why { border-color: rgba(44, 36, 28, 0.22); color: #5c574c; }
+.plaza .why:hover, .plaza .why[data-hand-hover], .plaza .why[aria-expanded="true"] { background: #eef0e4; }
+.plaza .why:focus-visible { outline-color: #6b7349; }
 .plaza .supporters { border-top-color: rgba(44, 36, 28, 0.16); }
 .plaza .roundIcon {
   border: 1.5px solid rgba(44, 36, 28, 0.22);

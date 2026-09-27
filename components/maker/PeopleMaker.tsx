@@ -50,6 +50,10 @@ export function PeopleMaker() {
     recipientIds?: string[];
   } | null>(null);
   useMakerKeyboard(state, dispatch);
+  // The scene hides dinner-plan furniture (the mission circle) while a gift is being shopped.
+  useEffect(() => {
+    usePlaza.getState().setMissionMode(activeMission?.mode ?? null);
+  }, [activeMission]);
 
   const wrappedDispatch = useCallback(
     (action: MakerAction) => {

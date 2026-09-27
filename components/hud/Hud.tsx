@@ -13,6 +13,7 @@ import { ProfileCard } from "@/components/sprites/ProfileCard";
 import { hasSavedRoster, usePeople, useRosterHydration } from "@/lib/people/roster";
 import { DEFAULT_BUDGET } from "@/lib/director/mission";
 import { useDirector } from "@/lib/director/useDirector";
+import { FAST_FORWARD_PACE } from "@/lib/director/director";
 import { emitGesture } from "@/lib/stage/bus";
 import { participantIds } from "@/lib/stage/slices/council";
 import { useStage } from "@/lib/stage/store";
@@ -147,9 +148,57 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
     phase === "receipt" && (receipt?.status === "rejected" || (receipt?.status === "approved" && Boolean(mandate)));
   const decisionOpen = shoppingDecision || planDecision || receiptDecision;
 
+  // Fast-forward is a per-run choice: it clears when the council goes home.
+  const [fastForward, setFastForward] = useState(false);
+  useEffect(() => {
+    if (phase === "lobby") setFastForward(false);
+  }, [phase]);
+  const toggleFastForward = useCallback(() => {
+    if (!director) return;
+    const next = !fastForward;
+    setFastForward(next);
+    director.setPace(next ? FAST_FORWARD_PACE : 1);
+  }, [director, fastForward]);
+  const skipTalk = useCallback(() => {
+    if (!director) return;
+    setFastForward(true);
+    director.skipTalk();
+  }, [director]);
+  const talking = DELIBERATING.includes(phase);
+
   return (
     <div className={`${styles.hud} ${plaza ? styles.plazaHud : ""}`}>
       {director && flags?.lab && <BeatTuner director={director} />}
+
+      {director && talking && (
+        <nav className={styles.pace} aria-label="Council pace">
+          <button
+            type="button"
+            className={styles.paceButton}
+            data-hand-target="pace-fast"
+            aria-pressed={fastForward}
+            title={fastForward ? "Back to normal speed" : "Play the council's talk faster"}
+            onClick={toggleFastForward}
+          >
+            <span className={styles.paceIcon} aria-hidden>
+              ⏩
+            </span>
+            {fastForward ? "Fast" : "Fast forward"}
+          </button>
+          <button
+            type="button"
+            className={styles.paceButton}
+            data-hand-target="pace-skip"
+            title="Skip the talk and go straight to the pick"
+            onClick={skipTalk}
+          >
+            <span className={styles.paceIcon} aria-hidden>
+              ⏭
+            </span>
+            Skip the chat
+          </button>
+        </nav>
+      )}
 
       {!plaza && <header className={styles.top}>
         <strong className={styles.brand}>Affinity</strong>

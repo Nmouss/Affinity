@@ -38,6 +38,10 @@ export interface DirectorOptions {
   log?: (message: string, detail?: unknown) => void;
 }
 
+/** After a skip, anything still arriving from the backend plays at this pace instead of the full show. */
+export const SKIP_PACE = 12;
+export const FAST_FORWARD_PACE = 3;
+
 export interface Director {
   /** Overrides individual beat durations (leva tuning in /lab). */
   tuneBeats: (patch: Partial<BeatDurations>) => void;
@@ -46,6 +50,10 @@ export interface Director {
   swapItem: (itemId: string, prompt?: string) => Promise<void>;
   /** Permanently rejects the current proposal; the backend creates no merchant carts. */
   cancelProposal: (itemId: string) => Promise<void>;
+  /** Fast-forward the council's talk: holds are divided by this (1 = normal). Reset returns to 1. */
+  setPace: (factor: number) => void;
+  /** Skip the talk: apply every waiting beat now and keep the rest of this run at a brisk pace. */
+  skipTalk: () => void;
   dispose: () => void;
 }
 
@@ -337,6 +345,11 @@ export function createDirector(options: DirectorOptions): Director {
     },
     swapItem,
     cancelProposal,
+    setPace: (factor) => queue.setSpeed(factor),
+    skipTalk: () => {
+      queue.skip();
+      queue.setSpeed(SKIP_PACE);
+    },
     dispose: () => {
       unsubscribe();
       restorePolicy();

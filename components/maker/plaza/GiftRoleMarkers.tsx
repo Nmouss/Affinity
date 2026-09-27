@@ -19,7 +19,7 @@ import styles from "./GiftPickBar.module.css";
 const ringGeometry = new THREE.RingGeometry(0.86, 1, 48);
 const ROLE_COLORS: Record<GiftRole, string> = { recipient: "#ffb347", buyer: "#8fd14f" };
 const ROLE_LABELS: Record<GiftRole, string> = { recipient: "Gift for", buyer: "Buying" };
-const BADGE_MARGIN = 1.15;
+const BADGE_MARGIN = 0.34;
 
 function RoleMarker({ id, role, name }: { id: string; role: GiftRole; name: string }) {
   const look = useLook(id) ?? STARTER_LOOKS[id] ?? BLANK_LOOK;

@@ -66,6 +66,7 @@ function Hero({ item }: { item: CatalogItem }) {
 /** Human review gate between the council's proposal and creation of a real merchant cart. */
 export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, plaza = false }: CartReviewProps) {
   const [index, setIndex] = useState(0);
+  const [whyOpen, setWhyOpen] = useState(false);
   const [approvedIds, setApprovedIds] = useState<Set<string>>(() => new Set());
   const [prompt, setPrompt] = useState("");
   const [askOpen, setAskOpen] = useState(false);
@@ -136,7 +137,7 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
       <div className={styles.header}>
         <div>
           <p className={styles.eyebrow}>Your decision</p>
-          <h2>{complete ? "Cart ready" : bundle.items.length === 1 ? "The council's pick" : `Pick ${index + 1} of ${bundle.items.length}`}</h2>
+          <h2>{complete ? "Cart ready" : bundle.items.length === 1 ? "Affinity's pick" : `Pick ${index + 1} of ${bundle.items.length}`}</h2>
         </div>
         <span className={styles.progress}>
           {approvedIds.size}/{bundle.items.length} approved
@@ -168,9 +169,22 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
           {money(item.price, item.currency ?? "USD")}
           {quantity}
           {item.merchantName && <small> · {item.merchantName}</small>}
+          {reasons.length > 0 && (
+            <button
+              type="button"
+              className={styles.why}
+              data-hand-target="review-why"
+              aria-expanded={whyOpen}
+              aria-controls="review-why-list"
+              title="Why Affinity picked this"
+              onClick={() => setWhyOpen((open) => !open)}
+            >
+              Why this?
+            </button>
+          )}
         </p>
-        {reasons.length > 0 && (
-          <ul className={styles.reasons} aria-label="Why the council chose this">
+        {whyOpen && reasons.length > 0 && (
+          <ul id="review-why-list" className={styles.reasons} aria-label="Why Affinity picked this">
             {reasons.map((reason) => (
               <li key={reason}>{reason}</li>
             ))}

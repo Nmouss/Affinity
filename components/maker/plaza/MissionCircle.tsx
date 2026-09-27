@@ -7,9 +7,11 @@ import styles from "./MissionCircle.module.css";
 
 /** The group-selection target: drag people inside and they remain gathered for the next mission. */
 export function MissionCircle() {
+  const giftFlow = usePlaza((state) => state.giftPick !== null || state.missionMode === "shopping");
   const count = usePlaza((state) => state.missionMemberIds.length);
   const htmlPortal = usePlazaHtmlPortal();
   const councilOn = useStage((state) => state.phase !== "lobby");
+  if (giftFlow) return null;
   return (
     <group position={[MISSION_CIRCLE.x, 0, MISSION_CIRCLE.z]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, .006, 0]}>

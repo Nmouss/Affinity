@@ -57,9 +57,9 @@ export function personForKey(key: string, orderedIds: readonly string[]): string
 /** Where everyone stands while picking (world ft): the recipient steps to the front, buyers line up
  *  beside them, and everyone else waits in a loose arc at the back so the front stage stays clear. */
 export const PICK_STAGE = {
-  frontZ: 1.6,
-  buyerZ: 1.1,
-  buyerSpacing: 1.6,
+  frontZ: 1.8,
+  buyerZ: 0.2,
+  buyerSpacing: 2.4,
   backZ: -3,
   backDepth: 1.1,
   backHalfWidth: 5,

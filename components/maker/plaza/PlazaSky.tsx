@@ -15,8 +15,8 @@ const DOME_RADIUS = 60;
 const CLOUD_COUNT = 6;
 // Clouds live in the far arc behind the plaza, low, in the strip of sky the camera sees over the
 // rim; they sway sideways a little rather than orbiting into the foreground.
-const CLOUD_RING = [27, 35] as const;
-const CLOUD_ARC = 2.4;
+const CLOUD_RING = [30, 38] as const;
+const CLOUD_ARC = 1.7;
 const CLOUD_HEIGHT = [-0.6, 1.0] as const;
 /** Sideways drift in world ft per second, plus a gentle bob; clouds that leave the arc wrap round. */
 const CLOUD_DRIFT = 0.55;

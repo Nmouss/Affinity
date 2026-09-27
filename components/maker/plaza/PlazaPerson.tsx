@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import { easing } from "maath";
 import * as THREE from "three";
@@ -17,6 +17,7 @@ import type { SpriteMood } from "@/types/stage";
 import { PLAZA } from "./formation";
 import { registerHit, unregisterHit } from "./plazaHits";
 import { giftRoleOf } from "./giftPick";
+import { clearOfControls } from "./plazaKeepOut";
 import { constrainOutsideMissionCircle, isInsideMissionCircle, MISSION_CIRCLE, usePlaza, usePlazaHtmlPortal } from "./plazaState";
 import { consumeDragOutcome, plazaPointerFloor } from "./plazaSignals";
 import styles from "./PlazaPerson.module.css";
@@ -47,19 +48,21 @@ function randomDiscPoint(radius: number): [number, number] {
 
 /** While dinner participant selection is open, roaming people stay out of its target so entering
  * the circle is always a deliberate drag-and-drop action. */
-function roamingPoint(radius: number, avoidMissionCircle: boolean): [number, number] {
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+function roamingPoint(radius: number, avoidMissionCircle: boolean, fits: (x: number, z: number) => boolean = () => true): [number, number] {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
     const point = randomDiscPoint(radius);
-    if (!avoidMissionCircle || !isInsideMissionCircle(point[0], point[1])) return point;
+    if (avoidMissionCircle && isInsideMissionCircle(point[0], point[1])) continue;
+    if (!fits(point[0], point[1])) continue;
+    return point;
   }
   return [Math.min(radius, MISSION_CIRCLE.radius + 0.5), 0];
 }
 
 /** A random point in the disc that isn't already crowded by another agent, so a fresh spawn (or a
  * new wander goal) doesn't land right on top of somebody else. */
-function spreadPoint(radius: number, minDist: number, avoidMissionCircle: boolean): [number, number] {
+function spreadPoint(radius: number, minDist: number, avoidMissionCircle: boolean, fits?: (x: number, z: number) => boolean): [number, number] {
   for (let attempt = 0; attempt < 14; attempt += 1) {
-    const [x, z] = roamingPoint(radius, avoidMissionCircle);
+    const [x, z] = roamingPoint(radius, avoidMissionCircle, fits);
     let ok = true;
     for (const other of getAgents("plaza")) {
       if (Math.hypot(other.x - x, other.z - z) < minDist) {
@@ -69,7 +72,7 @@ function spreadPoint(radius: number, minDist: number, avoidMissionCircle: boolea
     }
     if (ok) return [x, z];
   }
-  return roamingPoint(radius, avoidMissionCircle);
+  return roamingPoint(radius, avoidMissionCircle, fits);
 }
 
 // --- Shared, app-lifetime resources (never disposed — same convention as CharacterModel's module-
@@ -150,13 +153,16 @@ export function PlazaPerson({ profile, formationSlot, missionSlot, missionCircle
   const ringGlow = useRef(0);
   const wasDragging = useRef(false);
   const wasWhistleOn = useRef(false);
+  const camera = useThree((state) => state.camera);
+  // Wander goals keep people clear of the rails and bars so there's always room to pick them.
+  const clearSpot = (x: number, z: number) => clearOfControls(x, z, camera);
 
   useEffect(() => {
     const avoidMissionCircle = usePlaza.getState().missionMode === "plan";
-    const [x, z] = spreadPoint(PLAZA.radius * 0.9, SPREAD_MIN_DIST, avoidMissionCircle);
+    const [x, z] = spreadPoint(PLAZA.radius * 0.9, SPREAD_MIN_DIST, avoidMissionCircle, clearSpot);
     const agent = registerAgent("plaza", { id, x, z, vx: 0, vz: 0, radius: hitRadius, pinned: false });
     agentRef.current = agent;
-    goal.current = roamingPoint(PLAZA.radius * 0.88, avoidMissionCircle);
+    goal.current = roamingPoint(PLAZA.radius * 0.88, avoidMissionCircle, clearSpot);
     idleUntil.current = Math.random() * IDLE_MAX;
     root.current?.position.set(x, 0, z);
     return () => {
@@ -235,7 +241,7 @@ export function PlazaPerson({ profile, formationSlot, missionSlot, missionCircle
         agent.vx = 0;
         agent.vz = 0;
         if (!heldSlot && dist < ARRIVE_EPS && t >= idleUntil.current) {
-          goal.current = spreadPoint(PLAZA.radius * 0.88, SPREAD_MIN_DIST, missionCircleOpen);
+          goal.current = spreadPoint(PLAZA.radius * 0.88, SPREAD_MIN_DIST, missionCircleOpen, clearSpot);
           idleUntil.current = t + IDLE_MIN + Math.random() * (IDLE_MAX - IDLE_MIN);
         }
       } else {

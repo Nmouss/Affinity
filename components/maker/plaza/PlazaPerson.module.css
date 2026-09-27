@@ -1,0 +1,42 @@
+/* Anchored at its bottom-center point (the drei <Html> sits just above the head). */
+.tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -100%);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem 0.3rem 0.35rem;
+  border-radius: 999px;
+  background: #fffdf8;
+  box-shadow: 0 0.2rem 0.6rem rgba(60, 42, 20, 0.28);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #4a3b2a;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+.chipFamily,
+.chipFriend {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #fff8ec;
+}
+
+.chipFamily {
+  background: #e0693f;
+}
+
+.chipFriend {
+  background: #2f8fd1;
+}

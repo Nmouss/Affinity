@@ -1,0 +1,293 @@
+"use client";
+
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { Html } from "@react-three/drei";
+import { easing } from "maath";
+import * as THREE from "three";
+import { CharacterModel } from "@/components/sprites/CharacterModel";
+import { characterForLook, characterTuning, createMotion, MODEL_HEIGHT } from "@/components/sprites/characterPose";
+import { getAgents, radiusForScale, registerAgent, steer, unregisterAgent, type CrowdAgent } from "@/lib/people/crowd";
+import { useLook, useRoster } from "@/lib/people/roster";
+import { BLANK_LOOK, STARTER_LOOKS } from "@/lib/people/starters";
+import type { FamilyProfile } from "@/types/domain";
+import type { SpriteMood } from "@/types/stage";
+import { PLAZA } from "./formation";
+import { registerHit, unregisterHit } from "./plazaHits";
+import { usePlaza } from "./plazaState";
+import { consumeDragOutcome, plazaPointerFloor } from "./plazaSignals";
+import styles from "./PlazaPerson.module.css";
+
+// One roster person, wandering the plaza floor (or lined up for the whistle), plus a contact
+// shadow, an invisible hit capsule for PlazaPointer's raycasts, a hover/select glow ring, and a
+// Mii-style name tag. Position lives on the shared "plaza" crowd agent (lib/people/crowd.ts);
+// PlazaCrowd resolves overlaps between everyone once per frame, after all of these have moved.
+
+const DRAG_LIFT = 0.6;
+const WALK_ACCEL = 5;
+const WALK_SLOW_RADIUS = 1.2;
+const ARRIVE_EPS = 0.12;
+const WALK_FACING_SPEED = 0.25;
+const IDLE_MIN = 2;
+const IDLE_MAX = 6;
+/** Minimum gap kept from already-registered agents when spawning, so people start spread out. */
+const SPREAD_MIN_DIST = 1.4;
+const LABEL_MARGIN = 0.34;
+/** Never let a tiny look's hit capsule (or its contact shadow) collapse to nothing. */
+const MIN_HIT_RADIUS = 0.12;
+
+function randomDiscPoint(radius: number): [number, number] {
+  const r = radius * Math.sqrt(Math.random());
+  const theta = Math.random() * Math.PI * 2;
+  return [Math.cos(theta) * r, Math.sin(theta) * r];
+}
+
+/** A random point in the disc that isn't already crowded by another agent, so a fresh spawn (or a
+ * new wander goal) doesn't land right on top of somebody else. */
+function spreadPoint(radius: number, minDist: number): [number, number] {
+  for (let attempt = 0; attempt < 14; attempt += 1) {
+    const [x, z] = randomDiscPoint(radius);
+    let ok = true;
+    for (const other of getAgents("plaza")) {
+      if (Math.hypot(other.x - x, other.z - z) < minDist) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) return [x, z];
+  }
+  return randomDiscPoint(radius);
+}
+
+// --- Shared, app-lifetime resources (never disposed — same convention as CharacterModel's module-
+// level shared geometries/materials). Only per-look materials get a useMemo + dispose-on-unmount. -
+
+function buildShadowCanvas(): HTMLCanvasElement {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    gradient.addColorStop(0, "rgba(35,24,14,0.4)");
+    gradient.addColorStop(0.65, "rgba(35,24,14,0.22)");
+    gradient.addColorStop(1, "rgba(35,24,14,0)");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, size, size);
+  }
+  return canvas;
+}
+
+const shadowTexture = new THREE.CanvasTexture(buildShadowCanvas());
+const shadowMaterial = new THREE.MeshBasicMaterial({
+  map: shadowTexture,
+  transparent: true,
+  depthWrite: false,
+  toneMapped: false,
+});
+const shadowGeometry = new THREE.CircleGeometry(1, 24);
+const ringGeometry = new THREE.RingGeometry(0.92, 1, 40);
+
+export interface PlazaPersonProps {
+  profile: FamilyProfile;
+  /** This id's slot while the whistle is on; null wanders instead. */
+  formationSlot: [number, number] | null;
+}
+
+export function PlazaPerson({ profile, formationSlot }: PlazaPersonProps) {
+  const { id, name } = profile;
+  const look = useLook(id) ?? STARTER_LOOKS[id] ?? BLANK_LOOK;
+  const circle = useRoster((state) => state.circles[id]);
+  const character = useMemo(() => characterForLook(look, id), [look, id]);
+  const height = MODEL_HEIGHT * character.scale * characterTuning.scale;
+  const hitRadius = Math.max(MIN_HIT_RADIUS, radiusForScale(character.scale, character.width));
+
+  const hovered = usePlaza((state) => state.hoveredId === id);
+  const selected = usePlaza((state) => state.selectedId === id);
+  const dragging = usePlaza((state) => state.draggingId === id);
+  const whistleOn = usePlaza((state) => state.whistle.on);
+
+  const root = useRef<THREE.Group>(null);
+  const facing = useRef<THREE.Group>(null);
+  const hitRef = useRef<THREE.Mesh>(null);
+  const ringMatRef = useRef<THREE.MeshBasicMaterial>(null);
+
+  const mood = useRef<SpriteMood>("idle");
+  const gaze = useRef({ x: 0, y: 0 });
+  const motion = useRef(createMotion());
+
+  const agentRef = useRef<CrowdAgent | null>(null);
+  const goal = useRef<[number, number]>([0, 0]);
+  const idleUntil = useRef(0);
+  const velScratch = useRef({ vx: 0, vz: 0 });
+  const pickupPos = useRef<[number, number]>([0, 0]);
+  const liftY = useRef(0);
+  const ringGlow = useRef(0);
+  const wasDragging = useRef(false);
+  const wasWhistleOn = useRef(false);
+
+  useEffect(() => {
+    const [x, z] = spreadPoint(PLAZA.radius * 0.9, SPREAD_MIN_DIST);
+    const agent = registerAgent("plaza", { id, x, z, vx: 0, vz: 0, radius: hitRadius, pinned: false });
+    agentRef.current = agent;
+    goal.current = randomDiscPoint(PLAZA.radius * 0.88);
+    idleUntil.current = Math.random() * IDLE_MAX;
+    root.current?.position.set(x, 0, z);
+    return () => {
+      unregisterAgent("plaza", id);
+      agentRef.current = null;
+    };
+    // Only re-registers if the person themself changes; a look edit adjusting hitRadius updates the
+    // already-registered agent in place via the frame loop below instead of re-spawning them.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  useEffect(() => {
+    const mesh = hitRef.current;
+    if (!mesh) return undefined;
+    registerHit(id, mesh);
+    return () => unregisterHit(id);
+  }, [id]);
+
+  useFrame((state, rawDelta) => {
+    const group = root.current;
+    const agent = agentRef.current;
+    if (!group || !agent) return;
+    const delta = Math.min(rawDelta, 0.05);
+    const t = state.clock.elapsedTime;
+    agent.radius = hitRadius;
+
+    if (dragging && !wasDragging.current) {
+      pickupPos.current = [agent.x, agent.z];
+      agent.pinned = true;
+    }
+    if (!dragging && wasDragging.current) {
+      const outcome = consumeDragOutcome(id);
+      if (outcome === "icon") {
+        agent.x = pickupPos.current[0];
+        agent.z = pickupPos.current[1];
+      }
+      agent.pinned = false;
+      agent.vx = 0;
+      agent.vz = 0;
+      motion.current.landAt = t;
+      idleUntil.current = t + IDLE_MIN + Math.random() * (IDLE_MAX - IDLE_MIN);
+      goal.current = [agent.x, agent.z];
+    }
+    wasDragging.current = dragging;
+
+    if (!whistleOn && wasWhistleOn.current) {
+      // Resume wandering right where we stand instead of walking back to a stale pre-whistle goal.
+      goal.current = [agent.x, agent.z];
+      idleUntil.current = t;
+    }
+    wasWhistleOn.current = whistleOn;
+
+    let movedX = 0;
+    let movedZ = 0;
+    let moved = 0;
+
+    if (dragging) {
+      const target = plazaPointerFloor;
+      const prevX = agent.x;
+      const prevZ = agent.z;
+      agent.x = THREE.MathUtils.damp(agent.x, target.x, 6, delta);
+      agent.z = THREE.MathUtils.damp(agent.z, target.z, 6, delta);
+      agent.vx = 0;
+      agent.vz = 0;
+      movedX = agent.x - prevX;
+      movedZ = agent.z - prevZ;
+      moved = Math.hypot(movedX, movedZ);
+    } else {
+      const [goalX, goalZ] = whistleOn && formationSlot ? formationSlot : goal.current;
+      const dist = Math.hypot(goalX - agent.x, goalZ - agent.z);
+      const waiting = whistleOn && formationSlot ? dist < ARRIVE_EPS : t < idleUntil.current || dist < ARRIVE_EPS;
+      if (waiting) {
+        agent.vx = 0;
+        agent.vz = 0;
+        if (!whistleOn && dist < ARRIVE_EPS && t >= idleUntil.current) {
+          goal.current = spreadPoint(PLAZA.radius * 0.88, SPREAD_MIN_DIST);
+          idleUntil.current = t + IDLE_MIN + Math.random() * (IDLE_MAX - IDLE_MIN);
+        }
+      } else {
+        const maxSpeed = character.walkSpeed * characterTuning.walkSpeed;
+        steer(
+          agent,
+          getAgents("plaza"),
+          { goalX, goalZ, maxSpeed, accel: WALK_ACCEL, slowRadius: WALK_SLOW_RADIUS, dt: delta },
+          velScratch.current,
+        );
+        agent.vx = velScratch.current.vx;
+        agent.vz = velScratch.current.vz;
+        movedX = agent.vx * delta;
+        movedZ = agent.vz * delta;
+        agent.x += movedX;
+        agent.z += movedZ;
+        moved = Math.hypot(movedX, movedZ);
+      }
+    }
+
+    const speed = moved / delta;
+    motion.current.speed = dragging ? 0 : speed;
+    if (!dragging) motion.current.gaitPhase += (moved / character.stride) * Math.PI * 2;
+
+    liftY.current = THREE.MathUtils.damp(liftY.current, dragging ? DRAG_LIFT : 0, 8, delta);
+    group.position.set(agent.x, liftY.current, agent.z);
+
+    if (facing.current) {
+      const walking = !dragging && speed > WALK_FACING_SPEED;
+      const angle = walking
+        ? Math.atan2(movedX, movedZ)
+        : dragging
+          ? facing.current.rotation.y
+          : Math.atan2(state.camera.position.x - agent.x, state.camera.position.z - agent.z);
+      easing.dampAngle(facing.current.rotation, "y", angle, walking ? 0.18 : 0.32, delta);
+    }
+
+    mood.current = dragging ? "held" : hovered ? "hovered" : "idle";
+
+    ringGlow.current = THREE.MathUtils.damp(ringGlow.current, hovered || selected ? 1 : 0, 10, delta);
+    if (ringMatRef.current) ringMatRef.current.opacity = ringGlow.current * 0.75;
+  });
+
+  const chipClass = circle === "family" ? styles.chipFamily : styles.chipFriend;
+  const showTag = hovered || selected;
+
+  return (
+    <group ref={root}>
+      <mesh
+        geometry={shadowGeometry}
+        material={shadowMaterial}
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.01, 0]}
+        scale={hitRadius * 1.7}
+      />
+      <mesh geometry={ringGeometry} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.014, 0]} scale={hitRadius * 2.2}>
+        <meshBasicMaterial
+          ref={ringMatRef}
+          color="#ffd88a"
+          transparent
+          opacity={0}
+          depthWrite={false}
+          toneMapped={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <mesh ref={hitRef} visible={false} position={[0, height / 2, 0]}>
+        <capsuleGeometry args={[hitRadius, Math.max(0.05, height - 2 * hitRadius), 4, 8]} />
+      </mesh>
+      <group ref={facing}>
+        <CharacterModel profile={profile} mood={mood} gaze={gaze} motion={motion} look={look} />
+      </group>
+      {showTag && (
+        <Html position={[0, height + LABEL_MARGIN, 0]} zIndexRange={[0, 0]} pointerEvents="none">
+          <div className={styles.tag}>
+            <span className={chipClass}>{circle === "family" ? "Family" : "Friend"}</span>
+            {name}
+          </div>
+        </Html>
+      )}
+    </group>
+  );
+}

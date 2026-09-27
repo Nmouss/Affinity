@@ -1,0 +1,12 @@
+.stepper {
+  position: absolute;
+  left: 1.25rem;
+  bottom: 1.25rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: rgba(18, 13, 11, 0.8);
+  font-size: 0.875rem;
+}

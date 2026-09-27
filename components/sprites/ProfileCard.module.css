@@ -1,0 +1,99 @@
+.card {
+  composes: panel from "../hud/Panel.module.css";
+  display: grid;
+  gap: 0.7rem;
+  width: min(20rem, calc(100vw - 2.5rem));
+  border-width: 1px 1px 1px 4px;
+  animation: cardIn 280ms ease-out;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.orb {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  box-shadow: 0 0 1rem rgba(255, 209, 138, 0.45);
+}
+
+.name {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.relationship {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #dcc8b7;
+  text-transform: capitalize;
+}
+
+.close {
+  composes: kbd from "../hud/Panel.module.css";
+  background: transparent;
+  cursor: pointer;
+}
+
+.sub {
+  composes: title from "../hud/Panel.module.css";
+  margin-bottom: 0.35rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.love,
+.avoid {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+}
+
+.love {
+  background: rgba(255, 209, 138, 0.16);
+  color: #ffe9c2;
+}
+
+.avoid {
+  background: rgba(226, 85, 58, 0.16);
+  color: #ffc2b3;
+}
+
+.rules {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.82rem;
+}
+
+.why,
+.none {
+  color: #b9a494;
+  font-size: 0.75rem;
+}
+
+.none {
+  margin: 0;
+  font-style: italic;
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateX(1rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

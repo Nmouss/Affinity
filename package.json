@@ -7,25 +7,37 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "leap:bridge": "bash scripts/leap/start-bridge.sh",
+    "leap:synth": "node scripts/leap/synth.mjs",
+    "leap:record": "node scripts/leap/record.mjs",
+    "leap:replay": "node scripts/leap/replay.mjs"
   },
   "dependencies": {
     "@langchain/langgraph": "^0.4.0",
     "@langchain/openai": "^0.6.0",
+    "@mediapipe/tasks-vision": "^1.0.1",
+    "@react-spring/three": "^10.1.2",
     "@react-three/drei": "^10.0.0",
     "@react-three/fiber": "^9.0.0",
+    "@react-three/postprocessing": "^3.1.2",
+    "maath": "^0.10.8",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.180.0",
-    "zod": "^4.0.0"
+    "zod": "^4.0.0",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/three": "^0.180.0",
+    "@types/ws": "^8.18.1",
+    "leva": "^0.10.1",
     "typescript": "^5.0.0",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "ws": "^8.21.3"
   }
 }

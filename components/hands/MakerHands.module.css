@@ -1,0 +1,12 @@
+/* The Leap hand cursor: a Wii-remote-style pointing hand (fist while pinching), positioned so its
+   hotspot (the fingertip) sits at the tracked point, same convention as the mouse's CSS cursor in
+   plazaIcons.ts's POINTER_CURSOR_CSS/GRABBING_CURSOR_CSS. */
+.cursor {
+  position: fixed;
+  z-index: 1000;
+  margin-left: -0.7rem;
+  margin-top: -0.2rem;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+  transition: left 0.03s linear, top 0.03s linear;
+}

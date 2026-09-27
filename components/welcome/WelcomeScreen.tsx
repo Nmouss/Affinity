@@ -141,7 +141,12 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
               title="High-five Theo"
               onClick={enter}
               disabled={entering}
-            />
+              data-hand-target="welcome-palm"
+            >
+              <span className={styles.palmLabel} aria-hidden>
+                {entering ? "High five!" : "Tap to high-five"}
+              </span>
+            </button>
           )}
         </div>
         <div className={styles.actions}>
@@ -152,7 +157,7 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
               <path d="M7 17L17 7M9 7h8v8" />
             </svg>
           </button>
-          <p className={styles.hint}>{imageFailed ? "Use the button to step inside." : "Tap Theo's hand, or use the button to step inside."}</p>
+          <p className={styles.hint}>{imageFailed ? "Use the button to step inside." : "Or use the button."}</p>
           <p className={`${styles.tracking} ${styles[tracking]}`} role="status" aria-live="polite">
             <span aria-hidden />
             {trackingLine}

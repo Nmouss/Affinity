@@ -25,8 +25,8 @@ describe("attributeVeto", () => {
     });
   });
 
-  it("falls back to family profiles before any opinion arrives", () => {
-    expect(attributeVeto(veto, {}, FAMILY, CATALOG)).toMatchObject({ wishBy: "son", ruleBy: "wife" });
+  it("does not invent attribution when current profiles contain no matching wish or rule", () => {
+    expect(attributeVeto(veto, {}, FAMILY, CATALOG)).toMatchObject({ wishBy: null, ruleBy: null });
   });
 
   it("agrees with the stage transcript's veto", () => {

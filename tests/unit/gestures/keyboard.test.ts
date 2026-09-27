@@ -95,14 +95,14 @@ it("prevents browser defaults only for stage keys", () => {
 describe("number keys across both circles", () => {
   afterEach(() => useRoster.getState().resetToStarters());
 
-  it("seat the starters (all family) in roster order by default", () => {
+  it("seats the starter friends in roster order by default", () => {
     expect(mapKey({ code: "Digit1" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "wife" } });
     expect(mapKey({ code: "Digit2" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "daughter" } });
     expect(mapKey({ code: "Digit3" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "son" } });
     expect(mapKey({ code: "Digit4" }, "down")).toBeNull();
   });
 
-  it("seats family first, then friends, once a friend joins the roster", () => {
+  it("keeps a newly added friend after the starter friends", () => {
     const friendId = useRoster.getState().addPerson({
       name: "Friend",
       circle: "friend",
@@ -112,7 +112,7 @@ describe("number keys across both circles", () => {
     expect(mapKey({ code: "Digit1" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "wife" } });
     expect(mapKey({ code: "Digit2" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "daughter" } });
     expect(mapKey({ code: "Digit3" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: "son" } });
-    // The friend comes after all three family starters, even though they were added most recently.
+    // The new friend comes after the three starter friends.
     expect(mapKey({ code: "Digit4" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: friendId } });
     expect(mapKey({ code: "Numpad4" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: friendId } });
   });
@@ -130,7 +130,7 @@ describe("number keys across both circles", () => {
       relationship: "kid",
       look: BLANK_LOOK,
     });
-    expect(mapKey({ code: "Digit4" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: familyId } });
+    expect(mapKey({ code: "Digit1" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: familyId } });
     expect(mapKey({ code: "Digit5" }, "down")).toEqual({ kind: "emit", event: { type: "seat", spriteId: friendId } });
   });
 });

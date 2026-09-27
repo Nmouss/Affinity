@@ -1,5 +1,6 @@
 import type { Bundle, FamilyProfile } from "@/types/domain";
 import { handItem, handTarget } from "@/components/hands/makerHitTest";
+import { ImageWithFallback } from "@/components/media/ImageWithFallback";
 import styles from "./Bundle.module.css";
 
 const money = (value: number) => `$${Number.isInteger(value) ? value : value.toFixed(2)}`;
@@ -40,9 +41,15 @@ export function BundlePreview({ bundle, budget, family, onSwap, swapping }: Bund
         {bundle.items.map((item) => (
           <li key={item.id} className={styles.item} {...handItem(item.id)}>
             {item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className={styles.itemImage} loading="lazy" />
+              <ImageWithFallback
+                src={item.imageUrl}
+                alt=""
+                className={styles.itemImage}
+                loading="lazy"
+                fallback={<span className={styles.itemImagePlaceholder} aria-hidden>{item.name.slice(0, 1)}</span>}
+              />
             ) : (
-              <span className={styles.itemImagePlaceholder} aria-hidden="true" />
+              <span className={styles.itemImagePlaceholder} aria-hidden>{item.name.slice(0, 1)}</span>
             )}
             <span className={styles.itemName}>{item.name}</span>
             <span className={styles.servedBy}>

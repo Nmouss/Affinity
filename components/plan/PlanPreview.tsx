@@ -2,6 +2,7 @@ import type { FamilyProfile, Plan } from "@/types/domain";
 import { handItem } from "@/components/hands/makerHitTest";
 import { LinkIcon, MapPinIcon, RefreshIcon, StarIcon } from "@/components/hud/icons";
 import { RoundAction } from "@/components/hud/RoundAction";
+import { ImageWithFallback } from "@/components/media/ImageWithFallback";
 import styles from "./PlanPreview.module.css";
 
 export interface PlanPreviewProps {
@@ -34,9 +35,15 @@ export function PlanPreview({ plan, onSwap, swapping, plaza = false, compact = f
           <li key={stop.id} className={styles.stop} {...handItem(stop.id)}>
             <div className={styles.photoWrap}>
               {stop.photoName ? (
-                <img src={`/api/places/photo?name=${encodeURIComponent(stop.photoName)}`} alt={stop.name} className={styles.photo} loading="lazy" />
+                <ImageWithFallback
+                  src={`/api/places/photo?name=${encodeURIComponent(stop.photoName)}`}
+                  alt={stop.name}
+                  className={styles.photo}
+                  loading="lazy"
+                  fallback={<span className={styles.placeholder} role="img" aria-label={`${stop.name} photo unavailable`}>{stop.name.slice(0, 1)}</span>}
+                />
               ) : (
-                <span className={styles.placeholder} aria-hidden="true" />
+                <span className={styles.placeholder} role="img" aria-label={`${stop.name} photo unavailable`}>{stop.name.slice(0, 1)}</span>
               )}
               <span className={styles.slot}>{SLOT_LABEL[stop.slot] ?? stop.slot}</span>
             </div>

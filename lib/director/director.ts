@@ -136,7 +136,6 @@ export function createDirector(options: DirectorOptions): Director {
       replaySpeed: options.cut90 ? 2 : 1,
       fetchImpl,
       onSource: (source) => runId === run && get().setCouncilSource(source),
-      onFallback: (reason) => log(`falling back to replay: ${reason}`),
     };
     try {
       for await (const event of runCouncil(mission, profiles, runOptions)) {
@@ -149,7 +148,8 @@ export function createDirector(options: DirectorOptions): Director {
       if (runId === run) queue.push({ kind: "streamEnd" });
     } catch (error) {
       if (runId !== run || council?.signal.aborted) return;
-      get().setError(error instanceof Error ? error.message : "The council could not be reached");
+      log("live council failed", error);
+      get().setError("The live council could not be reached. Stop the agents and try again.");
     }
   }
 

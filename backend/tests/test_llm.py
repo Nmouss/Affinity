@@ -67,6 +67,7 @@ def test_demo_branches_survive_a_person_with_no_preferences(monkeypatch) -> None
     assert opinion["spriteId"] == "newbie"
     assert opinion["wishes"] == []
     assert "something we would all enjoy" in opinion["say"]
+    assert "non-negotiables" not in opinion["say"]
 
     alone = asyncio.run(create_sprite_deliberation(profile, mission, [opinion], {"hardRules": [], "wishes": [], "conflicts": []}))
     assert alone["spriteId"] == "newbie"
@@ -80,3 +81,24 @@ def test_demo_branches_survive_a_person_with_no_preferences(monkeypatch) -> None
     score = asyncio.run(score_bundle(profile, mission, bundle))
     assert score["score"] == 4.0
     assert "something we would all enjoy" in score["complaint"]
+
+
+def test_demo_opinion_mentions_non_negotiables_only_when_present(monkeypatch) -> None:
+    monkeypatch.setenv("DEMO_MODE", "true")
+    profile = _uninterviewed_profile()
+    profile["houseRules"] = [
+        {"type": "excludedTag", "tag": "glass", "why": "It must be durable"}
+    ]
+    mission = {
+        "occasion": "Birthday",
+        "budget": 80,
+        "freeText": "gift",
+        "type": "gift",
+        "invitedSpriteIds": ["newbie"],
+        "recipientId": "newbie",
+    }
+
+    opinion = asyncio.run(create_sprite_opinion(profile, mission))
+
+    assert "non-negotiables" in opinion["say"]
+    assert opinion["hardRules"] == profile["houseRules"]

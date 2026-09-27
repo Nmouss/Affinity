@@ -54,17 +54,6 @@ export async function* replayCouncil(
   }
 }
 
-/** Identity of an event for deduping when replay takes over mid-stream. */
-export function eventKey(event: CouncilEvent): string {
-  switch (event.type) {
-    case "opinion":
-    case "score":
-      return `${event.type}:${event.payload.spriteId}`;
-    default:
-      return event.type;
-  }
-}
-
 export interface CouncilRunOptions {
   signal: AbortSignal;
   threadId: string;
@@ -76,19 +65,18 @@ export interface CouncilRunOptions {
   fetchImpl?: FetchLike;
   timeline?: readonly TimedCouncilEvent[];
   onSource?: (source: CouncilSource) => void;
-  onFallback?: (reason: string) => void;
 }
 
 // Live model/tool calls can legitimately take several seconds. The backend emits a `mission`
-// acknowledgement immediately; keep a generous ceiling for cold starts instead of silently
-// replacing real product results (and their images) with the image-less demo transcript.
+// acknowledgement immediately; this ceiling catches a dead/cold backend without ever replacing a
+// user's mission with the unrelated recorded demo.
 const LIVE_STALL_MS = 15000;
 
 type Next = IteratorResult<CouncilEvent> | { stalled: true };
 
 /**
- * The council as one event stream: live when it works, replay when it's asked for, fails, or stays
- * silent too long. A mid-stream failure hands over to replay without repeating what already played.
+ * The council as one event stream. Replay is opt-in (`?demo`) because its recorded people and
+ * constraints must never be presented as the result of a live, user-authored mission.
  */
 export async function* runCouncil(
   mission: Mission,
@@ -96,22 +84,19 @@ export async function* runCouncil(
   options: CouncilRunOptions,
 ): AsyncGenerator<CouncilEvent> {
   const { signal, stallMs = LIVE_STALL_MS } = options;
-  const replay = (skip: Set<string>) => {
+  const replay = () => {
     options.onSource?.("replay");
-    return filterSeen(replayCouncil(signal, options.timeline, options.replaySpeed), skip);
+    return replayCouncil(signal, options.timeline, options.replaySpeed);
   };
 
   if (options.preferReplay) {
-    yield* replay(new Set());
+    yield* replay();
     return;
   }
 
   const live = new AbortController();
   const forwardAbort = () => live.abort();
   signal.addEventListener("abort", forwardAbort, { once: true });
-  const seen = new Set<string>();
-  let fallbackReason: string | null = null;
-
   try {
     options.onSource?.("live");
     const stream = startCouncil(mission, profiles, options.threadId, live.signal, options.fetchImpl);
@@ -126,31 +111,17 @@ export async function* runCouncil(
       pending.catch(() => undefined);
       const next = await Promise.race([pending, stall]).finally(() => clearTimeout(timer));
       if ("stalled" in next) {
-        fallbackReason = `Live council was silent for ${Math.round(stallMs / 1000)} s`;
-        break;
+        throw new Error(`Live council was silent for ${Math.round(stallMs / 1000)} seconds`);
       }
       if (next.done) {
-        if (first) fallbackReason = "Live council sent no events";
+        if (first) throw new Error("Live council sent no events");
         break;
       }
       first = false;
-      seen.add(eventKey(next.value));
       yield next.value;
     }
-  } catch (error) {
-    if (signal.aborted) throw error;
-    fallbackReason = error instanceof Error ? error.message : "Live council failed";
   } finally {
     signal.removeEventListener("abort", forwardAbort);
     live.abort();
   }
-
-  if (fallbackReason && !signal.aborted) {
-    options.onFallback?.(fallbackReason);
-    yield* replay(seen);
-  }
-}
-
-async function* filterSeen(events: AsyncGenerator<CouncilEvent>, seen: Set<string>): AsyncGenerator<CouncilEvent> {
-  for await (const event of events) if (!seen.has(eventKey(event))) yield event;
 }

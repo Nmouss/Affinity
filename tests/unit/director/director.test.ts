@@ -154,28 +154,28 @@ describe("council transports", () => {
     expect(council).not.toHaveBeenCalled();
   });
 
-  it("falls back to replay when the live request fails", async () => {
+  it("shows an honest error instead of replaying unrelated people when the live request fails", async () => {
     start({ fetchImpl: fakeFetch(() => Promise.reject(new Error("offline"))) });
     seatAllAndConvene();
     await vi.advanceTimersByTimeAsync(0);
-    expect(state().councilSource).toBe("replay");
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(state().phase).toBe("awaitMandate");
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("offline"));
+    expect(state().councilSource).toBe("live");
+    expect(state().error).toContain("live council could not be reached");
+    expect(appliedTypes()).toEqual([]);
+    expect(log).toHaveBeenCalledWith("live council failed", expect.any(Error));
   });
 
-  it("falls back to replay when the live stream stays silent for 15 s", async () => {
+  it("shows an honest error when the live stream stays silent for 15 s", async () => {
     start({ fetchImpl: fakeFetch((init) => new Promise((_, reject) => init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))))) });
     seatAllAndConvene();
     await vi.advanceTimersByTimeAsync(14_999);
     expect(state().councilSource).toBe("live");
     await vi.advanceTimersByTimeAsync(1);
-    expect(state().councilSource).toBe("replay");
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(state().phase).toBe("awaitMandate");
+    expect(state().councilSource).toBe("live");
+    expect(state().error).toContain("live council could not be reached");
+    expect(appliedTypes()).toEqual([]);
   });
 
-  it("hands over to replay mid-stream without repeating events", async () => {
+  it("keeps received live events but never splices in canned events after a mid-stream failure", async () => {
     const encoder = new TextEncoder();
     const [first, second] = STAGE_TRANSCRIPT;
     const body = new ReadableStream<Uint8Array>({
@@ -189,19 +189,25 @@ describe("council transports", () => {
     start({ fetchImpl: fakeFetch(async () => new Response(body)) });
     seatAllAndConvene();
     await vi.advanceTimersByTimeAsync(60_000);
-    expect(appliedTypes()).toEqual(STAGE_TRANSCRIPT.map((event) => event.type));
-    expect(state().phase).toBe("awaitMandate");
+    // Depending on when the stream reader observes the socket error, it may
+    // deliver zero, one, or both already-enqueued live events. It must never
+    // append bundle/score events belonging to the recorded family.
+    expect(appliedTypes().length).toBeLessThanOrEqual(2);
+    expect(appliedTypes().every((type) => type === "opinion")).toBe(true);
+    expect(state().councilSource).toBe("live");
+    expect(state().error).toContain("live council could not be reached");
   });
 });
 
 describe("signing", () => {
-  it("runs the real council route, synthesizes awaitMandate, and signs through /api/mandate", async () => {
-    start({ fetchImpl: fakeFetch() });
+  it("reaches awaitMandate from a live stream and signs through /api/mandate", async () => {
+    start();
     seatAllAndConvene();
     await vi.advanceTimersByTimeAsync(0);
     expect(emitGesture({ type: "handshakeComplete" })).toBe(false);
     await vi.advanceTimersByTimeAsync(60_000);
-    // The cached transcript has no scores or awaiting_mandate; the stream end arms the mandate.
+    // This test supplies the transcript as a live SSE response; explicit replay
+    // behavior is covered separately above.
     expect(state().phase).toBe("awaitMandate");
 
     expect(emitGesture({ type: "handshakeComplete" })).toBe(true);

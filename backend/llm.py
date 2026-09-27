@@ -156,9 +156,10 @@ async def create_sprite_opinion(profile: FamilyProfile, mission: Mission) -> Spr
     """
     if _demo_mode():
         featured_wish = _featured_wish(profile)
+        rules_line = " I also need my non-negotiables respected." if profile["houseRules"] else ""
         return {
             "spriteId": profile["id"],
-            "say": f"I would love {featured_wish}, and I want our house rules respected.",
+            "say": f"I would love {featured_wish}.{rules_line}",
             "hardRules": profile["houseRules"],
             "wishes": profile["loves"],
             "vetoes": profile["avoids"],

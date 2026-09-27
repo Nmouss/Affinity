@@ -912,8 +912,10 @@ async def shop_node(state: CouncilState) -> dict[str, Bundle]:
         ]
         reasons = [
             f"Fills the {item['slot']} slot at {item['price']:.2f}.",
-            "Passed the budget and household-rule filters.",
+            "Fits the mission budget.",
         ]
+        if state["constraints"]["hardRules"]:
+            reasons.append("Respects every stated non-negotiable.")
         if matched:
             reasons.append(f"Matches public preferences from {', '.join(matched)}.")
         items.append({**item, "selectedBecause": reasons})
@@ -1218,8 +1220,9 @@ def decide_revision_node(state: CouncilState) -> CouncilState:
     """Choose between another shop pass and the human mandate.
 
     The lowest score controls the decision. A score below 6 adds that sprite's
-    complaint and increments the loop count. Two completed revisions is the
-    hard cap, preventing an agentic infinite loop during the demo.
+    complaint and increments the loop count. One completed revision is the
+    hard cap: a second identical search is less useful than human review and
+    can make a bounded graph look infinite in the UI.
     """
     invited = set(state["mission"]["invitedSpriteIds"])
     scores = [score for score in state["scores"] if score["spriteId"] in invited]
@@ -1227,7 +1230,7 @@ def decide_revision_node(state: CouncilState) -> CouncilState:
         raise ValueError("The routing check did not receive every invited sprite score")
 
     lowest = min(scores, key=lambda score: score["score"])
-    if lowest["score"] < 6 and state.get("revisionCount", 0) < 2:
+    if lowest["score"] < 6 and state.get("revisionCount", 0) < 1:
         complaint = lowest.get("complaint") or f"Better serve sprite {lowest['spriteId']}"
         result = {
             "route": "revise",

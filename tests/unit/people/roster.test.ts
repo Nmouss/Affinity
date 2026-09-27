@@ -20,7 +20,7 @@ const { useRoster, getPeople, getLook, getCircle, orderedRoster, lobbySpot } = a
 const { BLANK_LOOK, STARTER_PEOPLE } = await import("@/lib/people/starters");
 const { DOORWAY, homeSpot } = await import("@/lib/stage/layout");
 
-const STORAGE_KEY = "affinity.people.v1";
+const STORAGE_KEY = "affinity.people.v2";
 
 describe("roster persistence", () => {
   beforeEach(() => {
@@ -96,7 +96,7 @@ describe("orderedRoster", () => {
     useRoster.getState().resetToStarters();
   });
 
-  it("starters are all family, in their starting order", () => {
+  it("keeps starters in their original order when they share one circle", () => {
     expect(orderedRoster().map((profile) => profile.id)).toEqual(STARTER_PEOPLE.map((profile) => profile.id));
   });
 
@@ -115,9 +115,13 @@ describe("lobbySpot", () => {
     useRoster.getState().resetToStarters();
   });
 
-  it("sends family to their home spot, in family order", () => {
-    const familyIds = STARTER_PEOPLE.map((profile) => profile.id);
-    familyIds.forEach((id, index) => expect(lobbySpot(id)).toEqual(homeSpot(index)));
+  it("sends starter friends to the doorway", () => {
+    STARTER_PEOPLE.forEach((profile) => expect(lobbySpot(profile.id)).toEqual(DOORWAY));
+  });
+
+  it("sends newly added family to their home spot", () => {
+    const id = useRoster.getState().addPerson({ name: "Auntie", circle: "family", relationship: "aunt", look: BLANK_LOOK });
+    expect(lobbySpot(id!)).toEqual(homeSpot(0));
   });
 
   it("defaults friends to the doorway", () => {

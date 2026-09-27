@@ -1,6 +1,7 @@
 "use client";
 
 import type { FamilyProfile, SpriteScore } from "@/types/domain";
+import { ImageWithFallback } from "@/components/media/ImageWithFallback";
 import { SupporterRow } from "./SupporterRow";
 import { supportersForProposal } from "./supporters";
 import styles from "./ItemRanking.module.css";
@@ -34,7 +35,12 @@ export function ItemRanking({ title, items, agents, scores, pending = true }: It
         {items.map((item) => (
           <li key={item.id} className={styles.item}>
             {item.imageUrl ? (
-              <img src={item.imageUrl} alt="" className={styles.thumb} />
+              <ImageWithFallback
+                src={item.imageUrl}
+                alt=""
+                className={styles.thumb}
+                fallback={<span className={styles.thumbFallback} aria-hidden>{item.name.slice(0, 1)}</span>}
+              />
             ) : (
               <span className={styles.thumbFallback} aria-hidden>
                 {item.name.slice(0, 1)}

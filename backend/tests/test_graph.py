@@ -93,7 +93,9 @@ def test_graph_streams_visible_council_conversation(monkeypatch) -> None:
 
     assert types.count("opinion") == 3
     assert types.count("deliberation") == 3
-    assert types.count("score") == 3
+    # One bounded retry produces at most a second score round, never an
+    # open-ended series that looks infinite in the UI.
+    assert types.count("score") == 6
     assert types.index("constraints") < types.index("deliberation")
     assert types[-1] == "awaiting_mandate"
 
@@ -174,8 +176,8 @@ def test_replacement_without_prompt_generates_autonomous_guidance() -> None:
     assert "different wrapping option" in result["repairRequest"]["prompt"]
 
 
-def test_revision_loop_is_capped_at_two() -> None:
-    """Low scores may revise twice but can never create an infinite loop."""
+def test_revision_loop_is_capped_at_one() -> None:
+    """Low scores may revise once but can never create an infinite loop."""
     base_state = {
         "mission": MISSION,
         "scores": [
@@ -186,7 +188,7 @@ def test_revision_loop_is_capped_at_two() -> None:
     }
 
     first = decide_revision_node({**base_state, "revisionCount": 0})
-    final = decide_revision_node({**base_state, "revisionCount": 2})
+    final = decide_revision_node({**base_state, "revisionCount": 1})
 
     assert first["route"] == "revise"
     assert first["revisionCount"] == 1

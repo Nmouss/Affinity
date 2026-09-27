@@ -180,13 +180,27 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
       )}
 
       <div className={styles.left}>
-        {plaza && (bundle || plan) && phase !== "lobby" && (
+        {plaza && !decisionOpen && (bundle || plan) && phase !== "lobby" && (
           <ItemRanking
             title={plan ? "Stops" : "Items"}
             items={
               plan
-                ? plan.stops.map((stop) => ({ id: stop.id, name: stop.name }))
-                : (bundle?.items ?? []).map((item) => ({ id: item.id, name: item.name }))
+                ? plan.stops.map((stop) => ({
+                    id: stop.id,
+                    name: stop.name,
+                    imageUrl: stop.photoName
+                      ? `/api/places/photo?name=${encodeURIComponent(stop.photoName)}`
+                      : null,
+                    forName:
+                      people.find((member) => plan.serves[member.id]?.includes(stop.id))?.name ?? null,
+                  }))
+                : (bundle?.items ?? []).map((item) => ({
+                    id: item.id,
+                    name: item.name,
+                    imageUrl: item.imageUrl,
+                    forName:
+                      people.find((member) => bundle?.serves[member.id]?.includes(item.id))?.name ?? null,
+                  }))
             }
             agents={rankingAgents}
             scores={scores}

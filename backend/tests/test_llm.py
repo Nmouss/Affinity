@@ -36,5 +36,5 @@ def test_live_opinion_adapter_returns_structured_profile_data(monkeypatch) -> No
 
     assert opinion["spriteId"] == "wife"
     assert opinion["say"] == "I prefer warm lights."
-    assert "neutral tones" in opinion["wishes"]
+    assert "gym" in opinion["wishes"]
     assert "cozy glow" in opinion["wishes"]

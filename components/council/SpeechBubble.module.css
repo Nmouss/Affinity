@@ -3,18 +3,18 @@
   position: absolute;
   left: 0;
   bottom: 0;
-  transform: translate(-50%, 0);
+  transform: translate(-50%, var(--drop, 0px));
   pointer-events: none;
   user-select: none;
 }
 
 /* Side seats grow their bubbles outward so three seated sprites never cover each other. */
 .left {
-  transform: translate(calc(-100% + 2.5rem), 0);
+  transform: translate(calc(-100% + 2.5rem), var(--drop, 0px));
 }
 
 .right {
-  transform: translate(-2.5rem, 0);
+  transform: translate(-2.5rem, var(--drop, 0px));
 }
 
 .left .bubble::after {

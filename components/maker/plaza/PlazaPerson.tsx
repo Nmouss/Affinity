@@ -16,7 +16,7 @@ import type { FamilyProfile } from "@/types/domain";
 import type { SpriteMood } from "@/types/stage";
 import { PLAZA } from "./formation";
 import { registerHit, unregisterHit } from "./plazaHits";
-import { constrainOutsideMissionCircle, isInsideMissionCircle, MISSION_CIRCLE, usePlaza } from "./plazaState";
+import { constrainOutsideMissionCircle, isInsideMissionCircle, MISSION_CIRCLE, usePlaza, usePlazaHtmlPortal } from "./plazaState";
 import { consumeDragOutcome, plazaPointerFloor } from "./plazaSignals";
 import styles from "./PlazaPerson.module.css";
 
@@ -307,6 +307,7 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
         ? "right"
         : "center"
     : "center";
+  const htmlPortal = usePlazaHtmlPortal();
 
   return (
     <group ref={root}>
@@ -335,7 +336,7 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
         <CharacterModel profile={profile} mood={mood} gaze={gaze} motion={motion} look={look} />
       </group>
       {councilActive && councilBubble && (
-        <Html position={[0, height + LABEL_MARGIN + 0.72, 0]} zIndexRange={[80, 0]} pointerEvents="none">
+        <Html portal={htmlPortal} position={[0, height + LABEL_MARGIN + 0.45, 0]} zIndexRange={[80, 0]} pointerEvents="none">
           <SpeechBubble
             speaker={name}
             text={councilBubble}
@@ -346,7 +347,7 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
         </Html>
       )}
       {!councilBubble && (
-        <Html position={[0, height + LABEL_MARGIN, 0]} zIndexRange={[0, 0]} pointerEvents="none">
+        <Html portal={htmlPortal} position={[0, height + LABEL_MARGIN, 0]} zIndexRange={[40, 0]} pointerEvents="none">
           <div className={`${styles.tag} ${councilActive && councilMood === "speaking" ? styles.speaking : ""}`}>
             <span className={chipClass}>{circle === "family" ? "Family" : "Friend"}</span>
             {name}

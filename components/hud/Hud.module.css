@@ -8,10 +8,10 @@
 /* In the home-world council, keep result widgets clear of the plaza's permanent icon rails. */
 .plazaHud .left {
   left: 7.5rem;
-  z-index: 80;
-  width: 13.75rem;
+  z-index: 20;
+  width: min(22rem, calc(100vw - 16rem));
   top: 4.5rem;
-  bottom: auto;
+  bottom: 1.5rem;
 }
 
 .plazaHud .right {
@@ -227,7 +227,6 @@
 }
 
 .plazaHud .decisionOverlay {
-  left: 21.5rem;
   background: rgba(44, 36, 28, 0.32);
   backdrop-filter: blur(4px);
 }

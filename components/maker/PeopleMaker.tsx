@@ -73,12 +73,21 @@ export function PeopleMaker() {
       </div>
 
       {state.step === "plaza" && (
-        <PlazaRails
-          dispatch={wrappedDispatch}
-          onLaunch={(mode, invitedIds, recipientIds) => {
-            if (!activeMission) setActiveMission({ mode, invitedIds, recipientIds });
-          }}
-        />
+        <>
+          <PlazaRails
+            hideMissions={Boolean(activeMission)}
+            dispatch={wrappedDispatch}
+            onLaunch={(mode, invitedIds, recipientIds) => {
+              if (!activeMission) setActiveMission({ mode, invitedIds, recipientIds });
+            }}
+          />
+          <div
+            className={styles.htmlLayer}
+            ref={(node) => {
+              usePlaza.getState().setHtmlHost(node);
+            }}
+          />
+        </>
       )}
 
       {activeMission && (

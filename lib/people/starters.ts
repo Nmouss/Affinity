@@ -9,7 +9,7 @@ export const STARTER_PEOPLE = family as FamilyProfile[];
 
 export const STARTER_LOOKS: Record<string, CharacterLook> = {
   wife: {
-    body: { height: 1, build: 0.5 },
+    body: { height: 1, build: 0.55 },
     bodyColor: "#eeda9e",
     accent: "#c9a227",
     skin: "#ffedce",
@@ -17,10 +17,10 @@ export const STARTER_LOOKS: Record<string, CharacterLook> = {
     brows: { type: "none", height: 0 },
     mouth: { type: "smile" },
     cheeks: { on: true, color: "#eab7a1" },
-    accessory: { type: "scarf", color: "#c9a227" },
+    accessory: { type: "none", color: "#c9a227" },
   },
   daughter: {
-    body: { height: 0.6, build: 0.4 },
+    body: { height: 1, build: 0.55 },
     bodyColor: "#ff99d4",
     accent: "#ffe5f5",
     skin: "#ffedce",
@@ -28,10 +28,10 @@ export const STARTER_LOOKS: Record<string, CharacterLook> = {
     brows: { type: "none", height: 0 },
     mouth: { type: "smile" },
     cheeks: { on: true, color: "#eab7a1" },
-    accessory: { type: "bow", color: "#ffe5f5" },
+    accessory: { type: "none", color: "#ffe5f5" },
   },
   son: {
-    body: { height: 0.55, build: 0.7 },
+    body: { height: 1, build: 0.65 },
     bodyColor: "#41c892",
     accent: "#2474ff",
     skin: "#ffedce",
@@ -39,11 +39,11 @@ export const STARTER_LOOKS: Record<string, CharacterLook> = {
     brows: { type: "none", height: 0 },
     mouth: { type: "smile" },
     cheeks: { on: true, color: "#eab7a1" },
-    accessory: { type: "dinosaur", color: "#2474ff" },
+    accessory: { type: "none", color: "#2474ff" },
   },
 };
 
-export const STARTER_CIRCLES: Record<string, Circle> = { wife: "family", daughter: "family", son: "family" };
+export const STARTER_CIRCLES: Record<string, Circle> = { wife: "friend", daughter: "friend", son: "friend" };
 
 /** A plain look for "Start from scratch". */
 export const BLANK_LOOK: CharacterLook = {

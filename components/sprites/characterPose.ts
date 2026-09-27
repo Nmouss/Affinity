@@ -38,9 +38,9 @@ export const JUMP_DURATION = 0.9;
 export const LAND_DURATION = 0.35;
 
 export const CHARACTERS: Record<string, CharacterConfig> = {
-  wife: { accessory: "scarf", scale: 0.95, width: 1, energy: 0.72, phase: 0, stride: 1.3, walkSpeed: 3.2, bounce: 0.03, fidget: "scarfTug" },
-  daughter: { accessory: "bow", scale: 0.86, width: 0.98, energy: 1, phase: 3.3, stride: 1.1, walkSpeed: 3.4, bounce: 0.04, fidget: "sway" },
-  son: { accessory: "dinosaur", scale: 0.84, width: 1.05, energy: 1.2, phase: 1.6, stride: 1, walkSpeed: 3.8, bounce: 0.05, fidget: "toeBounce" },
+  wife: { accessory: "none", scale: 0.95, width: 1.01, energy: 0.72, phase: 0, stride: 1.3, walkSpeed: 3.2, bounce: 0.03, fidget: "sway" },
+  daughter: { accessory: "none", scale: 0.95, width: 1.01, energy: 0.85, phase: 3.3, stride: 1.3, walkSpeed: 3.2, bounce: 0.035, fidget: "sway" },
+  son: { accessory: "none", scale: 0.95, width: 1.03, energy: 0.9, phase: 1.6, stride: 1.3, walkSpeed: 3.2, bounce: 0.04, fidget: "sway" },
 };
 
 export function characterFor(id: string): CharacterConfig {
@@ -66,7 +66,7 @@ function hashPhase(id: string): number {
  * hash (so two people with an identical look still move out of step).
  *
  * scale/width are tuned so the three STARTER_LOOKS land within ±0.015 of today's CHARACTERS
- * scale/width (wife 0.95/1, daughter 0.86/0.98, son 0.84/1.05).
+ * scale/width (adult friends at height 1).
  */
 export function characterForLook(look: CharacterLook, id: string): CharacterConfig {
   const { height, build } = look.body;

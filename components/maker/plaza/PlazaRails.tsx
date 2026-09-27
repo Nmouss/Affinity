@@ -57,6 +57,8 @@ export function resolvePlazaDrop(action: PlazaDrop, personId: string, lookup: Pe
 export interface PlazaRailsProps {
   dispatch: (action: MakerAction) => void;
   onLaunch: (mode: "shopping" | "plan", invitedIds: string[], recipientIds?: string[]) => void;
+  /** Hide the bottom mission bar so agent bubbles aren’t trapped under it. */
+  hideMissions?: boolean;
 }
 
 const HINT_MS = 1600;
@@ -102,7 +104,7 @@ function RailButton({
   );
 }
 
-export function PlazaRails({ dispatch, onLaunch }: PlazaRailsProps) {
+export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRailsProps) {
   const selectedId = usePlaza((s) => s.selectedId);
   const dropAction = usePlaza((s) => s.dropAction);
   const clearDrop = usePlaza((s) => s.clearDrop);
@@ -198,6 +200,7 @@ export function PlazaRails({ dispatch, onLaunch }: PlazaRailsProps) {
         </RailButton>
       </div>
 
+      {!hideMissions && (
       <div className={styles.missionActions} aria-label="Plan with your connections">
         <p className={styles.missionLabel}>
           {missionMemberIds.length === 0
@@ -213,6 +216,7 @@ export function PlazaRails({ dispatch, onLaunch }: PlazaRailsProps) {
           <span><strong>Make dinner plans</strong><small>Choose a place and activity</small></span>
         </button>
       </div>
+      )}
 
       <div className={styles.railRight}>
         <RailButton

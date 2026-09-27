@@ -23,3 +23,16 @@ export function uiTargetId(value: string): TargetId {
 export function uiTargetValue(target: TargetId | null): string | null {
   return target?.startsWith("ui:") ? target.slice("ui:".length) : null;
 }
+
+/** Marks a card for a cart or plan item, so a hand swipe over it can request a swap (`item:<id>`). */
+export const HAND_ITEM_ATTR = "data-hand-item";
+
+/** Spread onto any control the Leap pointer should hover and pinch-click: `<button {...handTarget("cart-approve")}>`. */
+export function handTarget(value: string): { "data-hand-target": string } {
+  return { [HAND_TARGET_ATTR]: value } as { "data-hand-target": string };
+}
+
+/** Spread onto an item card: `<li {...handItem(item.id)}>`. */
+export function handItem(itemId: string): { "data-hand-item": string } {
+  return { [HAND_ITEM_ATTR]: itemId } as { "data-hand-item": string };
+}

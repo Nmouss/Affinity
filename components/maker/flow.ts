@@ -22,7 +22,16 @@ import type { NewPerson, PersonPatch } from "@/lib/people/roster";
 // three.js, or the roster store directly (aside from the injected `save`/`update` calls below),
 // so the whole flow is exercised in flow.test.ts without React or a browser.
 
-export type MakerStep = "plaza" | "who-circle" | "who-size" | "start" | "editor" | "quit-dialog";
+export type MakerStep = "plaza" | "who-circle" | "who-size" | "start" | "editor" | "quit-dialog" | "interview";
+
+/** What a person likes, dislikes, and is like: filled by the onboarding interview. */
+export interface PersonPreferences {
+  loves: string[];
+  avoids: string[];
+  personality: string[];
+}
+
+export const EMPTY_PERSON_PREFERENCES: PersonPreferences = { loves: [], avoids: [], personality: [] };
 
 export const EDITOR_TABS = [
   "body",
@@ -72,6 +81,8 @@ export interface MakerState {
   nameError: boolean;
   /** Set while the plaza's Remove confirm dialog is open (rail click or Delete key), for this id. */
   plazaConfirmRemoveId: string | null;
+  /** The saved person being interviewed and what the roster already knew about them. */
+  interview: { personId: string; existing: PersonPreferences } | null;
 }
 
 export const initialMakerState: MakerState = {
@@ -80,11 +91,17 @@ export const initialMakerState: MakerState = {
   draft: null,
   nameError: false,
   plazaConfirmRemoveId: null,
+  interview: null,
 };
 
 export type MakerAction =
   | { type: "newPerson" }
   | { type: "editPerson"; id: string; name: string; circle: Circle; relationship: string; look: CharacterLook }
+  /** From the plaza rail: (re)run the interview for someone who already exists. */
+  | { type: "interviewPerson"; id: string; name: string; circle: Circle; relationship: string; look: CharacterLook; preferences: PersonPreferences }
+  /** The review step's Save: what the person kept. Replaces the roster's three lists. */
+  | { type: "interviewDone"; preferences: PersonPreferences }
+  | { type: "interviewSkip" }
   | { type: "pickCircle"; circle: Circle }
   | { type: "pickSize"; size: BodySize }
   | { type: "startScratch" }
@@ -204,6 +221,10 @@ function cloneLook(look: CharacterLook): CharacterLook {
   };
 }
 
+function clonePreferences(preferences: PersonPreferences): PersonPreferences {
+  return { loves: [...preferences.loves], avoids: [...preferences.avoids], personality: [...preferences.personality] };
+}
+
 function withLook(state: MakerState, mutate: (look: CharacterLook) => CharacterLook): MakerState {
   if (!state.draft) return state;
   return { ...state, draft: { ...state.draft, look: mutate(cloneLook(state.draft.look)) } };
@@ -228,6 +249,7 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
         tab: "body",
         nameError: false,
         plazaConfirmRemoveId: null,
+        interview: null,
         draft: {
           name: "",
           circle: "family",
@@ -246,6 +268,7 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
         tab: "body",
         nameError: false,
         plazaConfirmRemoveId: null,
+        interview: null,
         draft: {
           name: action.name,
           circle: action.circle,
@@ -255,6 +278,36 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
           editingId: action.id,
         },
       };
+    }
+
+    case "interviewPerson": {
+      if (state.step !== "plaza") return state;
+      return {
+        step: "interview",
+        tab: "body",
+        nameError: false,
+        plazaConfirmRemoveId: null,
+        interview: { personId: action.id, existing: clonePreferences(action.preferences) },
+        draft: {
+          name: action.name,
+          circle: action.circle,
+          size: "grownup",
+          relationship: action.relationship,
+          look: cloneLook(action.look),
+          editingId: action.id,
+        },
+      };
+    }
+
+    case "interviewDone": {
+      if (state.step !== "interview" || !state.interview) return state;
+      deps.updatePerson(state.interview.personId, clonePreferences(action.preferences));
+      return { ...initialMakerState };
+    }
+
+    case "interviewSkip": {
+      if (state.step !== "interview") return state;
+      return { ...initialMakerState };
     }
 
     case "pickCircle": {
@@ -400,9 +453,22 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
       const name = sanitizeName(state.draft.name).trim();
       if (!name) return { ...state, step: "editor", tab: "name", nameError: true };
       const person: NewPerson = { name, circle: state.draft.circle, relationship: state.draft.relationship, look: state.draft.look };
-      if (state.draft.editingId) deps.updatePerson(state.draft.editingId, person);
-      else deps.addPerson(person);
-      return { ...initialMakerState };
+      if (state.draft.editingId) {
+        deps.updatePerson(state.draft.editingId, person);
+        return { ...initialMakerState };
+      }
+      const id = deps.addPerson(person);
+      // A brand-new person goes straight into the interview (the draft stays so the canvas keeps
+      // showing them). A full roster saved nobody, so there is nobody to interview.
+      if (id === null) return { ...initialMakerState };
+      return {
+        step: "interview",
+        tab: "body",
+        nameError: false,
+        plazaConfirmRemoveId: null,
+        interview: { personId: id, existing: clonePreferences(EMPTY_PERSON_PREFERENCES) },
+        draft: { ...state.draft, name, editingId: id },
+      };
     }
 
     case "quit": {
@@ -432,6 +498,9 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
           return { ...state, step: "quit-dialog" };
         case "quit-dialog":
           return { ...state, step: "editor" };
+        case "interview":
+          // Leaving the interview keeps the saved person and skips their preferences for now.
+          return { ...initialMakerState };
         default:
           return state;
       }

@@ -96,3 +96,25 @@ describe("resolveDinnerPlanAction", () => {
     expect(resolveDinnerPlanAction(false, [], [])).toEqual({ kind: "emptyRoster" });
   });
 });
+
+describe("resolvePlazaDrop: interview", () => {
+  it("carries the person's current preferences into the interview", () => {
+    const lookup = lookupFor("wife", { name: "Maya" });
+    const withPrefs: PersonLookup = {
+      ...lookup,
+      getPerson: (id) => (id === "wife" ? { name: "Maya", relationship: "grown-up", loves: ["gym"], avoids: ["clutter"], personality: ["practical"] } : undefined),
+    };
+    expect(resolvePlazaDrop("interview", "wife", withPrefs)).toMatchObject({
+      kind: "interviewPerson",
+      id: "wife",
+      name: "Maya",
+      preferences: { loves: ["gym"], avoids: ["clutter"], personality: ["practical"] },
+    });
+  });
+
+  it("defaults missing preference lists to empty and needs a known look", () => {
+    const lookup = lookupFor("wife");
+    expect(resolvePlazaDrop("interview", "wife", lookup)).toMatchObject({ preferences: { loves: [], avoids: [], personality: [] } });
+    expect(resolvePlazaDrop("interview", "ghost", lookup)).toBeNull();
+  });
+});

@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import unicodedata
 from functools import lru_cache
 
 from pydantic import BaseModel, Field
@@ -69,6 +70,65 @@ class SearchPlanOutput(BaseModel):
     slots: list[SearchSlotOutput]
 
 
+class PreferencesOutput(BaseModel):
+    """Structured output for the spoken onboarding interview."""
+
+    loves: list[str] = Field(default_factory=list, max_length=8)
+    avoids: list[str] = Field(default_factory=list, max_length=5)
+    personality: list[str] = Field(default_factory=list, max_length=4)
+    summary: str = ""
+
+
+class ExtractionUnavailable(RuntimeError):
+    """Raised in demo mode: the frontend has its own deterministic extractor."""
+
+
+FALLBACK_WISH = "something we would all enjoy"
+
+
+def _featured_wish(profile: FamilyProfile) -> str:
+    """The first love, or a neutral wish for a person who has not been interviewed yet.
+
+    New People Maker characters start with empty preferences; indexing ``loves[0]``
+    directly raised ``IndexError`` throughout the demo branches.
+    """
+    loves = profile.get("loves") or []
+    return loves[0] if loves else FALLBACK_WISH
+
+
+def _first_wish(opinion: SpriteOpinion) -> str:
+    """The first public wish of another sprite, or the neutral fallback."""
+    wishes = opinion.get("wishes") or []
+    return wishes[0] if wishes else FALLBACK_WISH
+
+
+_EMOJI_RANGES = re.compile(
+    "[\U0001F300-\U0001FAFF\u2600-\u27BF\U0001F000-\U0001F2FF\uFE0F\u200D]"
+)
+
+
+def _strip_emoji(value: str) -> str:
+    """Remove pictographs and symbol modifiers; the UI never shows emoji."""
+    cleaned = _EMOJI_RANGES.sub("", value)
+    return "".join(ch for ch in cleaned if unicodedata.category(ch) not in {"So", "Sk"})
+
+
+def _normalize_phrases(items: list[str], cap: int, max_words: int = 3) -> list[str]:
+    """Lower-case, trim, de-emoji, dedupe, and cap short noun phrases."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for raw in items:
+        phrase = _strip_emoji(str(raw)).strip().strip("\"'`").rstrip(".!,;:").strip().casefold()
+        phrase = re.sub(r"\s+", " ", phrase)
+        if not phrase or len(phrase.split()) > max_words or phrase in seen:
+            continue
+        seen.add(phrase)
+        out.append(phrase)
+        if len(out) >= cap:
+            break
+    return out
+
+
 def _demo_mode() -> bool:
     """Use local fallbacks when explicitly configured or no key is present."""
     configured = os.getenv("DEMO_MODE", "true").casefold() in {"1", "true", "yes"}
@@ -95,7 +155,7 @@ async def create_sprite_opinion(profile: FamilyProfile, mission: Mission) -> Spr
     impersonating another family member's private context.
     """
     if _demo_mode():
-        featured_wish = profile["loves"][0]
+        featured_wish = _featured_wish(profile)
         return {
             "spriteId": profile["id"],
             "say": f"I would love {featured_wish}, and I want our house rules respected.",
@@ -146,12 +206,12 @@ async def create_sprite_deliberation(
             say = f"I hear the concern. {compromise}"
             compromise_wishes = [compromise]
         elif other_opinions:
-            shared_wish = other_opinions[0]["wishes"][0]
-            say = f"I can support {shared_wish} if we also include {profile['loves'][0]}."
-            compromise_wishes = [shared_wish, profile["loves"][0]]
+            shared_wish = _first_wish(other_opinions[0])
+            say = f"I can support {shared_wish} if we also include {_featured_wish(profile)}."
+            compromise_wishes = list(dict.fromkeys([shared_wish, _featured_wish(profile)]))
         else:
-            say = f"My priority is still {profile['loves'][0]}."
-            compromise_wishes = [profile["loves"][0]]
+            say = f"My priority is still {_featured_wish(profile)}."
+            compromise_wishes = [_featured_wish(profile)]
         return {
             "spriteId": profile["id"],
             "say": say,
@@ -284,7 +344,7 @@ async def score_bundle(
         catalog_tokens = _tokens(item_text)
         matched = [wish for wish in profile["loves"] if _tokens(wish) & catalog_tokens]
         score = min(10.0, 4.0 + 2.0 * len(matched))
-        complaint = None if score >= 6 else f"Please include something related to {profile['loves'][0]}."
+        complaint = None if score >= 6 else f"Please include something related to {_featured_wish(profile)}."
         return {
             "spriteId": profile["id"],
             "score": score,
@@ -313,4 +373,44 @@ async def score_bundle(
         "score": result.score,
         "say": result.say,
         **({"complaint": result.complaint} if result.complaint else {}),
+    }
+
+
+async def extract_preferences(name: str, answers: list[dict]) -> dict:
+    """Turn a short spoken interview into loves, avoids, personality, and a summary.
+
+    Demo mode raises ``ExtractionUnavailable``: the People Maker has its own
+    deterministic extractor, so a second lexicon here would only drift from it.
+    """
+    if _demo_mode():
+        raise ExtractionUnavailable("Live extraction is off")
+
+    prompt = {
+        "instruction": (
+            "You are turning a short spoken interview into a profile for a family "
+            "planning app. Infer preferences from what the person DID and WHERE they "
+            "go, not from what they say they want. Return loves: 3 to 6 short "
+            "lower-case noun phrases of 1 to 3 words naming hobbies, activities, places "
+            "or topics they enjoy (like 'hiking', 'video games', 'asian food'); avoids: "
+            "0 to 3 short noun phrases they dislike or would not pay for (like "
+            "'overpriced coffee'); personality: 2 to 3 single-word or hyphenated "
+            "adjectives (like 'outdoorsy', 'thrifty', 'curious'); summary: one plain "
+            "third-person sentence under 120 characters starting with the name. Never "
+            "invent items with no support in the answers. No emoji, no quotes, no "
+            "trailing periods in list items. Ignore empty or off-topic answers."
+        ),
+        "name": name,
+        "answers": answers,
+    }
+    structured = _model(os.getenv("OPENAI_SPRITE_MODEL", "gpt-4.1-mini")).with_structured_output(
+        PreferencesOutput, method="function_calling"
+    )
+    result = await structured.ainvoke(json.dumps(prompt))
+    summary = re.sub(r"\s+", " ", _strip_emoji(result.summary)).strip()[:160]
+    return {
+        "loves": _normalize_phrases(result.loves, 6),
+        "avoids": _normalize_phrases(result.avoids, 3),
+        "personality": _normalize_phrases(result.personality, 3, max_words=1),
+        "summary": summary,
+        "source": "llm",
     }

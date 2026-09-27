@@ -136,7 +136,16 @@ function EditorScene({ draft }: { draft: DraftPerson }) {
       motion.current.jumpAt = t;
       celebrateUntil.current = t + 1.4;
     }
-    mood.current = t < celebrateUntil.current ? "celebrating" : t < hopUntil.current ? "happy" : "hovered";
+    mood.current =
+      t < celebrateUntil.current
+        ? "celebrating"
+        : reactions.voice === "answering"
+          ? "speaking"
+          : reactions.voice === "hearingQuestion"
+            ? "listening"
+            : t < hopUntil.current
+              ? "happy"
+              : "hovered";
 
     turntable.idleFor += delta;
     if (turntable.idleFor > 1.5) turntable.yaw = MathUtils.damp(turntable.yaw, 0, 0.6, delta);
@@ -173,7 +182,7 @@ export interface MakerCanvasProps {
 }
 
 export default function MakerCanvas({ step, draft }: MakerCanvasProps) {
-  const editing = (step === "editor" || step === "quit-dialog") && draft !== null;
+  const editing = (step === "editor" || step === "quit-dialog" || step === "interview") && draft !== null;
   // In the plaza the canvas inherits PeopleMaker's pointing-hand / grabbing-fist cursor.
   const cursor = editing ? "auto" : "inherit";
 

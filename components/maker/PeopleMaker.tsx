@@ -17,6 +17,8 @@ import { EmbeddedCouncil, type MissionMode } from "@/components/stage/EmbeddedCo
 import { WhoCirclePanel, WhoSizePanel } from "./WhoPanel";
 import { StartPanel } from "./StartPanel";
 import { EditorPanel } from "./EditorPanel";
+import { InterviewPanel } from "./interview/InterviewPanel";
+import { unlockVoice } from "./interview/voiceUnlock";
 import { QuitDialog } from "./QuitDialog";
 import styles from "./PeopleMaker.module.css";
 
@@ -66,9 +68,11 @@ export function PeopleMaker() {
     (action: MakerAction) => {
       if (PICK_ACTIONS.has(action.type)) reactPick();
       if (action.type === "save") reactCelebrate();
+      // The interview speaks: prime audio playback inside this click so the first question can play.
+      if (action.type === "save" || action.type === "interviewPerson") unlockVoice();
       // Selection lives in the plaza seam (usePlaza), shared with the 3D scene track; clear it
       // whenever we leave the plaza so a stale selection doesn't linger under the editor.
-      if (action.type === "newPerson" || action.type === "editPerson") {
+      if (action.type === "newPerson" || action.type === "editPerson" || action.type === "interviewPerson") {
         usePlaza.getState().select(null);
         usePlaza.getState().setMissionMode(null);
       }
@@ -124,6 +128,19 @@ export function PeopleMaker() {
       {(state.step === "editor" || state.step === "quit-dialog") && state.draft && (
         <div className={styles.editorShell}>
           <EditorPanel draft={state.draft} tab={state.tab} nameError={state.nameError} dispatch={wrappedDispatch} />
+        </div>
+      )}
+
+      {state.step === "interview" && state.draft && state.interview && (
+        <div className={styles.editorShell}>
+          <InterviewPanel
+            key={state.interview.personId}
+            name={state.draft.name}
+            existing={state.interview.existing}
+            onFinish={(preferences) =>
+              wrappedDispatch(preferences ? { type: "interviewDone", preferences } : { type: "interviewSkip" })
+            }
+          />
         </div>
       )}
 

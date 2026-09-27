@@ -71,6 +71,23 @@ export function EditIcon({ size }: IconProps) {
 }
 
 /** New person: a face with a plus in its speech bubble. */
+/** Interview: a face with sound waves in its speech bubble. */
+export function InterviewIcon({ size }: IconProps) {
+  return (
+    <Glyph size={size}>
+      <FaceWithBubble
+        bubble={
+          <>
+            <path d="M32.5 11.5v3.5" />
+            <path d="M36.5 9.5v7.5" />
+            <path d="M40.5 11v4.5" />
+          </>
+        }
+      />
+    </Glyph>
+  );
+}
+
 export function NewIcon({ size }: IconProps) {
   return (
     <Glyph size={size}>

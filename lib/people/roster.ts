@@ -28,6 +28,10 @@ export interface PersonPatch {
   name?: string;
   relationship?: string;
   look?: CharacterLook;
+  /** Learned from the onboarding interview (or edited in review); replace, never merge. */
+  loves?: string[];
+  avoids?: string[];
+  personality?: string[];
 }
 
 export interface RosterState {
@@ -134,7 +138,7 @@ export const useRoster = create<RosterState>()(
         }));
         return id;
       },
-      updatePerson: (id, { name, relationship, look }) =>
+      updatePerson: (id, { name, relationship, look, loves, avoids, personality }) =>
         set((state) => ({
           people: state.people.map((profile) =>
             profile.id !== id
@@ -144,6 +148,9 @@ export const useRoster = create<RosterState>()(
                   ...(name !== undefined && { name }),
                   ...(relationship !== undefined && { relationship }),
                   ...(look && { colors: [look.bodyColor, look.accent] }),
+                  ...(loves !== undefined && { loves: [...loves] }),
+                  ...(avoids !== undefined && { avoids: [...avoids] }),
+                  ...(personality !== undefined && { personality: [...personality] }),
                 },
           ),
           looks: look ? { ...state.looks, [id]: look } : state.looks,

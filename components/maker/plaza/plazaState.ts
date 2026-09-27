@@ -8,7 +8,7 @@ import type { GiftPickState } from "./giftPick";
 export type WhistleSort = "name" | "circle";
 
 /** Icons a person can be dropped on (or that act on the selected person). */
-export type PlazaDrop = "edit" | "remove" | "move";
+export type PlazaDrop = "edit" | "remove" | "move" | "interview";
 
 /** The dinner-planning group target drawn in the middle of the world while that mode is open. */
 export const MISSION_CIRCLE = { x: 0, z: 0, radius: 3.15 } as const;

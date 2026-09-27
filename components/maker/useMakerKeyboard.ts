@@ -15,8 +15,13 @@ import type { MakerAction, MakerState } from "./flow";
 export function useMakerKeyboard(state: MakerState, dispatch: (action: MakerAction) => void): void {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      const typing = document.activeElement instanceof HTMLInputElement;
+      const typing = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement;
       if (event.key === "Escape") {
+        // While answering an interview question in the text box, Escape just blurs it.
+        if (state.step === "interview" && typing) {
+          (document.activeElement as HTMLElement).blur();
+          return;
+        }
         event.preventDefault();
         if (state.step === "plaza" && usePlaza.getState().missionMode === "plan") {
           usePlaza.getState().setMissionMode(null);

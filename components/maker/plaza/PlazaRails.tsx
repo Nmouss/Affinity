@@ -4,10 +4,10 @@
 import React, { useEffect, useRef, useState, type ReactNode } from "react";
 import { getCircle, getLook, getPerson, MAX_PEOPLE, useRoster } from "@/lib/people/roster";
 import { playBlip } from "@/components/maker/sound";
-import type { MakerAction } from "@/components/maker/flow";
+import type { MakerAction, PersonPreferences } from "@/components/maker/flow";
 import type { CharacterLook, Circle } from "@/types/character";
 import { PLAZA_DROP_ATTR, usePlaza, type PlazaDrop } from "./plazaState";
-import { DinnerPlanIcon, HelpIcon, MoveIcon, NewIcon, ShopTogetherIcon } from "./plazaIcons";
+import { DinnerPlanIcon, HelpIcon, InterviewIcon, MoveIcon, NewIcon, ShopTogetherIcon } from "./plazaIcons";
 import { HelpOverlay } from "./HelpOverlay";
 import { GiftPickBar } from "./GiftPickBar";
 import { giftPickBack, giftPickNext, invitedForPicks, personForKey, pickGiftPerson, startGiftPick } from "./giftPick";
@@ -23,13 +23,14 @@ import styles from "./PlazaRails.module.css";
 /** Looks a person up by id; production passes the roster's getPerson/getLook/getCircle, tests pass
  * plain fakes — see resolvePlazaDrop below and tests/unit/maker/plazaRails.test.ts. */
 export interface PersonLookup {
-  getPerson: (id: string) => { name: string; relationship: string } | undefined;
+  getPerson: (id: string) => { name: string; relationship: string; loves?: string[]; avoids?: string[]; personality?: string[] } | undefined;
   getLook: (id: string) => CharacterLook | undefined;
   getCircle: (id: string) => Circle | undefined;
 }
 
 export type PlazaDropResult =
   | { kind: "editPerson"; id: string; name: string; circle: Circle; relationship: string; look: CharacterLook }
+  | { kind: "interviewPerson"; id: string; name: string; circle: Circle; relationship: string; look: CharacterLook; preferences: PersonPreferences }
   | { kind: "requestRemove"; id: string }
   | { kind: "move"; id: string; from: Circle; to: Circle }
   | null;
@@ -66,6 +67,21 @@ export function resolvePlazaDrop(action: PlazaDrop, personId: string, lookup: Pe
     if (!person || !look || !circle) return null;
     return { kind: "editPerson", id: personId, name: person.name, circle, relationship: person.relationship, look };
   }
+  if (action === "interview") {
+    const person = lookup.getPerson(personId);
+    const look = lookup.getLook(personId);
+    const circle = lookup.getCircle(personId);
+    if (!person || !look || !circle) return null;
+    return {
+      kind: "interviewPerson",
+      id: personId,
+      name: person.name,
+      circle,
+      relationship: person.relationship,
+      look,
+      preferences: { loves: [...(person.loves ?? [])], avoids: [...(person.avoids ?? [])], personality: [...(person.personality ?? [])] },
+    };
+  }
   if (action === "remove") {
     return { kind: "requestRemove", id: personId };
   }
@@ -94,7 +110,7 @@ function RailButton({
   children,
 }: {
   targetId: string;
-  dropAction?: "edit" | "remove" | "move";
+  dropAction?: PlazaDrop;
   label: string;
   /** Visually muted (no selection to act on) but still clickable, so a hand pinch-tap can surface the hint. */
   dim?: boolean;
@@ -165,6 +181,9 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
     if (result?.kind === "editPerson") {
       playBlip("select");
       dispatch({ type: "editPerson", id: result.id, name: result.name, circle: result.circle, relationship: result.relationship, look: result.look });
+    } else if (result?.kind === "interviewPerson") {
+      playBlip("select");
+      dispatch({ type: "interviewPerson", id: result.id, name: result.name, circle: result.circle, relationship: result.relationship, look: result.look, preferences: result.preferences });
     } else if (result?.kind === "requestRemove") {
       dispatch({ type: "requestRemove", id: result.id });
     } else if (result?.kind === "move") {
@@ -284,6 +303,18 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
     dispatch({ type: "newPerson" });
   }
 
+  /** (Re)run the getting-to-know-you interview for the selected person. */
+  function handleInterview() {
+    if (!selectedId) {
+      showHint("Pick someone first");
+      return;
+    }
+    const result = resolvePlazaDrop("interview", selectedId, { getPerson, getLook, getCircle });
+    if (result?.kind !== "interviewPerson") return;
+    playBlip("select");
+    dispatch({ type: "interviewPerson", id: result.id, name: result.name, circle: result.circle, relationship: result.relationship, look: result.look, preferences: result.preferences });
+  }
+
   function handleMove() {
     if (!selectedId) {
       showHint("Pick someone first");
@@ -342,6 +373,9 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
       )}
 
       <div className={styles.railRight}>
+        <RailButton targetId="plaza-interview" dropAction="interview" label="Interview" dim={!selectedId} onClick={handleInterview}>
+          <InterviewIcon />
+        </RailButton>
         <RailButton
           targetId="plaza-move"
           dropAction="move"

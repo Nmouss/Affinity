@@ -538,6 +538,41 @@ The frontend should preserve the `threadId`, stop its loading animation, and
 offer retry or mission editing. It must not automatically interpret provider
 failure as approval or completion.
 
+## Interview extraction
+
+The People Maker's spoken interview posts its transcript here to turn it into
+profile preferences. Demo mode (`DEMO_MODE=true` or no `OPENAI_API_KEY`) answers
+`503 Live extraction is off`; the frontend then uses its own deterministic
+extractor, so there is one fallback lexicon, not two.
+
+```http
+POST /interview/extract
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Ava",
+  "answers": [
+    {"questionId": "weekend", "question": "What did you get up to last weekend?", "answer": "Went hiking, then cooked with friends."},
+    {"questionId": "never", "question": "What's one thing you'd never spend money on?", "answer": "Designer handbags."}
+  ]
+}
+```
+
+```json
+{
+  "loves": ["hiking", "cooking"],
+  "avoids": ["luxury brands"],
+  "personality": ["outdoorsy", "social"],
+  "summary": "Ava is into hiking and cooking, and steers clear of luxury brands.",
+  "source": "llm"
+}
+```
+
+Lists are lower-case, deduplicated, emoji-free, and capped at 6 loves, 3 avoids,
+3 single-word personality traits. Provider failures return `502 Extraction failed`.
+
 ## Privacy boundary
 
 - Opinion workers receive only their own private profile.

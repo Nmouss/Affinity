@@ -36,6 +36,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from .agent import graph
+from .llm import ExtractionUnavailable, extract_preferences
 from .models import FamilyProfile, Mission
 
 app = FastAPI(title="Affinity Agent API", version="0.1.0")
@@ -161,6 +162,38 @@ async def place_photo(name: str, max_width: int = 640) -> Response:
         media_type=upstream.headers.get("content-type", "image/jpeg"),
         headers={"Cache-Control": "private, no-store"},
     )
+
+
+class InterviewAnswer(BaseModel):
+    """One question and the spoken (or typed) answer from the People Maker interview."""
+
+    questionId: str = Field(max_length=40)
+    question: str = Field(max_length=300)
+    answer: str = Field(max_length=1000)
+
+
+class ExtractPreferencesRequest(BaseModel):
+    """Request body for turning an interview into profile preferences."""
+
+    name: str = Field(min_length=1, max_length=40)
+    answers: list[InterviewAnswer] = Field(max_length=6)
+
+
+@app.post("/interview/extract")
+async def extract_interview(request: ExtractPreferencesRequest) -> dict[str, Any]:
+    """Distill interview answers into loves, avoids, personality, and a summary.
+
+    Demo mode answers 503 so the frontend falls back to its local extractor; any
+    provider failure is a plain 502 without upstream details.
+    """
+    try:
+        return await extract_preferences(
+            request.name, [answer.model_dump() for answer in request.answers]
+        )
+    except ExtractionUnavailable as error:
+        raise HTTPException(status_code=503, detail="Live extraction is off") from error
+    except Exception as error:  # noqa: BLE001 - provider errors must not leak keys or traces
+        raise HTTPException(status_code=502, detail="Extraction failed") from error
 
 
 @app.post("/runs")

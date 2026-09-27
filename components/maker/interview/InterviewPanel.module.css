@@ -1,0 +1,368 @@
+/* The getting-to-know-you interview, in the People Maker's editor shell beside the character.
+   Same cream card language as WhoPanel / EditorPanel: brown text, gray-green accents, big friendly
+   controls with hand-hover glow, nothing that depends on emoji or symbol fonts. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  min-height: 0;
+  color: #2c241c;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.progress {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7349;
+  white-space: nowrap;
+}
+
+.dots {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.dot,
+.dotDone,
+.dotNow {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  border: 1.5px solid rgba(44, 36, 28, 0.3);
+  background: transparent;
+}
+
+.dotDone {
+  background: #6b7349;
+  border-color: #6b7349;
+}
+
+.dotNow {
+  background: #ffb347;
+  border-color: #c98a2a;
+}
+
+.question {
+  margin: 0;
+  padding: 1.1rem 1.2rem;
+  border-radius: 0.9rem;
+  border: 1.5px solid rgba(44, 36, 28, 0.16);
+  background: #fffaf1;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #6b665c;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 2.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #5c574c;
+}
+
+.statusIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  background: #f7f1e8;
+  color: #2c241c;
+}
+
+.listening .statusIcon {
+  background: #ffe3bd;
+  border-color: #c98a2a;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.speaking .statusIcon {
+  background: #e4e8d4;
+  border-color: #6b7349;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 179, 71, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 179, 71, 0);
+  }
+}
+
+.caption {
+  margin: 0;
+  min-height: 3.2rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.7rem;
+  background: rgba(44, 36, 28, 0.05);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #4a3a2f;
+}
+
+.captionEmpty {
+  color: #8a8073;
+  font-style: italic;
+}
+
+.notice {
+  margin: 0;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  background: #ffe3bd;
+  border: 1.5px solid #f0dcc0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.typeRow {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.input {
+  flex: 1;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 0.7rem;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  background: #fffdf8;
+  color: #2c241c;
+  font: inherit;
+  font-size: 1rem;
+}
+
+.input:focus-visible {
+  outline: 2px solid #6b7349;
+  outline-offset: 2px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.button,
+.primary,
+.ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 1.1rem;
+  border: 1.5px solid rgba(44, 36, 28, 0.22);
+  border-radius: 999px;
+  background: #f7f1e8;
+  color: #2c241c;
+  font: 600 0.92rem/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(44, 36, 28, 0.08);
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.primary {
+  background: #dce4c8;
+  border-color: rgba(107, 115, 73, 0.55);
+}
+
+.ghost {
+  background: transparent;
+  box-shadow: none;
+}
+
+.button:hover:not(:disabled),
+.primary:hover:not(:disabled),
+.ghost:hover:not(:disabled),
+.button[data-hand-hover]:not(:disabled),
+.primary[data-hand-hover]:not(:disabled) {
+  background: #eef0e4;
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.28), 0 12px 28px rgba(44, 36, 28, 0.12);
+}
+
+.button:active:not(:disabled),
+.primary:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.button:disabled,
+.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.button:focus-visible,
+.primary:focus-visible,
+.ghost:focus-visible {
+  outline: 2px solid #6b7349;
+  outline-offset: 3px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(44, 36, 28, 0.12);
+}
+
+/* Review */
+.summary {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.4;
+}
+
+.rows {
+  display: grid;
+  gap: 0.8rem;
+  overflow: auto;
+  min-height: 0;
+}
+
+.row {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.rowLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7349;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.5rem 0.3rem 0.75rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(44, 36, 28, 0.18);
+  background: #eef0e4;
+  color: #2c241c;
+  font: 600 0.85rem/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.chipAvoid {
+  background: #f3e6e2;
+}
+
+.chipTrait {
+  background: #ffe3bd;
+}
+
+.chip:hover,
+.chip[data-hand-hover] {
+  background: #e4e8d4;
+}
+
+.chip:focus-visible {
+  outline: 2px solid #6b7349;
+  outline-offset: 2px;
+}
+
+.chipIcon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: rgba(44, 36, 28, 0.12);
+}
+
+.addForm {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.addInput {
+  min-height: 2rem;
+  width: 9rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1.5px dashed rgba(44, 36, 28, 0.3);
+  background: #fffdf8;
+  color: #2c241c;
+  font: 600 0.85rem/1 Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.addInput:focus-visible {
+  outline: 2px solid #6b7349;
+  outline-offset: 2px;
+}
+
+.spinner {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  border: 3px solid rgba(107, 115, 73, 0.25);
+  border-top-color: #6b7349;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .listening .statusIcon,
+  .spinner {
+    animation: none;
+  }
+}

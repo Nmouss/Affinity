@@ -123,3 +123,30 @@ export function LinkIcon(props: IconProps) {
     </Glyph>
   );
 }
+
+export function MicIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <rect x="9" y="3.5" width="6" height="11" rx="3" />
+      <path d="M6 11.5a6 6 0 0 0 12 0M12 17.5v3M9 20.5h6" />
+    </Glyph>
+  );
+}
+
+export function SpeakerIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <path d="M4 9.5v5h3.5l4.5 3.5V6L7.5 9.5z" />
+      <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />
+    </Glyph>
+  );
+}
+
+export function KeyboardIcon(props: IconProps) {
+  return (
+    <Glyph {...props}>
+      <rect x="3" y="6" width="18" height="12" rx="2.5" />
+      <path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10" />
+    </Glyph>
+  );
+}

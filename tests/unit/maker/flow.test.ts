@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { BLANK_LOOK } from "@/lib/people/starters";
 import { BODY_PRESETS, EYE_COLORS, SKIN_TONES } from "@/types/character";
 import { STARTER_LOOKS } from "@/lib/people/starters";
 import type { NewPerson, PersonPatch } from "@/lib/people/roster";
@@ -68,8 +69,82 @@ describe("flowReducer", () => {
     });
     expect(saved.look.bodyColor).toBe("#8fd14f");
     expect(saved.look.eyes.type).toBe("sparkle");
+    // A new person goes straight into the getting-to-know-you interview, still on the canvas.
+    expect(h.state.step).toBe("interview");
+    expect(h.state.interview).toEqual({ personId: "new-id", existing: { loves: [], avoids: [], personality: [] } });
+    expect(h.state.draft?.editingId).toBe("new-id");
+    expect(h.state.draft?.name).toBe("Ava");
+  });
+
+  it("interview: Save writes the kept preferences and returns to the plaza", () => {
+    const h = harness();
+    h.dispatch({ type: "newPerson" });
+    h.dispatch({ type: "pickCircle", circle: "family" });
+    h.dispatch({ type: "startScratch" });
+    h.dispatch({ type: "setName", name: "Ava" });
+    h.dispatch({ type: "save" });
+    expect(h.state.step).toBe("interview");
+    const preferences = { loves: ["hiking", "cooking"], avoids: ["luxury brands"], personality: ["outdoorsy"] };
+    h.dispatch({ type: "interviewDone", preferences });
+    expect(h.updatePerson).toHaveBeenCalledWith("new-id", preferences);
     expect(h.state.step).toBe("plaza");
     expect(h.state.draft).toBeNull();
+    expect(h.state.interview).toBeNull();
+  });
+
+  it("interview: Skip (or Escape) keeps the saved person and writes nothing", () => {
+    const h = harness();
+    h.dispatch({ type: "newPerson" });
+    h.dispatch({ type: "pickCircle", circle: "friend" });
+    h.dispatch({ type: "startScratch" });
+    h.dispatch({ type: "setName", name: "Rui" });
+    h.dispatch({ type: "save" });
+    h.dispatch({ type: "interviewSkip" });
+    expect(h.updatePerson).not.toHaveBeenCalled();
+    expect(h.state.step).toBe("plaza");
+
+    h.dispatch({ type: "newPerson" });
+    h.dispatch({ type: "pickCircle", circle: "friend" });
+    h.dispatch({ type: "startScratch" });
+    h.dispatch({ type: "setName", name: "Rui" });
+    h.dispatch({ type: "save" });
+    h.dispatch({ type: "back" });
+    expect(h.state.step).toBe("plaza");
+    expect(h.updatePerson).not.toHaveBeenCalled();
+  });
+
+  it("interview: a full roster saves nobody, so there is nobody to interview", () => {
+    const h = harness();
+    h.addPerson.mockReturnValueOnce(null);
+    h.dispatch({ type: "newPerson" });
+    h.dispatch({ type: "pickCircle", circle: "family" });
+    h.dispatch({ type: "startScratch" });
+    h.dispatch({ type: "setName", name: "Ava" });
+    h.dispatch({ type: "save" });
+    expect(h.state.step).toBe("plaza");
+    expect(h.state.interview).toBeNull();
+  });
+
+  it("interview: editing an existing look saves back to the plaza without an interview", () => {
+    const h = harness();
+    h.dispatch({ type: "editPerson", id: "wife", name: "Maya", circle: "family", relationship: "grown-up", look: BLANK_LOOK });
+    h.dispatch({ type: "save" });
+    expect(h.updatePerson).toHaveBeenCalledTimes(1);
+    expect(h.state.step).toBe("plaza");
+  });
+
+  it("interview: the plaza rail can (re)run it for an existing person with their current preferences", () => {
+    const h = harness();
+    const preferences = { loves: ["gym"], avoids: ["clutter"], personality: ["practical"] };
+    h.dispatch({ type: "interviewPerson", id: "wife", name: "Maya", circle: "family", relationship: "grown-up", look: BLANK_LOOK, preferences });
+    expect(h.state.step).toBe("interview");
+    expect(h.state.interview).toEqual({ personId: "wife", existing: preferences });
+    expect(h.state.draft?.editingId).toBe("wife");
+    // Done and Skip outside the interview are ignored.
+    h.dispatch({ type: "interviewSkip" });
+    expect(h.state.step).toBe("plaza");
+    h.dispatch({ type: "interviewDone", preferences });
+    expect(h.updatePerson).not.toHaveBeenCalled();
   });
 
   it("relationship is 'friend' regardless of the size pick", () => {

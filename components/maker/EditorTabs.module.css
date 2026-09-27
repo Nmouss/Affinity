@@ -118,3 +118,41 @@
 .keyWide {
   min-width: 5rem;
 }
+
+/* The keyboard fits the panel: keys share each row's width instead of pushing past its edge, and the
+   name field never runs wider than the panel either. */
+.nameField {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.keyboard {
+  width: 100%;
+  min-width: 0;
+}
+
+.keyboardRow {
+  width: 100%;
+  min-width: 0;
+  flex-wrap: nowrap;
+  justify-content: center;
+}
+
+.key {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 3rem;
+  padding: 0 0.2rem;
+  font-size: clamp(0.8rem, 1.1vw, 1rem);
+}
+
+.keySpace {
+  flex: 4 1 0;
+  max-width: none;
+}
+
+.keyWide {
+  flex: 2 1 0;
+  max-width: none;
+}

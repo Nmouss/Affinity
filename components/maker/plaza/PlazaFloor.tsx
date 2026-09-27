@@ -11,9 +11,11 @@ import { PLAZA } from "./formation";
 const FLOOR_MARGIN = 6;
 const TEXTURE_SIZE = 2048;
 
-const GAP_OUTER = new THREE.Color("#d9cfbd");
-const GAP_INNER = new THREE.Color("#f0e9db");
-const TILE_OUTER = new THREE.Color("#f2ede1");
+// Cool, clean tiles that brighten toward the center: white on a pale mint-gray grout, like the
+// Mii Plaza's floor, so the warm characters pop against it.
+const GAP_OUTER = new THREE.Color("#c6cfc8");
+const GAP_INNER = new THREE.Color("#eef1ec");
+const TILE_OUTER = new THREE.Color("#f7f9f6");
 const TILE_INNER = new THREE.Color("#ffffff");
 const scratchColor = new THREE.Color();
 
@@ -96,13 +98,20 @@ export function PlazaFloor() {
 
   return (
     <group>
-      <color attach="background" args={["#efe7d8"]} />
-      <hemisphereLight args={["#fff7e8", "#ded1ba", 0.95]} />
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[6, 11, 5]} intensity={0.5} />
+      {/* The plaza floats against the sky, as the Mii Plaza does; a thin lip below the rim gives the
+          disc a little thickness where it meets the horizon. */}
+      <mesh position={[0, -0.32, 0]}>
+        <cylinderGeometry args={[discRadius + 0.9, discRadius + 0.6, 0.6, 96, 1, true]} />
+        <meshStandardMaterial color="#c8cfc9" roughness={1} metalness={0} side={THREE.DoubleSide} />
+      </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
         <circleGeometry args={[discRadius, 96]} />
-        <meshStandardMaterial map={texture} roughness={0.92} metalness={0} />
+        <meshStandardMaterial map={texture} roughness={0.7} metalness={0} />
+      </mesh>
+      {/* A soft rim so the disc reads as a raised plaza rather than a sticker on the ground. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]}>
+        <ringGeometry args={[discRadius - 0.35, discRadius + 0.9, 96]} />
+        <meshStandardMaterial color="#d9dfd9" roughness={1} metalness={0} />
       </mesh>
     </group>
   );

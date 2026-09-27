@@ -11,6 +11,7 @@ import type { SpriteMood } from "@/types/stage";
 import type { DraftPerson, MakerStep } from "./flow";
 import { PlazaCrowd } from "./plaza/PlazaCrowd";
 import { PlazaFloor } from "./plaza/PlazaFloor";
+import { PlazaSky } from "./plaza/PlazaSky";
 import { MissionCircle } from "./plaza/MissionCircle";
 import { PlazaPointer } from "./plaza/PlazaPointer";
 import { usePlaza } from "./plaza/plazaState";
@@ -30,7 +31,8 @@ interface CameraFrame {
   target: [number, number, number];
   fov: number;
 }
-const PLAZA_CAMERA: CameraFrame = { position: [0, 12, 10], target: [0, 0, 0], fov: 40 };
+// Lower and further back than a top-down view, so the horizon and sky show above the plaza.
+const PLAZA_CAMERA: CameraFrame = { position: [0, 9.5, 13.5], target: [0, 0.4, -2.2], fov: 42 };
 /** Close and low: every eye, brow, and mouth change is visible and the feet meet the disc. */
 // Offset in +x so the ~2 ft character stands in the clear left of the editor panel, framed head to toe.
 const EDITOR_CAMERA: CameraFrame = { position: [0.75, 1.15, 4.6], target: [0.75, 0.95, 0], fov: 32 };
@@ -52,6 +54,7 @@ function PlazaScene() {
   return (
     <group>
       <CameraFraming frame={PLAZA_CAMERA} />
+      <PlazaSky />
       <PlazaFloor />
       <MissionCircle />
       <PlazaCrowd />

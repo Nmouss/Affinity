@@ -31,6 +31,11 @@ export async function POST(request: Request) {
       body: JSON.stringify({ ttl_seconds: ttlSeconds() }),
       cache: "no-store",
     });
+    // A key without the Member role can't mint browser tokens (401/403). That's a supported setup,
+    // not a failure: the interview records whole answers and transcribes them server-side instead.
+    if (upstream.status === 401 || upstream.status === 403) {
+      return Response.json({ configured: true, streaming: false }, { headers: { "Cache-Control": "no-store" } });
+    }
     if (!upstream.ok) return Response.json({ detail: "Voice token unavailable" }, { status: 502, headers: { "Cache-Control": "no-store" } });
     const grant = (await upstream.json()) as { access_token?: string; expires_in?: number };
     if (!grant.access_token) return Response.json({ detail: "Voice token unavailable" }, { status: 502, headers: { "Cache-Control": "no-store" } });

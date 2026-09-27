@@ -85,15 +85,19 @@ export function useInterview({ name, existing, onFinish, engines: injected, fetc
 
   /** 503 means no Deepgram key at all; anything else means the key exists (prerecorded still works). */
   const configuredRef = useRef<boolean | null>(null);
+  const streamingRef = useRef<boolean | null>(null);
 
   const getToken = useCallback(async (): Promise<string | null> => {
     const cached = tokenRef.current;
     if (cached && cached.expiresAt - Date.now() > 10_000) return cached.token;
+    // Once we know this key can't stream, don't keep asking (each ask is a round trip to Deepgram).
+    if (streamingRef.current === false) return null;
     try {
       const response = await doFetch("/api/voice/token", { method: "POST" });
       configuredRef.current = response.status !== 503;
       if (!response.ok) return null;
-      const body = (await response.json()) as { token?: string; expiresIn?: number };
+      const body = (await response.json()) as { token?: string; expiresIn?: number; streaming?: boolean };
+      if (body.streaming === false) streamingRef.current = false;
       if (!body.token) return null;
       tokenRef.current = { token: body.token, expiresAt: Date.now() + (body.expiresIn ?? 300) * 1000 };
       return body.token;

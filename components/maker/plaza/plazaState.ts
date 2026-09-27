@@ -15,6 +15,18 @@ export function isInsideMissionCircle(x: number, z: number): boolean {
   return Math.hypot(x - MISSION_CIRCLE.x, z - MISSION_CIRCLE.z) <= MISSION_CIRCLE.radius;
 }
 
+/** Push a roaming person's center to the nearest legal point outside the mission circle. */
+export function constrainOutsideMissionCircle(x: number, z: number, clearance = 0): [number, number] {
+  const dx = x - MISSION_CIRCLE.x;
+  const dz = z - MISSION_CIRCLE.z;
+  const distance = Math.hypot(dx, dz);
+  const minimum = MISSION_CIRCLE.radius + Math.max(0, clearance);
+  if (distance >= minimum) return [x, z];
+  if (distance < 1e-6) return [MISSION_CIRCLE.x + minimum, MISSION_CIRCLE.z];
+  const scale = minimum / distance;
+  return [MISSION_CIRCLE.x + dx * scale, MISSION_CIRCLE.z + dz * scale];
+}
+
 /** Attribute on the rail buttons that accept a dragged person, e.g. data-plaza-drop="remove". */
 export const PLAZA_DROP_ATTR = "data-plaza-drop";
 

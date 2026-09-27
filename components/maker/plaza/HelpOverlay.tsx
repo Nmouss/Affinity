@@ -2,7 +2,7 @@
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- classic JSX runtime needs React in scope
 import React, { type ReactNode } from "react";
-import { BackIcon, EditIcon, MoveIcon, NewIcon, RemoveIcon, WhistleIcon } from "./plazaIcons";
+import { MoveIcon, NewIcon } from "./plazaIcons";
 import styles from "./HelpOverlay.module.css";
 
 // A small "what does each icon do" card for the plaza, opened from the Help rail button. Purely
@@ -10,12 +10,8 @@ import styles from "./HelpOverlay.module.css";
 
 const ENTRIES: Array<{ icon: ReactNode; title: string; body: string }> = [
   { icon: <span aria-hidden="true">◎</span>, title: "Mission circle", body: "Drag people into the center circle to include their personalities. Drag them back out to remove them." },
-  { icon: <BackIcon size={32} />, title: "Saved", body: "Confirms that your profiles are saved on this device." },
-  { icon: <EditIcon size={32} />, title: "View/Edit", body: "Pick a Mii, then tap here to change their look." },
   { icon: <NewIcon size={32} />, title: "New person", body: "Make a new family member or friend." },
-  { icon: <RemoveIcon size={32} />, title: "Remove", body: "Pick a Mii, then tap here twice to remove them." },
   { icon: <MoveIcon size={32} />, title: "Move", body: "Pick a Mii, then tap here to move them between Family and Friends." },
-  { icon: <WhistleIcon size={32} />, title: "Whistle", body: "Pick a way to line everyone up; tap again to let them wander." },
 ];
 
 export function HelpOverlay({ onClose }: { onClose: () => void }) {

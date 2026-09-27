@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FORMATION, PLAZA, formationSlots, missionCircleSlots, sortForWhistle } from "@/components/maker/plaza/formation";
-import { MISSION_CIRCLE, isInsideMissionCircle } from "@/components/maker/plaza/plazaState";
+import { MISSION_CIRCLE, constrainOutsideMissionCircle, isInsideMissionCircle } from "@/components/maker/plaza/plazaState";
 import type { Circle } from "@/types/character";
 import type { FamilyProfile } from "@/types/domain";
 
@@ -154,5 +154,14 @@ describe("missionCircleSlots", () => {
     expect(isInsideMissionCircle(0, 0)).toBe(true);
     expect(isInsideMissionCircle(MISSION_CIRCLE.radius, 0)).toBe(true);
     expect(isInsideMissionCircle(MISSION_CIRCLE.radius + 0.01, 0)).toBe(false);
+  });
+
+  it("keeps roaming character bodies outside the mission circle", () => {
+    const clearance = 0.4;
+    const [centerX, centerZ] = constrainOutsideMissionCircle(0, 0, clearance);
+    expect(Math.hypot(centerX, centerZ)).toBeCloseTo(MISSION_CIRCLE.radius + clearance);
+
+    const alreadyOutside: [number, number] = [MISSION_CIRCLE.radius + clearance + 1, 0.5];
+    expect(constrainOutsideMissionCircle(...alreadyOutside, clearance)).toEqual(alreadyOutside);
   });
 });

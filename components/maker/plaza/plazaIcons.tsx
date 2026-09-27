@@ -120,6 +120,31 @@ export function MoveIcon({ size }: IconProps) {
   );
 }
 
+/** Mission action: a wrapped gift, matching the plaza's friendly outlined icon language. */
+export function ShopTogetherIcon({ size = 40 }: IconProps) {
+  return (
+    <Glyph size={size}>
+      <rect x={8} y={18} width={32} height={23} rx={3} />
+      <path d="M6 18 h36 v-7 H6 z" />
+      <path d="M24 11 v30" />
+      <path d="M24 11 C19 2 10 4 12 10 c1 3 6 3 12 1" />
+      <path d="M24 11 C29 2 38 4 36 10 c-1 3-6 3-12 1" />
+    </Glyph>
+  );
+}
+
+/** Mission action: a dinner plate with fork and knife. */
+export function DinnerPlanIcon({ size = 40 }: IconProps) {
+  return (
+    <Glyph size={size}>
+      <circle cx={24} cy={25} r={11} />
+      <circle cx={24} cy={25} r={6} />
+      <path d="M8 7 v12 M4.5 7 v7 c0 3 7 3 7 0 V7 M8 19 v22" />
+      <path d="M39 7 v34 M34 7 v11 c0 3 5 3 5 0" />
+    </Glyph>
+  );
+}
+
 export function WhistleIcon({ size }: IconProps) {
   return (
     <Glyph size={size}>

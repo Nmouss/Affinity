@@ -70,7 +70,6 @@ export function PeopleMaker() {
 
       {state.step === "plaza" && (
         <PlazaRails
-          state={state}
           dispatch={wrappedDispatch}
           onLaunch={(mode, invitedIds) => {
             if (!activeMission) setActiveMission({ mode, invitedIds });

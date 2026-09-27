@@ -3,21 +3,11 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- classic JSX runtime needs React in scope
 import React, { useEffect, useRef, useState, type ReactNode } from "react";
 import { getCircle, getLook, getPerson, MAX_PEOPLE, useRoster } from "@/lib/people/roster";
-import { playBlip, playWhistle } from "@/components/maker/sound";
-import type { MakerAction, MakerState } from "@/components/maker/flow";
+import { playBlip } from "@/components/maker/sound";
+import type { MakerAction } from "@/components/maker/flow";
 import type { CharacterLook, Circle } from "@/types/character";
-import { PLAZA_DROP_ATTR, usePlaza, type PlazaDrop, type WhistleSort } from "./plazaState";
-import {
-  BackIcon,
-  EditIcon,
-  HelpIcon,
-  MoveIcon,
-  NewIcon,
-  RemoveIcon,
-  SortCircleIcon,
-  SortNameIcon,
-  WhistleIcon,
-} from "./plazaIcons";
+import { PLAZA_DROP_ATTR, usePlaza, type PlazaDrop } from "./plazaState";
+import { DinnerPlanIcon, HelpIcon, MoveIcon, NewIcon, ShopTogetherIcon } from "./plazaIcons";
 import { HelpOverlay } from "./HelpOverlay";
 import styles from "./PlazaRails.module.css";
 
@@ -64,7 +54,6 @@ export function resolvePlazaDrop(action: PlazaDrop, personId: string, lookup: Pe
 }
 
 export interface PlazaRailsProps {
-  state: MakerState;
   dispatch: (action: MakerAction) => void;
   onLaunch: (mode: "shopping" | "plan", invitedIds: string[]) => void;
 }
@@ -112,26 +101,18 @@ function RailButton({
   );
 }
 
-export function PlazaRails({ state, dispatch, onLaunch }: PlazaRailsProps) {
+export function PlazaRails({ dispatch, onLaunch }: PlazaRailsProps) {
   const selectedId = usePlaza((s) => s.selectedId);
-  const select = usePlaza((s) => s.select);
   const dropAction = usePlaza((s) => s.dropAction);
   const clearDrop = usePlaza((s) => s.clearDrop);
-  const whistle = usePlaza((s) => s.whistle);
-  const setWhistle = usePlaza((s) => s.setWhistle);
   const missionMemberIds = usePlaza((s) => s.missionMemberIds);
 
   const total = useRoster((s) => s.people.length);
   const people = useRoster((s) => s.people);
   const setCircle = useRoster((s) => s.setCircle);
-  const selectedPerson = useRoster((s) => (selectedId ? s.people.find((p) => p.id === selectedId) ?? null : null));
   const selectedCircle = useRoster((s) => (selectedId ? s.circles[selectedId] : undefined));
-  const confirmPerson = useRoster((s) =>
-    state.plazaConfirmRemoveId ? s.people.find((p) => p.id === state.plazaConfirmRemoveId) ?? null : null,
-  );
 
   const [helpOpen, setHelpOpen] = useState(false);
-  const [whistleMenuOpen, setWhistleMenuOpen] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -165,11 +146,6 @@ export function PlazaRails({ state, dispatch, onLaunch }: PlazaRailsProps) {
     clearDrop();
   }, [dropAction, dispatch, setCircle, clearDrop]);
 
-  function handleBack() {
-    playBlip("save");
-    showHint("Profiles saved");
-  }
-
   function launchCouncil(mode: "shopping" | "plan") {
     if (people.length === 0) {
       showHint("Add someone to your world first");
@@ -185,39 +161,9 @@ export function PlazaRails({ state, dispatch, onLaunch }: PlazaRailsProps) {
     onLaunch(mode, invited);
   }
 
-  function handleEdit() {
-    if (!selectedId) {
-      showHint("Pick someone first");
-      return;
-    }
-    const person = getPerson(selectedId);
-    const look = getLook(selectedId);
-    const circle = getCircle(selectedId);
-    if (!person || !look || !circle) return;
-    playBlip("select");
-    dispatch({ type: "editPerson", id: selectedId, name: person.name, circle, relationship: person.relationship, look });
-  }
-
   function handleNew() {
     playBlip("select");
     dispatch({ type: "newPerson" });
-  }
-
-  const confirmingSelected = selectedId !== null && state.plazaConfirmRemoveId === selectedId;
-
-  function handleRemoveClick() {
-    if (!selectedId) {
-      showHint("Pick someone first");
-      return;
-    }
-    playBlip("select");
-    if (confirmingSelected) {
-      usePlaza.getState().setMissionMember(selectedId, false);
-      dispatch({ type: "confirmRemove" });
-      select(null);
-    } else {
-      dispatch({ type: "requestRemove", id: selectedId });
-    }
   }
 
   function handleMove() {
@@ -231,55 +177,11 @@ export function PlazaRails({ state, dispatch, onLaunch }: PlazaRailsProps) {
     setCircle(selectedId, circle === "family" ? "friend" : "family");
   }
 
-  function handleConfirmRemove() {
-    playBlip("select");
-    if (state.plazaConfirmRemoveId) usePlaza.getState().setMissionMember(state.plazaConfirmRemoveId, false);
-    dispatch({ type: "confirmRemove" });
-    select(null);
-  }
-
-  function handleCancelRemove() {
-    playBlip("select");
-    dispatch({ type: "cancelRemove" });
-  }
-
-  function handleWhistleClick() {
-    if (whistle.on) {
-      playBlip("select");
-      setWhistle({ on: false });
-      setWhistleMenuOpen(false);
-      return;
-    }
-    setWhistleMenuOpen((was) => !was);
-  }
-
-  function pickSort(sort: WhistleSort) {
-    playWhistle();
-    setWhistle({ on: true, sort });
-    setWhistleMenuOpen(false);
-  }
-
   return (
     <>
       <div className={styles.railLeft}>
-        <RailButton targetId="plaza-back" label="Saved" onClick={handleBack}>
-          <BackIcon />
-        </RailButton>
-        <RailButton targetId="plaza-edit" dropAction="edit" label="View/Edit" dim={!selectedId} onClick={handleEdit}>
-          <EditIcon />
-        </RailButton>
         <RailButton targetId="plaza-new" label="New person" disabled={total >= MAX_PEOPLE} onClick={handleNew}>
           <NewIcon />
-        </RailButton>
-        <RailButton
-          targetId="plaza-remove"
-          dropAction="remove"
-          label={confirmingSelected ? "Remove?" : "Remove"}
-          dim={!selectedId}
-          active={confirmingSelected}
-          onClick={handleRemoveClick}
-        >
-          <RemoveIcon />
         </RailButton>
         <RailButton targetId="plaza-help" label="Help" active={helpOpen} onClick={() => setHelpOpen((was) => !was)}>
           <HelpIcon />
@@ -292,13 +194,13 @@ export function PlazaRails({ state, dispatch, onLaunch }: PlazaRailsProps) {
             ? "Build your mission circle"
             : `${missionMemberIds.length} ${missionMemberIds.length === 1 ? "person" : "people"} in this mission`}
         </p>
-        <button type="button" data-hand-target="plaza-shop" className={styles.missionButton} onClick={() => launchCouncil("shopping")}>
-          <span aria-hidden="true">🛍️</span>
-          <span><strong>Shop together</strong><small>Find something everyone agrees on</small></span>
+        <button type="button" data-hand-target="plaza-shop" className={`${styles.missionButton} ${styles.shopMission}`} onClick={() => launchCouncil("shopping")}>
+          <span className={styles.missionIcon}><ShopTogetherIcon size={38} /></span>
+          <span><strong>Shop together</strong><small>Pick something for your circle</small></span>
         </button>
-        <button type="button" data-hand-target="plaza-dinner" className={styles.missionButton} onClick={() => launchCouncil("plan")}>
-          <span aria-hidden="true">🍽️</span>
-          <span><strong>Make a dinner plan</strong><small>Choose dinner and an activity</small></span>
+        <button type="button" data-hand-target="plaza-dinner" className={`${styles.missionButton} ${styles.planMission}`} onClick={() => launchCouncil("plan")}>
+          <span className={styles.missionIcon}><DinnerPlanIcon size={38} /></span>
+          <span><strong>Make dinner plans</strong><small>Choose a place and activity</small></span>
         </button>
       </div>
 
@@ -314,65 +216,9 @@ export function PlazaRails({ state, dispatch, onLaunch }: PlazaRailsProps) {
         </RailButton>
       </div>
 
-      <div className={styles.whistleWrap}>
-        {whistleMenuOpen && !whistle.on && (
-          <div className={styles.whistleMenu} role="menu" aria-label="Sort everyone by">
-            <button
-              type="button"
-              data-hand-target="plaza-sort-name"
-              className={styles.sortButton}
-              aria-label="Sort by name"
-              onClick={() => pickSort("name")}
-            >
-              <SortNameIcon size={30} />
-            </button>
-            <button
-              type="button"
-              data-hand-target="plaza-sort-circle"
-              className={styles.sortButton}
-              aria-label="Sort by circle"
-              onClick={() => pickSort("circle")}
-            >
-              <SortCircleIcon size={30} />
-            </button>
-          </div>
-        )}
-        <RailButton
-          targetId="plaza-whistle"
-          label={whistle.on ? `Stop lining up (${whistle.sort === "name" ? "A-Z" : "Circle"})` : "Whistle"}
-          active={whistle.on}
-          onClick={handleWhistleClick}
-        >
-          <WhistleIcon />
-        </RailButton>
-      </div>
-
       {hint && (
         <div className={styles.hintBubble} role="status">
           {hint}
-        </div>
-      )}
-
-      {selectedPerson && !state.plazaConfirmRemoveId && <div className={styles.selectedChip}>{selectedPerson.name}</div>}
-
-      {state.plazaConfirmRemoveId && (
-        <div className={styles.confirmOverlay} role="alertdialog" aria-modal="true" aria-label="Remove person?">
-          <div className={styles.confirmDialog}>
-            <p className={styles.confirmMessage}>Remove {confirmPerson?.name ?? "them"}?</p>
-            <div className={styles.confirmActions}>
-              <button
-                type="button"
-                data-hand-target="plaza-confirm-remove"
-                className={`${styles.confirmButton} ${styles.confirmDanger}`}
-                onClick={handleConfirmRemove}
-              >
-                Remove
-              </button>
-              <button type="button" data-hand-target="plaza-cancel-remove" className={styles.confirmButton} onClick={handleCancelRemove}>
-                Cancel
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

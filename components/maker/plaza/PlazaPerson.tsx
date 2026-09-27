@@ -16,7 +16,7 @@ import type { FamilyProfile } from "@/types/domain";
 import type { SpriteMood } from "@/types/stage";
 import { PLAZA } from "./formation";
 import { registerHit, unregisterHit } from "./plazaHits";
-import { isInsideMissionCircle, MISSION_CIRCLE, usePlaza } from "./plazaState";
+import { constrainOutsideMissionCircle, isInsideMissionCircle, MISSION_CIRCLE, usePlaza } from "./plazaState";
 import { consumeDragOutcome, plazaPointerFloor } from "./plazaSignals";
 import styles from "./PlazaPerson.module.css";
 
@@ -248,6 +248,30 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
       }
     }
 
+    // Random destinations already avoid the circle, but a straight path between two legal points
+    // can still cross it. Treat the circle as a physical boundary for non-members and give anyone
+    // who reaches it a short around-the-edge waypoint. Deliberate dragging remains unrestricted.
+    if (!dragging && missionSlot === null) {
+      const [safeX, safeZ] = constrainOutsideMissionCircle(agent.x, agent.z, agent.radius + 0.12);
+      if (safeX !== agent.x || safeZ !== agent.z) {
+        agent.x = safeX;
+        agent.z = safeZ;
+        agent.vx = 0;
+        agent.vz = 0;
+        const boundaryAngle = Math.atan2(safeZ - MISSION_CIRCLE.z, safeX - MISSION_CIRCLE.x);
+        const turn = id.charCodeAt(0) % 2 === 0 ? 0.62 : -0.62;
+        const waypointRadius = MISSION_CIRCLE.radius + agent.radius + 1.1;
+        goal.current = [
+          MISSION_CIRCLE.x + Math.cos(boundaryAngle + turn) * waypointRadius,
+          MISSION_CIRCLE.z + Math.sin(boundaryAngle + turn) * waypointRadius,
+        ];
+        idleUntil.current = t;
+        movedX = agent.x - group.position.x;
+        movedZ = agent.z - group.position.z;
+        moved = Math.hypot(movedX, movedZ);
+      }
+    }
+
     const speed = moved / delta;
     motion.current.speed = dragging ? 0 : speed;
     if (!dragging) motion.current.gaitPhase += (moved / character.stride) * Math.PI * 2;
@@ -272,7 +296,6 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
   });
 
   const chipClass = circle === "family" ? styles.chipFamily : styles.chipFriend;
-  const showTag = (hovered || selected) && !councilBubble;
   const bubbleAlign = missionSlot
     ? missionSlot[0] < -0.2
       ? "left"
@@ -318,14 +341,12 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
           />
         </Html>
       )}
-      {showTag && (
-        <Html position={[0, height + LABEL_MARGIN, 0]} zIndexRange={[0, 0]} pointerEvents="none">
-          <div className={styles.tag}>
-            <span className={chipClass}>{circle === "family" ? "Family" : "Friend"}</span>
-            {name}
-          </div>
-        </Html>
-      )}
+      <Html position={[0, height + LABEL_MARGIN, 0]} zIndexRange={[0, 0]} pointerEvents="none">
+        <div className={styles.tag}>
+          <span className={chipClass}>{circle === "family" ? "Family" : "Friend"}</span>
+          {name}
+        </div>
+      </Html>
     </group>
   );
 }

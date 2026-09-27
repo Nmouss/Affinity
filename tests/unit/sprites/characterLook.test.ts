@@ -5,14 +5,24 @@ import type { CharacterLook } from "@/types/character";
 import { CHARACTERS, characterForLook } from "@/components/sprites/characterPose";
 
 describe("characterForLook", () => {
-  it("lands within ±0.015 of today's CHARACTERS scale/width for every starter", () => {
+  it("keeps every starter within a few percent of today's CHARACTERS scale/width", () => {
+    // The editor's height/build ranges were widened so a step is visible; grown-up height and a
+    // medium build are anchored exactly, so starters move by at most ~3% in width.
     for (const id of ["wife", "daughter", "son"] as const) {
       const look = STARTER_LOOKS[id]!;
       const config = characterForLook(look, id);
       const today = CHARACTERS[id]!;
       expect(Math.abs(config.scale - today.scale)).toBeLessThanOrEqual(0.015);
-      expect(Math.abs(config.width - today.width)).toBeLessThanOrEqual(0.015);
+      expect(Math.abs(config.width - today.width)).toBeLessThanOrEqual(0.035);
     }
+  });
+
+  it("makes height and build steps plainly visible in the editor", () => {
+    const tall = characterForLook({ ...BLANK_LOOK, body: { height: 1, build: 0.5 } }, "x");
+    const small = characterForLook({ ...BLANK_LOOK, body: { height: 0.6, build: 0.5 } }, "x");
+    const wide = characterForLook({ ...BLANK_LOOK, body: { height: 1, build: 0.9 } }, "x");
+    expect(small.scale / tall.scale).toBeLessThan(0.85);
+    expect(wide.width / tall.width).toBeGreaterThan(1.12);
   });
 
   it("carries the look's accessory type straight through", () => {

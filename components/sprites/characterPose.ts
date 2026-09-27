@@ -71,8 +71,10 @@ function hashPhase(id: string): number {
 export function characterForLook(look: CharacterLook, id: string): CharacterConfig {
   const { height, build } = look.body;
 
-  const scale = 0.72 + 0.23 * height;
-  const width = 0.9 + 0.2 * build;
+  // Anchored so a grown-up (height 1) and a medium build (0.5) keep today's size, with a range wide
+  // enough that a step in the editor is plainly visible: height spans 0.55–0.95, build 0.8–1.2.
+  const scale = 0.55 + 0.4 * height;
+  const width = 0.8 + 0.4 * build;
 
   // Smaller and rounder people read as more energetic (bouncier idle fidgets, bigger gestures).
   const smallness = 1 - height;

@@ -14,8 +14,13 @@ export const LEAP_CONTROL_MESSAGES = [
 
 export type LeapStatus = "connecting" | "open" | "closed";
 
+/** Which hand drives the cursor: that side first (falling back to the other), or whichever comes first. */
+export type HandPreference = "right" | "left" | "any";
+
 export interface ConnectLeapOptions {
   url?: string;
+  /** Defaults to NEXT_PUBLIC_LEAP_HAND, else "right". */
+  hand?: HandPreference;
   onService?: (info: LeapServiceInfo) => void;
   minBackoffMs?: number;
   maxBackoffMs?: number;
@@ -42,9 +47,34 @@ export function rollFromNormal(normal: Vec3): number {
   return Math.atan2(normal[0], -normal[1]);
 }
 
-/** The right hand when one is visible, otherwise the first hand. */
-function preferredHand(hands: Json[]): Json | undefined {
-  return hands.find((hand) => hand.type === "right") ?? hands[0];
+/** Reads NEXT_PUBLIC_LEAP_HAND-style config; anything unrecognized means the default, "right". */
+export function parseHandPreference(value: string | undefined): HandPreference {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "left" || normalized === "any" ? normalized : "right";
+}
+
+/** The preferred side when one is visible, otherwise the first hand. */
+function preferredHand(hands: Json[], preference: HandPreference = "right"): Json | undefined {
+  if (preference === "any") return hands[0];
+  return hands.find((hand) => hand.type === preference) ?? hands[0];
+}
+
+export type HandSelector = (hands: Json[]) => Json | undefined;
+
+/**
+ * Stateful single-hand pick for a live stream. Once a hand is chosen it stays locked by its Leap
+ * `id` for as long as it's tracked, so a second hand entering the field, or the service briefly
+ * relabelling left/right (common with two hands close together), never moves the cursor to the
+ * other hand. Only when the locked hand leaves does it pick again by preference.
+ */
+export function createHandSelector(preference: HandPreference = "right"): HandSelector {
+  let lockedId: number | null = null;
+  return (hands) => {
+    const locked = lockedId === null ? undefined : hands.find((hand) => Number(hand.id) === lockedId);
+    const chosen = locked ?? preferredHand(hands, preference);
+    lockedId = chosen ? Number(chosen.id) : null;
+    return chosen;
+  };
 }
 
 function parseHand(raw: Json, pointables: Json[]): TrackedHand {
@@ -68,12 +98,15 @@ function parseHand(raw: Json, pointables: Json[]): TrackedHand {
   };
 }
 
-/** Normalizes one decoded message into a HandFrame, or null when it isn't a tracking frame. */
-export function parseLeapFrame(raw: unknown): HandFrame | null {
+/**
+ * Normalizes one decoded message into a HandFrame, or null when it isn't a tracking frame. Without a
+ * `select`, it takes the right hand over the left, statelessly; connectLeap passes a locking selector.
+ */
+export function parseLeapFrame(raw: unknown, select: HandSelector = preferredHand): HandFrame | null {
   if (!isObject(raw) || !Array.isArray(raw.hands) || typeof raw.timestamp !== "number") return null;
   const hands = raw.hands.filter(isObject);
   const pointables = Array.isArray(raw.pointables) ? raw.pointables.filter(isObject) : [];
-  const chosen = preferredHand(hands);
+  const chosen = select(hands);
   return {
     id: Number(raw.id) || 0,
     timestamp: raw.timestamp / 1000,
@@ -112,6 +145,7 @@ export function connectLeap(
   options: ConnectLeapOptions = {},
 ): () => void {
   const url = options.url ?? process.env.NEXT_PUBLIC_LEAP_WS_URL ?? DEFAULT_LEAP_URL;
+  const selectHand = createHandSelector(options.hand ?? parseHandPreference(process.env.NEXT_PUBLIC_LEAP_HAND));
   const minBackoff = options.minBackoffMs ?? 500;
   const maxBackoff = options.maxBackoffMs ?? 5000;
   let backoff = minBackoff;
@@ -147,7 +181,7 @@ export function connectLeap(
     });
     ws.addEventListener("message", (event) => {
       const raw = decode(event.data);
-      const frame = parseLeapFrame(raw);
+      const frame = parseLeapFrame(raw, selectHand);
       if (frame) {
         onFrame(frame);
         return;

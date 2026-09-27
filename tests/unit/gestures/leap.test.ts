@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { parseLeapFrame, parseServiceInfo, rollFromNormal } from "@/lib/gestures/leap";
+import {
+  createHandSelector,
+  parseHandPreference,
+  parseLeapFrame,
+  parseServiceInfo,
+  rollFromNormal,
+} from "@/lib/gestures/leap";
 
 function hand(overrides: Record<string, unknown> = {}) {
   return {
@@ -96,5 +102,47 @@ describe("parseServiceInfo", () => {
 
   it("ignores frames", () => {
     expect(parseServiceInfo({ version: 6, hands: [], timestamp: 0 })).toBeNull();
+  });
+});
+
+describe("createHandSelector", () => {
+  const frame = (...hands: ReturnType<typeof hand>[]) => ({ id: 1, timestamp: 0, hands });
+  const right = hand({ id: 1, type: "right" });
+  const left = hand({ id: 2, type: "left" });
+
+  it("stays on the locked hand when a second hand enters, even the preferred side", () => {
+    const select = createHandSelector("right");
+    expect(parseLeapFrame(frame(left), select)?.hand?.id).toBe(2);
+    expect(parseLeapFrame(frame(left, right), select)?.hand?.id).toBe(2);
+    expect(parseLeapFrame(frame(right, left), select)?.hand?.id).toBe(2);
+  });
+
+  it("ignores the service relabelling the locked hand's side", () => {
+    const select = createHandSelector("right");
+    expect(parseLeapFrame(frame(right, left), select)?.hand?.id).toBe(1);
+    const swapped = frame(hand({ id: 1, type: "left" }), hand({ id: 2, type: "right" }));
+    expect(parseLeapFrame(swapped, select)?.hand?.id).toBe(1);
+  });
+
+  it("re-picks by preference once the locked hand leaves", () => {
+    const select = createHandSelector("right");
+    expect(parseLeapFrame(frame(right), select)?.hand?.id).toBe(1);
+    expect(parseLeapFrame(frame(), select)?.hand).toBeNull();
+    expect(parseLeapFrame(frame(left, hand({ id: 3, type: "right" })), select)?.hand?.id).toBe(3);
+  });
+
+  it("honours left and any", () => {
+    expect(parseLeapFrame(frame(right, left), createHandSelector("left"))?.hand?.id).toBe(2);
+    expect(parseLeapFrame(frame(left, right), createHandSelector("any"))?.hand?.id).toBe(2);
+  });
+});
+
+describe("parseHandPreference", () => {
+  it("reads left/any case-insensitively and defaults to right", () => {
+    expect(parseHandPreference("Left")).toBe("left");
+    expect(parseHandPreference(" any ")).toBe("any");
+    expect(parseHandPreference("right")).toBe("right");
+    expect(parseHandPreference(undefined)).toBe("right");
+    expect(parseHandPreference("both")).toBe("right");
   });
 });

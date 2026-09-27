@@ -17,7 +17,7 @@ export interface TrackedHand {
   fingertips: Vec3[];
 }
 
-/** A normalized tracking frame. `hand` is the preferred hand (right over left), or null when none is visible. */
+/** A normalized tracking frame. `hand` is the one hand driving input (see createHandSelector), or null when none is visible. */
 export interface HandFrame {
   id: number;
   /** Milliseconds (the Leap protocol sends microseconds). */

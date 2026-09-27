@@ -1,5 +1,6 @@
 import { useRef, type RefObject } from "react";
 import { create } from "zustand";
+import type { GiftPickState } from "./giftPick";
 
 // Shared state between the Plaza's 3D scene (hover, drag, formation) and its DOM rails (icons,
 // whistle, cursor). MakerHands and the mouse both write the pointer; the scene decides what's under it.
@@ -47,7 +48,10 @@ export interface PlazaState {
   dropAction: { action: PlazaDrop; personId: string; at: number } | null;
   /** DOM host for 3D name chips / bubbles so they paint above the mission action bar. */
   htmlHost: HTMLElement | null;
+  /** Picking who a gift is for and who's buying; the scene lines people up and badges them while set. */
+  giftPick: GiftPickState | null;
   setHtmlHost: (htmlHost: HTMLElement | null) => void;
+  setGiftPick: (giftPick: GiftPickState | null) => void;
   setPointer: (pointer: [number, number] | null, source: "mouse" | "hand" | null) => void;
   setGrabbing: (grabbing: boolean) => void;
   setHovered: (id: string | null) => void;
@@ -70,7 +74,9 @@ export const usePlaza = create<PlazaState>()((set) => ({
   missionMemberIds: [],
   dropAction: null,
   htmlHost: null,
+  giftPick: null,
   setHtmlHost: (htmlHost) => set({ htmlHost }),
+  setGiftPick: (giftPick) => set({ giftPick }),
   setPointer: (pointer, pointerSource) => set({ pointer, pointerSource }),
   setGrabbing: (grabbing) => set({ grabbing }),
   setHovered: (hoveredId) => set({ hoveredId }),

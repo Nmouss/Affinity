@@ -121,6 +121,7 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
   const selected = usePlaza((state) => state.selectedId === id);
   const dragging = usePlaza((state) => state.draggingId === id);
   const whistleOn = usePlaza((state) => state.whistle.on);
+  const pickingGift = usePlaza((state) => state.giftPick !== null);
   const councilBubble = useStage((state) => state.sprites[id]?.bubble ?? null);
   const councilMood = useStage((state) => state.sprites[id]?.mood ?? "idle");
   const councilPhase = useStage((state) => state.phase);
@@ -219,7 +220,8 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
       movedZ = agent.z - prevZ;
       moved = Math.hypot(movedX, movedZ);
     } else {
-      const heldSlot = missionSlot ?? (whistleOn ? formationSlot : null);
+      // While a gift's people are being picked, the line-up wins over the mission circle and the whistle.
+      const heldSlot = pickingGift ? formationSlot : missionSlot ?? (whistleOn ? formationSlot : null);
       const [goalX, goalZ] = heldSlot ?? goal.current;
       const dist = Math.hypot(goalX - agent.x, goalZ - agent.z);
       const waiting = heldSlot ? dist < ARRIVE_EPS : t < idleUntil.current || dist < ARRIVE_EPS;
@@ -251,7 +253,8 @@ export function PlazaPerson({ profile, formationSlot, missionSlot }: PlazaPerson
     // Random destinations already avoid the circle, but a straight path between two legal points
     // can still cross it. Treat the circle as a physical boundary for non-members and give anyone
     // who reaches it a short around-the-edge waypoint. Deliberate dragging remains unrestricted.
-    if (!dragging && missionSlot === null) {
+    // Picked gift people may step into the circle: their line-up is the mission taking shape.
+    if (!dragging && missionSlot === null && !(pickingGift && formationSlot)) {
       const [safeX, safeZ] = constrainOutsideMissionCircle(agent.x, agent.z, agent.radius + 0.12);
       if (safeX !== agent.x || safeZ !== agent.z) {
         agent.x = safeX;

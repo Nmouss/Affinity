@@ -9,7 +9,8 @@ import type { CharacterLook, Circle } from "@/types/character";
 import { PLAZA_DROP_ATTR, usePlaza, type PlazaDrop } from "./plazaState";
 import { DinnerPlanIcon, HelpIcon, MoveIcon, NewIcon, ShopTogetherIcon } from "./plazaIcons";
 import { HelpOverlay } from "./HelpOverlay";
-import { RecipientPicker } from "./RecipientPicker";
+import { GiftPickBar } from "./GiftPickBar";
+import { giftPickBack, giftPickNext, invitedForPicks, personForKey, pickGiftPerson, startGiftPick } from "./giftPick";
 import styles from "./PlazaRails.module.css";
 
 // Replaces the old text-button toolbar and the Family/Friends name panels: the plaza now shows only
@@ -117,7 +118,8 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
-  const [shopPicker, setShopPicker] = useState<{ invited: string[]; selected: string[] } | null>(null);
+  const giftPick = usePlaza((s) => s.giftPick);
+  const setGiftPick = usePlaza((s) => s.setGiftPick);
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(
@@ -157,21 +159,89 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
     }
     const knownIds = new Set(people.map((person) => person.id));
     const invited = missionMemberIds.filter((id) => knownIds.has(id));
+    if (mode === "shopping") {
+      // Gifts are picked in the Plaza itself: who it's for, then who's buying. Anyone already in
+      // the mission circle starts out as a buyer.
+      playBlip("select");
+      usePlaza.getState().select(null);
+      setGiftPick(startGiftPick(invited));
+      return;
+    }
     if (invited.length === 0) {
       showHint("Drag people into the mission circle first");
       return;
     }
     playBlip("select");
-    if (mode === "shopping") {
-      if (invited.length === 1) {
-        onLaunch(mode, invited, invited);
-        return;
-      }
-      setShopPicker({ invited, selected: [] });
-      return;
-    }
     onLaunch(mode, invited);
   }
+
+  // While picking, a click (or pinch) on a character in the scene is a pick, not a selection.
+  useEffect(() => {
+    if (!giftPick || !selectedId) return;
+    if (!people.some((person) => person.id === selectedId)) return;
+    playBlip("select");
+    setGiftPick(pickGiftPerson(giftPick, selectedId));
+    usePlaza.getState().select(null);
+  }, [giftPick, selectedId, people, setGiftPick]);
+
+  function giftNext() {
+    if (!giftPick?.recipientId) {
+      showHint("Click the person the gift is for");
+      return;
+    }
+    playBlip("select");
+    setGiftPick(giftPickNext(giftPick));
+  }
+
+  function giftBack() {
+    if (!giftPick) return;
+    playBlip("select");
+    setGiftPick(giftPickBack(giftPick));
+  }
+
+  function giftLaunch() {
+    if (!giftPick?.recipientId) return;
+    const invited = invitedForPicks(giftPick).filter((id) => people.some((person) => person.id === id));
+    if (invited.length === 0) return;
+    playBlip("select");
+    // The picked people are the mission: they take their places in the mission circle so the
+    // council gathers around them exactly as it does for a dragged-in circle.
+    const plaza = usePlaza.getState();
+    for (const person of people) plaza.setMissionMember(person.id, invited.includes(person.id));
+    setGiftPick(null);
+    onLaunch("shopping", invited, [invited[0]!]);
+  }
+
+  // Keyboard while picking: number keys pick in roster order, Enter moves on, Escape steps back.
+  useEffect(() => {
+    if (!giftPick) return;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      const picked = personForKey(event.key, people.map((person) => person.id));
+      if (picked) {
+        event.preventDefault();
+        playBlip("select");
+        setGiftPick(pickGiftPerson(giftPick, picked));
+        return;
+      }
+      if (event.key === "Enter" && !(target && target.tagName === "BUTTON")) {
+        event.preventDefault();
+        if (giftPick.step === "recipient") giftNext();
+        else giftLaunch();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        giftBack();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // giftNext/giftBack/giftLaunch close over the same giftPick/people captured here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [giftPick, people, setGiftPick]);
+
+  // Leaving the plaza (editor, council) always ends picking.
+  useEffect(() => () => setGiftPick(null), [setGiftPick]);
 
   function handleNew() {
     playBlip("select");
@@ -200,7 +270,7 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
         </RailButton>
       </div>
 
-      {!hideMissions && (
+      {!hideMissions && !giftPick && (
       <div className={styles.missionActions} aria-label="Plan with your connections">
         <p className={styles.missionLabel}>
           {missionMemberIds.length === 0
@@ -209,7 +279,7 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
         </p>
         <button type="button" data-hand-target="plaza-shop" className={`${styles.missionButton} ${styles.shopMission}`} onClick={() => launchCouncil("shopping")}>
           <span className={styles.missionIcon}><ShopTogetherIcon size={28} /></span>
-          <span><strong>Shop together</strong><small>Choose who the gifts are for</small></span>
+          <span><strong>Shop for a gift</strong><small>Pick who it's for, then who's buying</small></span>
         </button>
         <button type="button" data-hand-target="plaza-dinner" className={`${styles.missionButton} ${styles.planMission}`} onClick={() => launchCouncil("plan")}>
           <span className={styles.missionIcon}><DinnerPlanIcon size={28} /></span>
@@ -236,27 +306,13 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
         </div>
       )}
 
-      {shopPicker && (
-        <RecipientPicker
-          candidateIds={shopPicker.invited}
-          selectedIds={shopPicker.selected}
-          onToggle={(id) =>
-            setShopPicker((current) => {
-              if (!current) return current;
-              const on = current.selected.includes(id);
-              return {
-                ...current,
-                selected: on ? current.selected.filter((entry) => entry !== id) : [...current.selected, id],
-              };
-            })
-          }
-          onConfirm={() => {
-            if (shopPicker.selected.length === 0) return;
-            playBlip("select");
-            onLaunch("shopping", shopPicker.invited, shopPicker.selected);
-            setShopPicker(null);
-          }}
-          onCancel={() => setShopPicker(null)}
+      {giftPick && !hideMissions && (
+        <GiftPickBar
+          pick={giftPick}
+          names={Object.fromEntries(people.map((person) => [person.id, person.name]))}
+          onNext={giftNext}
+          onBack={giftBack}
+          onLaunch={giftLaunch}
         />
       )}
 

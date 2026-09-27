@@ -1,8 +1,10 @@
 """Load Affinity's local profile and catalog data.
 
-The MVP has no database. Profiles live in ``data/family.json`` and the curated
-product catalog lives in ``data/catalog.json``. This module owns filesystem path
-resolution so graph nodes do not depend on the process's current directory.
+The MVP has no database. Profiles live in ``data/family.json``, the curated
+Christmas-tree catalog lives in ``data/catalog.json``, and the local gift
+catalog (the offline fallback for gift missions) lives in ``data/gifts.json``.
+This module owns filesystem path resolution so graph nodes do not depend on the
+process's current directory.
 """
 
 from __future__ import annotations
@@ -12,6 +14,7 @@ from pathlib import Path
 from typing import TypeVar, cast
 
 from .models import CatalogItem, FamilyProfile
+from .taste import with_traits
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
@@ -33,5 +36,15 @@ def load_profiles() -> dict[str, FamilyProfile]:
 
 
 def load_catalog() -> list[CatalogItem]:
-    """Return every curated catalog item in display order."""
-    return cast(list[CatalogItem], _read_json(DATA_DIR / "catalog.json", list))
+    """Return every curated catalog item in display order, with taste traits.
+
+    ``catalog.json`` (tree slots) comes first so the tree demo is unchanged;
+    ``gifts.json`` (slot ``gift``) follows when present. Every item passes
+    through :func:`backend.taste.with_traits`, the single seam where local
+    products gain the shared trait vocabulary.
+    """
+    items = list(_read_json(DATA_DIR / "catalog.json", list))
+    gifts_path = DATA_DIR / "gifts.json"
+    if gifts_path.exists():
+        items.extend(_read_json(gifts_path, list))
+    return [with_traits(cast(CatalogItem, item)) for item in items]

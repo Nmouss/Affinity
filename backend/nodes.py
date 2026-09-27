@@ -35,6 +35,7 @@ from .commerce import ShopifyUcpClient, ShopifyUcpError
 from .data import load_catalog, load_profiles
 from .llm import create_search_plan, create_sprite_deliberation, create_sprite_opinion, score_bundle
 from .places import GooglePlacesClient, GooglePlacesError
+from .taste import SERVES_MIN_AFFINITY, taste_affinity, taste_explanation, taste_term, with_traits
 from .models import (
     Bundle,
     CatalogItem,
@@ -60,8 +61,11 @@ from .models import (
 )
 from .notifications import SmtpEmailError, SmtpEmailSender
 
-# A valid MVP bundle must contain products for each of these conceptual slots.
+# A Christmas-tree bundle must contain products for each of these conceptual slots.
 REQUIRED_SLOTS = ("tree", "lights", "ornaments", "topper")
+# Local catalog slot that stands in for any other requested product slot when
+# Shopify is unavailable or the local provider is selected.
+GIFT_SLOT = "gift"
 
 
 def _emit(event_type: str, payload: Any) -> None:
@@ -393,14 +397,56 @@ def _item_relevance(item: CatalogItem, desires: list[str]) -> float:
     return float(sum(bool(item_tokens & _tokens(desire)) for desire in desires))
 
 
+def _local_items_for_slot(state: CouncilState, slot: dict[str, Any]) -> list[CatalogItem]:
+    """Return hard-rule-compliant local items for one requested slot.
+
+    Tree slots map onto the curated tree catalog. Any other slot (a gift, a
+    basketball, ...) falls back to the local ``gift`` items relabelled with the
+    requested slot ID, so an offline demo can still propose something real.
+    Items rejected earlier in the run are excluded.
+    """
+    rejected = set(state.get("rejectedCandidateIds", []))
+    common = {
+        "catalog": state["catalog"],
+        "max_price": float(state["mission"]["budget"]),
+        "hard_rules": state["constraints"]["hardRules"],
+    }
+    slot_id = str(slot["id"])
+    matches = search_catalog(slot=slot_id, **common)
+    if not matches and slot_id not in REQUIRED_SLOTS and slot_id != "decoy":
+        matches = [{**item, "slot": slot_id} for item in search_catalog(slot=GIFT_SLOT, **common)]
+    quantity = max(1, int(slot.get("quantity", 1)))
+    return [
+        {**item, "quantity": quantity} if quantity > 1 else item
+        for item in matches
+        if item["id"] not in rejected
+    ]
+
+
 def _candidate_bundles(state: CouncilState):
     """Yield every complete, hard-rule-compliant bundle within the budget.
 
-    Tree, lights, and topper contribute one item each. One to three ornament
-    sets are permitted so multiple family wishes can be represented.
+    For the Christmas-tree slots, tree, lights, and topper contribute one item
+    each and one to three ornament sets are permitted so multiple family wishes
+    can be represented. Any other slot list (for example one ``gift`` slot)
+    takes one local item per slot.
     """
     mission = state["mission"]
     constraints = state["constraints"]
+    slots = _shopping_slots(mission)
+    if {slot["id"] for slot in slots} != set(REQUIRED_SLOTS):
+        per_slot = [_local_items_for_slot(state, slot) for slot in slots]
+        if any(not options for options in per_slot):
+            missing = [slot["id"] for slot, options in zip(slots, per_slot) if not options]
+            raise ValueError(f"No local products satisfy the hard rules for: {', '.join(missing)}")
+        for items in itertools.product(*per_slot):
+            total = round(
+                sum(float(item["price"]) * int(item.get("quantity", 1)) for item in items), 2
+            )
+            if total <= mission["budget"]:
+                yield list(items), total
+        return
+
     common = {
         "catalog": state["catalog"],
         "max_price": mission["budget"],
@@ -433,16 +479,11 @@ def _local_repair_candidate_bundles(state: CouncilState):
         yield from _candidate_bundles(state)
         return
     locked = [item for item in state["bundle"]["items"] if item["id"] != repair["itemId"]]
-    rejected = set(state.get("rejectedCandidateIds", []))
-    replacements = search_catalog(
-        state["catalog"],
-        slot=repair["slotId"],
-        max_price=state["mission"]["budget"],
-        hard_rules=state["constraints"]["hardRules"],
+    slot = next(
+        (slot for slot in _shopping_slots(state["mission"]) if slot["id"] == repair["slotId"]),
+        {"id": repair["slotId"], "query": repair["slotId"], "quantity": 1},
     )
-    for item in replacements:
-        if item["id"] in rejected:
-            continue
+    for item in _local_items_for_slot(state, slot):
         items = [*locked, item]
         total = round(
             sum(float(entry["price"]) * int(entry.get("quantity", 1)) for entry in items),
@@ -470,10 +511,13 @@ def _shopping_slots(mission: Mission) -> list[dict[str, Any]]:
             raise ValueError("Shopping slot IDs must be unique")
         return slots
 
+    query = mission.get("freeText", "").strip() or mission["occasion"].strip()
+    if mission.get("type") == "gift":
+        # A Christmas gift is a present, not a tree: never force the tree slots.
+        return [{"id": GIFT_SLOT, "query": query, "quantity": 1}]
     context = f"{mission['occasion']} {mission.get('freeText', '')}".casefold()
     if any(word in context for word in ("christmas", "holiday tree", "ornament")):
         return [{"id": slot, "query": slot, "quantity": 1} for slot in REQUIRED_SLOTS]
-    query = mission.get("freeText", "").strip() or mission["occasion"].strip()
     return [{"id": "item", "query": query, "quantity": 1}]
 
 
@@ -712,7 +756,8 @@ def _normalize_shopify_product(product: dict[str, Any], slot: dict[str, Any]) ->
         image = _first_image_url(variant.get("media"), product.get("media"))
         if image:
             item["imageUrl"] = image
-        results.append(item)
+        # The one seam where live products gain the shared taste-trait vocabulary.
+        results.append(with_traits(item))
     return results
 
 
@@ -814,9 +859,18 @@ async def shop_node(state: CouncilState) -> dict[str, Bundle]:
     Candidate ranking is lexicographic:
 
     1. Maximize the least-served sprite (max-min fairness).
-    2. Maximize total relevance across the family.
+    2. Maximize total satisfaction across the family.
     3. Prefer the fuller tree when still allowed.
     4. Prefer the cheaper bundle when all prior values tie.
+
+    A sprite's satisfaction with a bundle is ``relevance + taste``, where
+    relevance counts public wishes the items match and taste is
+    :func:`backend.taste.taste_term`: each item adds ``(affinity - 0.5) * 2``
+    scaled by ``TASTE_WEIGHT`` (1.0, so one perfectly fitting item is worth one
+    matched wish) and by the role weight (the gift recipient counts 2x, like
+    their wishes in ``merge_node``). These weights are product heuristics.
+    Hard rules were already enforced by ``search_catalog``; taste can only
+    reorder compliant candidates, never veto or admit one.
 
     Complaints from revision rounds are appended as additional desires.
     """
@@ -836,11 +890,14 @@ async def shop_node(state: CouncilState) -> dict[str, Bundle]:
         try:
             candidates = await _shopify_candidate_bundles(state)
         except (ShopifyUcpError, ValueError) as error:
-            slots = _shopping_slots(state["mission"])
-            local_slots = {item["slot"] for item in state["catalog"]}
-            if not all(slot["id"] in local_slots for slot in slots):
+            try:
+                candidates = list(_local_repair_candidate_bundles(state))
+            except ValueError as local_error:
+                raise ValueError(
+                    f"Live Shopify search failed: {error} (local fallback: {local_error})"
+                ) from error
+            if not candidates:
                 raise ValueError(f"Live Shopify search failed: {error}") from error
-            candidates = list(_local_repair_candidate_bundles(state))
             provider = "local"
             warnings.append(f"Shopify unavailable; used demo catalog: {error}")
     elif provider == "local":
@@ -848,10 +905,21 @@ async def shop_node(state: CouncilState) -> dict[str, Bundle]:
     else:
         raise ValueError("AFFINITY_PRODUCT_PROVIDER must be 'local' or 'shopify_ucp'")
 
+    mission = state["mission"]
+    profiles = state.get("profiles", {})
+
+    def fits(sprite_id: str, item: CatalogItem) -> bool:
+        """An item serves a sprite through a public wish or a clear taste match."""
+        if _item_relevance(item, desires_by_sprite[sprite_id]) > 0:
+            return True
+        profile = profiles.get(sprite_id)
+        return profile is not None and taste_affinity(profile, item) >= SERVES_MIN_AFFINITY
+
     best: tuple[tuple[float, float, float, float], list[CatalogItem], float] | None = None
     for items, total in candidates:
         happiness = {
             sprite_id: sum(_item_relevance(item, desires) for item in items)
+            + (taste_term(profiles[sprite_id], items, mission) if sprite_id in profiles else 0.0)
             for sprite_id, desires in desires_by_sprite.items()
         }
         tree_height = next(
@@ -867,11 +935,7 @@ async def shop_node(state: CouncilState) -> dict[str, Bundle]:
 
     _, selected_items, total = best
     serves = {
-        sprite_id: [
-            item["id"]
-            for item in selected_items
-            if _item_relevance(item, desires_by_sprite[sprite_id]) > 0
-        ]
+        sprite_id: [item["id"] for item in selected_items if fits(sprite_id, item)]
         for sprite_id in invited
     }
     items: list[CatalogItem] = []
@@ -887,6 +951,17 @@ async def shop_node(state: CouncilState) -> dict[str, Bundle]:
         ]
         if matched:
             reasons.append(f"Matches public preferences from {', '.join(matched)}.")
+        # Taste explanations cite only the comparisons the frontend recorded.
+        # The recipient (when there is one) is explained first.
+        ordered = sorted(
+            invited,
+            key=lambda sprite_id: 0 if mission.get("recipientId") == sprite_id else 1,
+        )
+        for sprite_id in ordered:
+            profile = profiles.get(sprite_id)
+            if profile is None or taste_affinity(profile, item) < SERVES_MIN_AFFINITY:
+                continue
+            reasons.extend(taste_explanation(profile, item))
         items.append({**item, "selectedBecause": reasons})
 
     selected_ids = {item["id"] for item in selected_items}

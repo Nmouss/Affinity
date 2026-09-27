@@ -29,6 +29,15 @@ from .models import (
     SpriteOpinion,
     SpriteScore,
 )
+from .taste import public_taste, taste_affinity
+
+TASTE_EVIDENCE_RULE = (
+    "The profile may include a learned `taste` summary with likes, dislikes, a "
+    "confidence, and the number of comparisons it came from. Treat it as public "
+    "preference context. When you mention taste, cite only that observed comparison "
+    "evidence or the profile's declared rules; never invent personal history, past "
+    "gifts, or anecdotes."
+)
 
 
 class OpinionOutput(BaseModel):
@@ -94,14 +103,18 @@ async def create_sprite_opinion(profile: FamilyProfile, mission: Mission) -> Spr
     The caller passes one profile only. This prevents a sprite from seeing or
     impersonating another family member's private context.
     """
+    taste = public_taste(profile)
     if _demo_mode():
-        featured_wish = profile["loves"][0]
+        featured_wish = profile["loves"][0] if profile["loves"] else "something thoughtful"
+        say = f"I would love {featured_wish}, and I want our house rules respected."
+        if taste and taste["summary"]:
+            say = f"I would love {featured_wish}. My taste runs {taste['summary']}."
         return {
             "spriteId": profile["id"],
-            "say": f"I would love {featured_wish}, and I want our house rules respected.",
+            "say": say,
             "hardRules": profile["houseRules"],
-            "wishes": profile["loves"],
-            "vetoes": profile["avoids"],
+            "wishes": list(dict.fromkeys([*profile["loves"], *(taste["likes"][:2] if taste else [])])),
+            "vetoes": list(dict.fromkeys([*profile["avoids"], *(taste["dislikes"][:2] if taste else [])])),
         }
 
     prompt = {
@@ -109,9 +122,10 @@ async def create_sprite_opinion(profile: FamilyProfile, mission: Mission) -> Spr
             "Represent only this family member. Return one short spoken line plus "
             "wishes and vetoes. The profile's house rules are authoritative and are "
             "attached by deterministic code, so do not restate or invent rules. "
-            "Never authorize spending."
+            "Never authorize spending. " + TASTE_EVIDENCE_RULE
         ),
         "profile": profile,
+        "publicTaste": taste,
         "mission": mission,
     }
     # Function calling keeps this compatible with optional/default list fields.
@@ -167,9 +181,10 @@ async def create_sprite_deliberation(
             "sprites' PUBLIC statements, acknowledge at least one specific point when possible, "
             "and suggest up to two concrete compromise wishes. Never weaken or override a hard "
             "rule. You may see only your own private profile; do not infer private facts about "
-            "others. Keep the spoken line brief and natural."
+            "others. Keep the spoken line brief and natural. " + TASTE_EVIDENCE_RULE
         ),
         "ownProfile": profile,
+        "publicTaste": public_taste(profile),
         "mission": mission,
         "publicOpinions": other_opinions,
         "publicConstraintBoard": constraints,
@@ -274,6 +289,7 @@ async def score_bundle(
     proposal: Bundle | Plan,
 ) -> SpriteScore:
     """Return one sprite's reaction to a product bundle or place plan."""
+    taste = public_taste(profile)
     if _demo_mode():
         entries = proposal.get("items", proposal.get("stops", []))
         item_text = " ".join(
@@ -283,12 +299,25 @@ async def score_bundle(
         )
         catalog_tokens = _tokens(item_text)
         matched = [wish for wish in profile["loves"] if _tokens(wish) & catalog_tokens]
-        score = min(10.0, 4.0 + 2.0 * len(matched))
-        complaint = None if score >= 6 else f"Please include something related to {profile['loves'][0]}."
+        score = 4.0 + 2.0 * len(matched)
+        # Learned taste moves the demo score by up to +-2 for a product bundle:
+        # the mean item affinity (0..1) is centered on the neutral 0.5.
+        say_taste = ""
+        items = proposal.get("items", [])
+        if taste and items:
+            affinity = sum(taste_affinity(profile, item) for item in items) / len(items)
+            score += (affinity - 0.5) * 4.0
+            if affinity >= 0.6:
+                say_taste = f" It fits my taste for {taste['summary']}." if taste["summary"] else " It fits my taste."
+            elif affinity <= 0.4:
+                say_taste = f" It misses my taste for {taste['summary']}." if taste["summary"] else " It misses my taste."
+        score = max(0.0, min(10.0, round(score, 1)))
+        fallback_wish = profile["loves"][0] if profile["loves"] else (taste["likes"][0] if taste and taste["likes"] else "my taste")
+        complaint = None if score >= 6 else f"Please include something related to {fallback_wish}."
         return {
             "spriteId": profile["id"],
             "score": score,
-            "say": f"I give this proposal {score:g} out of 10.",
+            "say": f"I give this proposal {score:g} out of 10.{say_taste}",
             **({"complaint": complaint} if complaint else {}),
         }
 
@@ -297,9 +326,11 @@ async def score_bundle(
             "Score this product bundle or place plan from 0 to 10 for only this family "
             "member. Give one short spoken reaction. If below 6, include one concrete "
             "search complaint. Do not claim that a reservation or purchase is complete. "
-            "For place plans, price levels are approximate, so do not claim exact budget fit."
+            "For place plans, price levels are approximate, so do not claim exact budget fit. "
+            + TASTE_EVIDENCE_RULE
         ),
         "profile": profile,
+        "publicTaste": taste,
         "mission": mission,
         "proposal": proposal,
     }

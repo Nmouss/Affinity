@@ -1,0 +1,337 @@
+[
+  {
+    "id": "gift-merino-scarf",
+    "slot": "gift",
+    "name": "Merino wool scarf",
+    "price": 38,
+    "tags": [
+      "wool",
+      "scarf",
+      "soft",
+      "cozy",
+      "winter"
+    ],
+    "traits": {
+      "classic": 0.8,
+      "neutral": 0.8,
+      "minimal": 0.6,
+      "practical": 0.5
+    },
+    "imageUrl": "/products/gift-merino-scarf.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-pattern-socks",
+    "slot": "gift",
+    "name": "Patterned sock trio",
+    "price": 18,
+    "tags": [
+      "socks",
+      "patterned",
+      "playful",
+      "cozy"
+    ],
+    "traits": {
+      "colorful": 0.9,
+      "expressive": 0.8,
+      "casual": 0.8,
+      "budgetSensitive": 0.8
+    },
+    "imageUrl": "/products/gift-pattern-socks.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-ceramic-mug",
+    "slot": "gift",
+    "name": "Handmade ceramic mug",
+    "price": 26,
+    "tags": [
+      "ceramic",
+      "handmade",
+      "mug",
+      "kitchen"
+    ],
+    "traits": {
+      "minimal": 0.7,
+      "aesthetic": 0.7,
+      "neutral": 0.6,
+      "practical": 0.6
+    },
+    "imageUrl": "/products/gift-ceramic-mug.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-leather-journal",
+    "slot": "gift",
+    "name": "Leather-bound journal",
+    "price": 34,
+    "tags": [
+      "leather",
+      "journal",
+      "paper",
+      "stationery"
+    ],
+    "traits": {
+      "classic": 0.8,
+      "formal": 0.5,
+      "aesthetic": 0.6,
+      "practical": 0.6
+    },
+    "imageUrl": "/products/gift-leather-journal.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-board-game",
+    "slot": "gift",
+    "name": "Family board game night set",
+    "price": 32,
+    "tags": [
+      "board game",
+      "family",
+      "tabletop",
+      "playful"
+    ],
+    "traits": {
+      "casual": 0.8,
+      "expressive": 0.5,
+      "practical": 0.5,
+      "colorful": 0.6
+    },
+    "imageUrl": "/products/gift-board-game.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-wireless-earbuds",
+    "slot": "gift",
+    "name": "Wireless earbuds",
+    "price": 79,
+    "tags": [
+      "earbuds",
+      "wireless",
+      "audio",
+      "tech"
+    ],
+    "traits": {
+      "trendy": 0.8,
+      "minimal": 0.6,
+      "practical": 0.8,
+      "premium": 0.6
+    },
+    "imageUrl": "/products/gift-wireless-earbuds.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-oversized-hoodie",
+    "slot": "gift",
+    "name": "Oversized fleece hoodie",
+    "price": 48,
+    "tags": [
+      "hoodie",
+      "fleece",
+      "oversized",
+      "relaxed",
+      "cozy"
+    ],
+    "traits": {
+      "oversized": 0.9,
+      "casual": 0.9,
+      "trendy": 0.6,
+      "neutral": 0.5
+    },
+    "imageUrl": "/products/gift-oversized-hoodie.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-fitted-cardigan",
+    "slot": "gift",
+    "name": "Fitted knit cardigan",
+    "price": 56,
+    "tags": [
+      "cardigan",
+      "knit",
+      "fitted",
+      "tailored"
+    ],
+    "traits": {
+      "fitted": 0.9,
+      "formal": 0.6,
+      "classic": 0.7,
+      "minimal": 0.5
+    },
+    "imageUrl": "/products/gift-fitted-cardigan.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-art-print",
+    "slot": "gift",
+    "name": "Framed botanical art print",
+    "price": 44,
+    "tags": [
+      "art",
+      "print",
+      "framed",
+      "wall"
+    ],
+    "traits": {
+      "aesthetic": 0.9,
+      "expressive": 0.7,
+      "colorful": 0.6
+    },
+    "imageUrl": "/products/gift-art-print.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-silk-tie",
+    "slot": "gift",
+    "name": "Silk tie",
+    "price": 42,
+    "tags": [
+      "silk",
+      "tie",
+      "tailored",
+      "evening"
+    ],
+    "traits": {
+      "formal": 0.9,
+      "classic": 0.8,
+      "premium": 0.5
+    },
+    "imageUrl": "/products/gift-silk-tie.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-cast-iron-skillet",
+    "slot": "gift",
+    "name": "Cast iron skillet",
+    "price": 40,
+    "tags": [
+      "cast iron",
+      "skillet",
+      "kitchen",
+      "durable"
+    ],
+    "traits": {
+      "practical": 0.9,
+      "classic": 0.7,
+      "neutral": 0.6
+    },
+    "imageUrl": "/products/gift-cast-iron-skillet.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-smart-lamp",
+    "slot": "gift",
+    "name": "Mood-shifting smart lamp",
+    "price": 65,
+    "tags": [
+      "lamp",
+      "smart",
+      "ambient",
+      "tech"
+    ],
+    "traits": {
+      "trendy": 0.8,
+      "colorful": 0.8,
+      "expressive": 0.6,
+      "premium": 0.5
+    },
+    "imageUrl": "/products/gift-smart-lamp.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-jigsaw-puzzle",
+    "slot": "gift",
+    "name": "1000-piece jigsaw puzzle",
+    "price": 22,
+    "tags": [
+      "puzzle",
+      "jigsaw",
+      "tabletop",
+      "family"
+    ],
+    "traits": {
+      "casual": 0.7,
+      "practical": 0.5,
+      "budgetSensitive": 0.7,
+      "colorful": 0.5
+    },
+    "imageUrl": "/products/gift-jigsaw-puzzle.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  },
+  {
+    "id": "gift-cashmere-beanie",
+    "slot": "gift",
+    "name": "Cashmere beanie",
+    "price": 95,
+    "tags": [
+      "cashmere",
+      "beanie",
+      "soft",
+      "winter"
+    ],
+    "traits": {
+      "premium": 0.9,
+      "minimal": 0.7,
+      "neutral": 0.7,
+      "classic": 0.6
+    },
+    "imageUrl": "/products/gift-cashmere-beanie.svg",
+    "merchantName": "Affinity Demo Shop",
+    "currency": "USD",
+    "quantity": 1,
+    "provider": "local",
+    "has3dModel": false
+  }
+]

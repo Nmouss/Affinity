@@ -226,6 +226,42 @@ confirm a table, hold inventory, or create a reservation.
 | `houseRules` | yes | Machine-enforceable hard rules. |
 | `email` | optional | Recipient address for approved plans. |
 | `emailNotifications` | optional | Defaults to true when an email exists. |
+| `taste` | optional | Learned taste summary from the frontend's comparisons (below). |
+
+### Learned taste (optional)
+
+The People Maker teaches a character its taste through pairwise comparisons.
+The frontend keeps the raw history and sends only this compact summary:
+
+```json
+{
+  "summary": "casual, colorful, comfort-first",
+  "likes": ["casual", "colorful"],
+  "dislikes": ["formal"],
+  "confidence": 0.7,
+  "traits": {
+    "casual": { "score": 0.85, "confidence": 0.8 },
+    "colorful": { "score": 0.8, "confidence": 0.6 },
+    "formal": { "score": 0.15, "confidence": 0.7 }
+  },
+  "evidenceCount": 9
+}
+```
+
+Trait keys are the shared vocabulary: `minimal`, `expressive`, `casual`,
+`formal`, `neutral`, `colorful`, `classic`, `trendy`, `practical`,
+`aesthetic`, `budgetSensitive`, `premium`, `oversized`, `fitted`. Scores and
+confidences are 0..1; opposite-sounding traits are independent.
+
+Taste is soft. `backend/taste.py` classifies every product into the same
+traits (authored `traits` in the local catalog, otherwise a deterministic
+keyword and price-band mapping cached by variant) and the shop node adds a
+confidence-weighted affinity term to each sprite's satisfaction when ranking
+hard-rule-compliant bundles. For gift missions the recipient's taste weighs 2x,
+like their wishes. Hard rules are enforced in code before ranking; taste can
+never veto or admit a product. Explanations cite only the recorded comparison
+count (`selectedBecause`: "Fits Ava's lean toward colorful, learned from 9
+taste comparisons."). Profiles without `taste` behave exactly as before.
 
 Supported hard rules:
 
@@ -440,6 +476,25 @@ rendering or a USDZ source for compatible iOS AR. The backend passes through
 only merchant-supplied Shopify model assets; it does not synthesize a model
 from product images. Products without a model return `has3dModel: false` and
 omit `models3d`.
+
+Every item may also carry `traits`, a map of taste trait to 0..1 presence (see
+"Learned taste" above). Local catalog items author their traits; Shopify items
+are classified deterministically from their title, description, and metadata.
+
+### Local gift fallback
+
+`data/gifts.json` is a small local catalog of real-looking gifts (slot `gift`,
+`imageUrl` under `/products/`, `has3dModel: false`). It serves two cases:
+
+- `AFFINITY_PRODUCT_PROVIDER=local` with a gift mission.
+- `AFFINITY_PRODUCT_PROVIDER=shopify_ucp` when the live search fails: the shop
+  node retries locally, labels the bundle `source: "local"`, and adds a
+  `warnings` entry. Any non-tree slot ID is filled from the gift items,
+  relabelled with the requested slot.
+
+A `type: "gift"` mission without explicit `shoppingSlots` defaults to one
+`gift` slot built from `freeText`, even when the occasion mentions Christmas;
+only `shared` Christmas missions infer the tree slots.
 
 Do not send users to checkout from an item's discovery-time `checkoutUrl`.
 After final approval, use only `state.carts[].checkoutUrl`, which comes from the

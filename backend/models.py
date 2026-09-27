@@ -23,6 +23,47 @@ class HouseRule(TypedDict):
     tag: NotRequired[str]
 
 
+TasteTrait = Literal[
+    "minimal",
+    "expressive",
+    "casual",
+    "formal",
+    "neutral",
+    "colorful",
+    "classic",
+    "trendy",
+    "practical",
+    "aesthetic",
+    "budgetSensitive",
+    "premium",
+    "oversized",
+    "fitted",
+]
+
+
+class TasteTraitPreference(TypedDict):
+    """How much a person likes one trait and how sure the comparisons made us."""
+
+    score: float
+    confidence: float
+
+
+class TasteSummary(TypedDict):
+    """Public, evidence-backed taste learned from the frontend's comparisons.
+
+    The frontend owns the raw comparison history. It sends only this compact,
+    agent-readable summary so opinions and scoring can cite observed evidence
+    instead of inventing personal history.
+    """
+
+    summary: str
+    likes: list[str]
+    dislikes: list[str]
+    confidence: float
+    traits: dict[str, TasteTraitPreference]
+    evidenceCount: int
+
+
 class FamilyProfile(TypedDict):
     """Identity and preferences for one of any number of invited sprites."""
 
@@ -37,6 +78,7 @@ class FamilyProfile(TypedDict):
     houseRules: list[HouseRule]
     email: NotRequired[str]
     emailNotifications: NotRequired[bool]
+    taste: NotRequired[TasteSummary]
 
 
 class ShoppingSlot(TypedDict):
@@ -186,6 +228,7 @@ class CatalogItem(TypedDict):
     currency: NotRequired[str]
     quantity: NotRequired[int]
     selectedBecause: NotRequired[list[str]]
+    traits: NotRequired[dict[str, float]]
 
 
 class RejectedAlternative(TypedDict):

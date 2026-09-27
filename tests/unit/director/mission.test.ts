@@ -8,7 +8,17 @@ describe("buildMission", () => {
       budget: 200,
       freeText: "Family Christmas tree, under $200",
       type: "shared",
+      kind: "shopping",
       invitedSpriteIds: ["son", "wife"],
+    });
+  });
+
+  it("builds a Google Places mission for dinner and activity prompts", () => {
+    expect(buildMission("Plan dinner and an activity in Midtown Atlanta under $150", ["wife"])).toMatchObject({
+      kind: "plan",
+      budget: 150,
+      location: { label: "Midtown Atlanta" },
+      planSlots: [{ id: "dinner" }, { id: "activity" }],
     });
   });
 

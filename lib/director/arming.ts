@@ -23,7 +23,6 @@ const bundleSettled = (context: ArmingContext) =>
 
 export const ARMING_TABLE: Record<GestureType, ArmingRule> = {
   hover: { phases: "all" },
-  toggleReasoning: { phases: "all" },
   reset: { phases: "all" },
   pinchTap: { phases: "all", except: ["signing"] },
   dragStart: { phases: ["lobby"] },
@@ -33,7 +32,8 @@ export const ARMING_TABLE: Record<GestureType, ArmingRule> = {
     phases: ["lobby"],
     when: (context) => context.missionText.trim().length > 0 && context.seatedCount >= 1,
   },
-  orbit: { phases: ["bundle", "scoring", "awaitMandate"] },
+  // The council stage is intentionally a fixed wide shot so every speaking agent remains visible.
+  orbit: { phases: [] },
   swipe: { phases: ["awaitMandate"], when: bundleSettled },
   handshakeProgress: { phases: ["awaitMandate"], when: bundleSettled },
   handshakeComplete: { phases: ["awaitMandate"], when: bundleSettled },

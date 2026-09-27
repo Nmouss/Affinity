@@ -3,7 +3,6 @@ import { getDemoTranscript } from "@/lib/demo/transcript";
 import { STAGE_TRANSCRIPT } from "@/lib/demo/stageTranscript";
 import { nextPhase } from "@/lib/director/phase";
 import { useStage } from "@/lib/stage/store";
-import type { CartMandate } from "@/types/domain";
 
 const state = () => useStage.getState();
 
@@ -36,9 +35,9 @@ describe("phase walk over the stage transcript", () => {
 
     state().advancePhase("handshakeComplete");
     expect(state().phase).toBe("signing");
-    state().completeMandate("receipt-1", { approvedAt: "now" } as CartMandate);
+    state().applyCouncilEvent({ type: "receipt", payload: { status: "approved", threadId: "receipt-1" } });
     expect(state().phase).toBe("receipt");
-    expect(state().receiptId).toBe("receipt-1");
+    expect(state().receipt?.threadId).toBe("receipt-1");
     expect(Object.values(state().sprites).every((sprite) => sprite.mood === "celebrating")).toBe(true);
 
     state().advancePhase("reset");
@@ -48,7 +47,7 @@ describe("phase walk over the stage transcript", () => {
   it("maps events to moods and fills the veto attribution", () => {
     const [wife, daughter, son, constraints, veto, bundle, ...scores] = STAGE_TRANSCRIPT;
     state().applyCouncilEvent(wife!);
-    expect(state().sprites.wife).toMatchObject({ mood: "speaking", bubble: expect.stringContaining("four feet") });
+    expect(state().sprites.wife).toMatchObject({ mood: "speaking", bubble: expect.stringContaining("under $25") });
     state().applyCouncilEvent(daughter!);
     expect(state().sprites.wife!.mood).toBe("listening");
     state().applyCouncilEvent(son!);
@@ -59,8 +58,8 @@ describe("phase walk over the stage transcript", () => {
     expect(state().conflict).toEqual({
       wishBy: "son",
       ruleBy: "wife",
-      itemId: "inflatable-trex",
-      resolvedItemId: "orn-dino",
+      itemId: "oversized-lamp",
+      resolvedItemId: "gift-lamp",
     });
     expect(state().sprites.wife!.mood).toBe("vetoing");
     expect(state().sprites.son!.mood).toBe("conceding");
@@ -78,7 +77,7 @@ describe("phase walk over the stage transcript", () => {
     for (const event of getDemoTranscript()) state().applyCouncilEvent(event);
     expect(state().phase).toBe("bundle");
     expect(state().conflict?.wishBy).toBe("son");
-    expect(state().bundle?.total).toBe(182);
+    expect(state().bundle?.total).toBe(85);
   });
 });
 
@@ -99,5 +98,20 @@ describe("nextPhase", () => {
     expect(nextPhase("bundle", "handshakeComplete")).toBe("bundle");
     expect(nextPhase("signing", "score")).toBe("signing");
     expect(nextPhase("signing", "mandateRejected")).toBe("awaitMandate");
+  });
+
+  it("treats run_state as a no-op transition in any phase", () => {
+    expect(nextPhase("awaitMandate", "run_state")).toBe("awaitMandate");
+    expect(nextPhase("opinions", "run_state")).toBe("opinions");
+    expect(nextPhase("signing", "run_state")).toBe("signing");
+  });
+
+  it("returns to the bundle phase when a swap arrives after awaitMandate", () => {
+    expect(nextPhase("awaitMandate", "bundle", true)).toBe("bundle");
+  });
+
+  it("locks late bundle events out once signing or receipt has started", () => {
+    expect(nextPhase("signing", "bundle", true)).toBe("signing");
+    expect(nextPhase("receipt", "bundle", true)).toBe("receipt");
   });
 });

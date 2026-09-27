@@ -1,20 +1,22 @@
 import { STAGE_TIMELINE, type TimedCouncilEvent } from "@/lib/demo/stageTranscript";
-import type { CouncilEvent, Mission } from "@/types/domain";
+import type { CouncilEvent, FamilyProfile, Mission } from "@/types/domain";
 import type { CouncilSource } from "@/lib/stage/slices/council";
 import { readSseStream } from "./sse";
 
 type FetchLike = typeof fetch;
 
-/** POSTs the mission to /api/council and yields CouncilEvents as the SSE stream arrives. */
+/** POSTs the mission and invited profiles to /api/council and yields CouncilEvents as they arrive. */
 export async function* startCouncil(
   mission: Mission,
+  profiles: FamilyProfile[],
+  threadId: string,
   signal: AbortSignal,
   fetchImpl: FetchLike = fetch,
 ): AsyncGenerator<CouncilEvent> {
   const response = await fetchImpl("/api/council", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
-    body: JSON.stringify(mission),
+    body: JSON.stringify({ mission, profiles, threadId }),
     signal,
   });
   if (!response.ok || !response.body) throw new Error(`Council request failed (${response.status})`);
@@ -65,6 +67,7 @@ export function eventKey(event: CouncilEvent): string {
 
 export interface CouncilRunOptions {
   signal: AbortSignal;
+  threadId: string;
   /** Skip the network and play the stage transcript (the `?demo` URL flag). */
   preferReplay?: boolean;
   /** Give up on the live stream if its first event takes longer than this. */
@@ -76,7 +79,10 @@ export interface CouncilRunOptions {
   onFallback?: (reason: string) => void;
 }
 
-const LIVE_STALL_MS = 4000;
+// Live model/tool calls can legitimately take several seconds. The backend emits a `mission`
+// acknowledgement immediately; keep a generous ceiling for cold starts instead of silently
+// replacing real product results (and their images) with the image-less demo transcript.
+const LIVE_STALL_MS = 15000;
 
 type Next = IteratorResult<CouncilEvent> | { stalled: true };
 
@@ -84,7 +90,11 @@ type Next = IteratorResult<CouncilEvent> | { stalled: true };
  * The council as one event stream: live when it works, replay when it's asked for, fails, or stays
  * silent too long. A mid-stream failure hands over to replay without repeating what already played.
  */
-export async function* runCouncil(mission: Mission, options: CouncilRunOptions): AsyncGenerator<CouncilEvent> {
+export async function* runCouncil(
+  mission: Mission,
+  profiles: FamilyProfile[],
+  options: CouncilRunOptions,
+): AsyncGenerator<CouncilEvent> {
   const { signal, stallMs = LIVE_STALL_MS } = options;
   const replay = (skip: Set<string>) => {
     options.onSource?.("replay");
@@ -104,7 +114,7 @@ export async function* runCouncil(mission: Mission, options: CouncilRunOptions):
 
   try {
     options.onSource?.("live");
-    const stream = startCouncil(mission, live.signal, options.fetchImpl);
+    const stream = startCouncil(mission, profiles, options.threadId, live.signal, options.fetchImpl);
     let first = true;
     for (;;) {
       let timer: ReturnType<typeof setTimeout> | undefined;

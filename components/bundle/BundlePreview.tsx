@@ -3,8 +3,18 @@ import styles from "./Bundle.module.css";
 
 const money = (value: number) => `$${Number.isInteger(value) ? value : value.toFixed(2)}`;
 
-/** The proposed cart as a budget bar (total vs budget) plus who each item serves. */
-export function BundlePreview({ bundle, budget, family }: { bundle: Bundle; budget: number; family: FamilyProfile[] }) {
+export interface BundlePreviewProps {
+  bundle: Bundle;
+  budget: number;
+  family: FamilyProfile[];
+  /** Asks the council for a different item in this slot. Omit to hide the swap action. */
+  onSwap?: (itemId: string) => void;
+  /** Item id currently awaiting a swapped replacement, for a loading state. */
+  swapping?: string | null;
+}
+
+/** The proposed cart as a budget bar (total vs budget), who each item serves, and per-item actions. */
+export function BundlePreview({ bundle, budget, family, onSwap, swapping }: BundlePreviewProps) {
   const ratio = budget > 0 ? bundle.total / budget : 1;
   const over = bundle.total > budget;
   const servedBy = (itemId: string) =>
@@ -28,6 +38,11 @@ export function BundlePreview({ bundle, budget, family }: { bundle: Bundle; budg
       <ul className={styles.items}>
         {bundle.items.map((item) => (
           <li key={item.id} className={styles.item}>
+            {item.imageUrl ? (
+              <img src={item.imageUrl} alt="" className={styles.itemImage} loading="lazy" />
+            ) : (
+              <span className={styles.itemImagePlaceholder} aria-hidden="true" />
+            )}
             <span className={styles.itemName}>{item.name}</span>
             <span className={styles.servedBy}>
               {servedBy(item.id).map((member) => (
@@ -41,6 +56,18 @@ export function BundlePreview({ bundle, budget, family }: { bundle: Bundle; budg
               ))}
             </span>
             <span className={styles.price}>{money(item.price)}</span>
+            <span className={styles.itemActions}>
+              {onSwap && (
+                <button
+                  type="button"
+                  className={styles.swap}
+                  onClick={() => onSwap(item.id)}
+                  disabled={swapping === item.id}
+                >
+                  {swapping === item.id ? "Asking…" : "Swap"}
+                </button>
+              )}
+            </span>
           </li>
         ))}
       </ul>

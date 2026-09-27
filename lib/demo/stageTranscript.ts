@@ -11,14 +11,13 @@ export interface TimedCouncilEvent {
 
 const BUNDLE: Bundle = {
   items: [
-    { id: "tree-4ft", slot: "tree", name: "4 ft pre-lit tree", price: 89, heightIn: 48, tags: ["compact", "warm white"] },
-    { id: "orn-doll", slot: "ornaments", name: "Doll ornament set", price: 26, tags: ["dolls", "pink", "sparkle"] },
-    { id: "orn-dino", slot: "ornaments", name: "Dinosaur ornament set", price: 28, tags: ["dinosaurs"] },
-    { id: "orn-gold", slot: "ornaments", name: "White and gold ornament set", price: 24, tags: ["white and gold decor"] },
-    { id: "topper-star", slot: "topper", name: "Gold star topper", price: 15, tags: ["sparkle"] },
+    { id: "gift-lamp", slot: "centerpiece", name: "Sculptural desk lamp", price: 74, heightIn: 20, tags: ["design-forward pieces"] },
+    { id: "wrap-simple", slot: "wrapping", name: "Kraft paper and twine", price: 6, tags: ["neutral tones"] },
+    { id: "card-simple", slot: "card", name: "Letterpress card", price: 5, tags: ["local makers"] },
+    { id: "extra-mug", slot: "extra", name: "Hand-thrown mug", price: 18, tags: ["local makers", "quality over quantity"] },
   ],
-  total: 182,
-  serves: { wife: ["tree-4ft", "orn-gold"], daughter: ["orn-doll", "topper-star"], son: ["orn-dino"] },
+  total: 103,
+  serves: { wife: ["gift-lamp", "wrap-simple"], daughter: ["card-simple", "extra-mug"], son: ["gift-lamp"] },
 };
 
 export const STAGE_TIMELINE = [
@@ -28,10 +27,10 @@ export const STAGE_TIMELINE = [
       type: "opinion",
       payload: {
         spriteId: "wife",
-        say: "Warm and elegant, please—and no taller than four feet.",
-        hardRules: [{ type: "maxHeight", inches: 48, why: "The living room is small." }],
-        wishes: ["warm lights", "white and gold decor"],
-        vetoes: ["giant decorations"],
+        say: "Something practical and well-made, please—and let's keep it under $25.",
+        hardRules: [{ type: "maxHeight", inches: 24, why: "It has to fit on the shared shelf." }],
+        wishes: ["neutral tones", "useful gifts"],
+        vetoes: ["novelty items"],
       },
     },
   },
@@ -41,9 +40,9 @@ export const STAGE_TIMELINE = [
       type: "opinion",
       payload: {
         spriteId: "daughter",
-        say: "Can we make it pink and sparkly with dolls?",
+        say: "Can we find something from a local maker instead of the usual mall stuff?",
         hardRules: [],
-        wishes: ["dolls", "pink", "sparkle"],
+        wishes: ["local makers", "design-forward pieces"],
         vetoes: [],
       },
     },
@@ -54,9 +53,9 @@ export const STAGE_TIMELINE = [
       type: "opinion",
       payload: {
         spriteId: "son",
-        say: "I vote for a giant T-rex! Or at least lots of dinosaurs.",
+        say: "I say we go big—get the giant arc lamp, make it a whole thing.",
         hardRules: [],
-        wishes: ["giant inflatable T-rex", "dinosaurs"],
+        wishes: ["oversized", "conversation pieces"],
         vetoes: [],
       },
     },
@@ -66,18 +65,17 @@ export const STAGE_TIMELINE = [
     event: {
       type: "constraints",
       payload: {
-        hardRules: [{ type: "maxHeight", inches: 48, why: "The living room is small." }],
+        hardRules: [{ type: "maxHeight", inches: 24, why: "It has to fit on the shared shelf." }],
         wishes: [
-          { spriteId: "wife", wish: "warm lights", weight: 1 },
-          { spriteId: "wife", wish: "white and gold decor", weight: 1 },
-          { spriteId: "daughter", wish: "dolls", weight: 1 },
-          { spriteId: "daughter", wish: "pink", weight: 1 },
-          { spriteId: "daughter", wish: "sparkle", weight: 1 },
-          { spriteId: "son", wish: "giant inflatable T-rex", weight: 1 },
-          { spriteId: "son", wish: "dinosaurs", weight: 1 },
+          { spriteId: "wife", wish: "neutral tones", weight: 1 },
+          { spriteId: "wife", wish: "useful gifts", weight: 1 },
+          { spriteId: "daughter", wish: "local makers", weight: 1 },
+          { spriteId: "daughter", wish: "design-forward pieces", weight: 1 },
+          { spriteId: "son", wish: "oversized", weight: 1 },
+          { spriteId: "son", wish: "conversation pieces", weight: 1 },
         ],
         conflicts: [
-          { rule: "Maximum height: 48 inches", wish: "8 ft inflatable T-rex", resolution: "Use dinosaur ornaments instead." },
+          { rule: "Maximum height: 24 inches", wish: "oversized floor arc lamp", resolution: "Use a sculptural desk lamp instead." },
         ],
       },
     },
@@ -86,17 +84,17 @@ export const STAGE_TIMELINE = [
     afterMs: 40,
     event: {
       type: "veto",
-      payload: { rule: "Maximum height: 48 inches", wish: "8 ft inflatable T-rex", resolution: "Use dinosaur ornaments instead." },
+      payload: { rule: "Maximum height: 24 inches", wish: "oversized floor arc lamp", resolution: "Use a sculptural desk lamp instead." },
     },
   },
   { afterMs: 2600, event: { type: "bundle", payload: BUNDLE } },
   {
     afterMs: 900,
-    event: { type: "score", payload: { spriteId: "wife", score: 9, say: "Warm, tidy, and it fits the corner." } },
+    event: { type: "score", payload: { spriteId: "wife", score: 9, say: "Practical, well-made, and it fits on the shelf." } },
   },
   {
     afterMs: 200,
-    event: { type: "score", payload: { spriteId: "daughter", score: 8, say: "Pink dolls and a sparkly star!" } },
+    event: { type: "score", payload: { spriteId: "daughter", score: 8, say: "Love that it's from a local maker." } },
   },
   {
     afterMs: 250,
@@ -105,8 +103,8 @@ export const STAGE_TIMELINE = [
       payload: {
         spriteId: "son",
         score: 7,
-        say: "Dinosaur ornaments are almost as cool as a T-rex.",
-        complaint: "Still wish it was giant.",
+        say: "The desk lamp is still a conversation piece, at least.",
+        complaint: "Still wish it was the giant arc lamp.",
       },
     },
   },

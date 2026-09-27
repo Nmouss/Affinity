@@ -44,6 +44,41 @@ describe("createSseParser", () => {
     expect(parseAll([text])).toEqual(STAGE_TRANSCRIPT.slice(0, 1));
   });
 
+  it("recognizes run_state and carries its payload through", () => {
+    const runState: CouncilEvent = {
+      type: "run_state",
+      payload: { threadId: "t1", status: "interrupted", interrupts: [], state: {} },
+    };
+    expect(parseAll([encode([runState])])).toEqual([runState]);
+  });
+
+  it("recognizes live acknowledgements and public agent deliberation", () => {
+    const events: CouncilEvent[] = [
+      {
+        type: "mission",
+        payload: {
+          occasion: "Dinner",
+          budget: 100,
+          freeText: "Find dinner",
+          type: "shared",
+          invitedSpriteIds: ["wife"],
+        },
+      },
+      {
+        type: "deliberation",
+        payload: {
+          spriteId: "wife",
+          say: "I agree, with one compromise.",
+          replyToSpriteIds: [],
+          agreements: ["dinner"],
+          concerns: [],
+          compromiseWishes: ["nearby"],
+        },
+      },
+    ];
+    expect(parseAll([encode(events)])).toEqual(events);
+  });
+
   it("flushes a final event without a trailing blank line", () => {
     const text = encode(STAGE_TRANSCRIPT.slice(0, 1)).trimEnd();
     expect(parseAll([text])).toEqual(STAGE_TRANSCRIPT.slice(0, 1));

@@ -1,14 +1,17 @@
 import type { StoreApi } from "zustand";
-import { signMandate } from "@/lib/crypto/sign";
+import { signMandate, signPlanMandate } from "@/lib/crypto/sign";
 import { emitGesture, onGesture, setArmingPolicy } from "@/lib/stage/bus";
 import { MAX_SEATS } from "@/lib/stage/layout";
+import { getPerson } from "@/lib/people/roster";
 import type { StageStore } from "@/lib/stage/store";
-import type { Bundle, CartMandate, Mission } from "@/types/domain";
+import type { Bundle, CartMandate, FamilyProfile, Mission } from "@/types/domain";
 import type { GestureEvent } from "@/types/stage";
 import { isGestureArmed, type ArmingContext } from "./arming";
 import { BeatQueue, CUT90_BEATS, DEFAULT_BEATS, type Beat, type BeatDurations } from "./beats";
 import { runCouncil, type CouncilRunOptions } from "./councilClient";
+import { classifyEnvironment } from "./environmentClassifier";
 import { buildMission } from "./mission";
+import { readSseStream } from "./sse";
 
 // The director sits between the hands and the agents: it decides what each armed gesture means in the
 // current phase, runs the council, and paces its events into beats so stage timing never depends on
@@ -31,6 +34,8 @@ export interface Director {
   /** Overrides individual beat durations (leva tuning in /lab). */
   tuneBeats: (patch: Partial<BeatDurations>) => void;
   readonly beats: BeatDurations;
+  /** Asks the backend to replace one cart item with a different option for the same slot. */
+  swapItem: (itemId: string, prompt?: string) => Promise<void>;
   dispose: () => void;
 }
 
@@ -80,7 +85,7 @@ export function createDirector(options: DirectorOptions): Director {
     apply: applyBeat,
     durations: () => beats,
     onBeatEnd: (beat) => {
-      if (beat.kind === "event" && beat.event.type === "opinion") {
+      if (beat.kind === "event" && (beat.event.type === "opinion" || beat.event.type === "deliberation")) {
         const id = beat.event.payload.spriteId;
         if (get().sprites[id]?.mood === "speaking") get().setSpriteMood(id, "listening");
       }
@@ -91,17 +96,22 @@ export function createDirector(options: DirectorOptions): Director {
     const state = get();
     const invited = seatedInOrder(state);
     const mission = buildMission(state.missionText, invited);
+    const profiles = invited.map((id) => getPerson(id)).filter((p): p is FamilyProfile => p != null);
+    const threadId = crypto.randomUUID();
     const runId = ++run;
     council?.abort();
     council = new AbortController();
     state.setMission(mission);
+    state.setThreadId(threadId);
     state.setError(null);
     state.openProfile(null);
+    state.setScene({ environment: classifyEnvironment(mission.freeText) });
     state.advancePhase("convene");
     for (const id of invited) state.setSpriteMood(id, "thinking");
 
     const runOptions: CouncilRunOptions = {
       signal: council.signal,
+      threadId,
       preferReplay: options.preferReplay,
       stallMs: options.stallMs,
       replaySpeed: options.cut90 ? 2 : 1,
@@ -110,9 +120,12 @@ export function createDirector(options: DirectorOptions): Director {
       onFallback: (reason) => log(`falling back to replay: ${reason}`),
     };
     try {
-      for await (const event of runCouncil(mission, runOptions)) {
+      for await (const event of runCouncil(mission, profiles, runOptions)) {
         if (runId !== run) return;
-        queue.push({ kind: "event", event });
+        // Session identity and failures are control-plane state, not theatrical beats. Applying
+        // them immediately prevents a user action from racing the paced animation queue.
+        if (event.type === "run_state" || event.type === "error") get().applyCouncilEvent(event);
+        else queue.push({ kind: "event", event });
       }
       if (runId === run) queue.push({ kind: "streamEnd" });
     } catch (error) {
@@ -124,31 +137,76 @@ export function createDirector(options: DirectorOptions): Director {
   async function approve() {
     const state = get();
     const bundle = state.bundle;
-    if (!bundle) return;
+    const plan = state.plan;
+    const threadId = state.threadId;
+    if ((!bundle && !plan) || !threadId) {
+      state.setError("The proposal is not ready to approve yet.");
+      return;
+    }
     const mission =
       state.mission ?? buildMission(state.missionText, [...new Set([...seatedInOrder(state), ...Object.keys(state.opinions)])]);
     const runId = run;
     state.setError(null);
     state.advancePhase("handshakeComplete");
     try {
-      const mandate = await sign(mission, bundle);
-      const response = await fetchImpl("/api/mandate", {
+      const mandate = plan ? await signPlanMandate(mission, plan) : await sign(mission, bundle!);
+      state.setMandate(mandate);
+      const verification = await fetchImpl("/api/mandate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(mandate),
       });
-      const result = (await response.json().catch(() => ({}))) as { valid?: boolean; receiptId?: string };
+      const verified = (await verification.json().catch(() => ({}))) as { valid?: boolean };
       if (runId !== run) return;
-      if (result.valid && result.receiptId) {
-        get().completeMandate(result.receiptId, mandate);
-      } else {
+      if (!verified.valid) {
         get().advancePhase("mandateRejected");
         get().setError("The mandate signature was rejected. Shake again to retry.");
+        return;
+      }
+
+      const response = await fetchImpl("/api/council/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+        body: JSON.stringify({ threadId, action: "approve", signature: mandate.signature }),
+      });
+      if (!response.ok || !response.body) throw new Error(`Approval resume failed (${response.status})`);
+      for await (const event of readSseStream(response.body)) {
+        if (runId !== run) return;
+        if (event.type === "run_state" || event.type === "error") get().applyCouncilEvent(event);
+        else queue.push({ kind: "event", event });
       }
     } catch (error) {
       if (runId !== run) return;
       get().advancePhase("mandateRejected");
       get().setError(error instanceof Error ? `Signing failed: ${error.message}` : "Signing failed");
+    }
+  }
+
+  async function swapItem(itemId: string, prompt?: string) {
+    const state = get();
+    const threadId = state.threadId;
+    if (!threadId) {
+      log("swap requested with no threadId (live backend session not established)", itemId);
+      state.setError("Can't swap yet — the council session hasn't started.");
+      return;
+    }
+    const runId = run;
+    state.setError(null);
+    try {
+      const response = await fetchImpl("/api/council/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+        body: JSON.stringify({ threadId, action: "replace_agent", itemId, prompt }),
+      });
+      if (!response.ok || !response.body) throw new Error(`Swap request failed (${response.status})`);
+      for await (const event of readSseStream(response.body)) {
+        if (runId !== run) return;
+        if (event.type === "run_state" || event.type === "error") get().applyCouncilEvent(event);
+        else queue.push({ kind: "event", event });
+      }
+    } catch (error) {
+      if (runId !== run) return;
+      get().setError(error instanceof Error ? `Swap failed: ${error.message}` : "Swap failed");
     }
   }
 
@@ -202,14 +260,7 @@ export function createDirector(options: DirectorOptions): Director {
         }
         if (target.startsWith("sprite:")) {
           const id = target.slice("sprite:".length);
-          if (state.phase === "lobby") {
-            state.openProfile(state.profileOpenId === id ? null : id);
-          } else if (state.reasoningFocusId === id) {
-            state.setReasoningFocus(null);
-          } else {
-            state.setReasoningFocus(id);
-            if (!state.reasoningVisible) state.toggleReasoning();
-          }
+          if (state.phase === "lobby") state.openProfile(state.profileOpenId === id ? null : id);
           return;
         }
         if (state.profileOpenId) state.openProfile(null);
@@ -221,15 +272,11 @@ export function createDirector(options: DirectorOptions): Director {
       case "handshakeComplete":
         void approve();
         return;
-      case "toggleReasoning":
-        state.toggleReasoning();
-        return;
       case "reset":
         reset();
         return;
       case "swipe":
-        // No agent endpoint for swapping items yet; this is where a revise request would go.
-        log("swipe (no-op)", event.itemId);
+        void swapItem(event.itemId);
         return;
       case "hover":
       case "orbit":
@@ -247,6 +294,7 @@ export function createDirector(options: DirectorOptions): Director {
     tuneBeats: (patch) => {
       Object.assign(beats, patch);
     },
+    swapItem,
     dispose: () => {
       unsubscribe();
       restorePolicy();

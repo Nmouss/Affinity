@@ -394,10 +394,10 @@ def _item_relevance(item: CatalogItem, desires: list[str]) -> float:
 
 
 def _candidate_bundles(state: CouncilState):
-    """Yield every complete, hard-rule-compliant bundle within the budget.
+    """Yield complete local bundles for the mission's actual catalog slots.
 
-    Tree, lights, and topper contribute one item each. One to three ornament
-    sets are permitted so multiple family wishes can be represented.
+    The fallback catalog is intentionally data-driven: changing demo categories must not require
+    rewriting this node. ``decoy`` remains available for conflict attribution but is never required.
     """
     mission = state["mission"]
     constraints = state["constraints"]
@@ -406,22 +406,27 @@ def _candidate_bundles(state: CouncilState):
         "max_price": mission["budget"],
         "hard_rules": constraints["hardRules"],
     }
-    trees = search_catalog(slot="tree", **common)
-    lights = search_catalog(slot="lights", **common)
-    ornaments = search_catalog(slot="ornaments", **common)
-    toppers = search_catalog(slot="topper", **common)
-    if not all((trees, lights, ornaments, toppers)):
-        raise ValueError("No complete bundle can satisfy the hard rules")
+    supplied = mission.get("shoppingSlots") or []
+    slot_ids = [str(slot["id"]) for slot in supplied]
+    if not slot_ids:
+        slot_ids = list(
+            dict.fromkeys(item["slot"] for item in state["catalog"] if item["slot"] != "decoy")
+        )
+    candidates_by_slot = [search_catalog(slot=slot, **common) for slot in slot_ids]
+    if not slot_ids or any(not candidates for candidates in candidates_by_slot):
+        missing = [slot for slot, candidates in zip(slot_ids, candidates_by_slot) if not candidates]
+        raise ValueError(f"No complete bundle can satisfy the hard rules for: {', '.join(missing)}")
 
-    ornament_sets = itertools.chain.from_iterable(
-        itertools.combinations(ornaments, count)
-        for count in range(1, min(3, len(ornaments)) + 1)
-    )
-    for tree, light, ornament_group, topper in itertools.product(
-        trees, lights, list(ornament_sets), toppers
-    ):
-        items = [tree, light, *ornament_group, topper]
-        total = round(sum(float(item["price"]) for item in items), 2)
+    for selected in itertools.product(*candidates_by_slot):
+        quantities = {
+            str(slot["id"]): max(1, int(slot.get("quantity", 1))) for slot in supplied
+        }
+        items = [
+            {**item, "quantity": quantities.get(item["slot"], 1)} for item in selected
+        ]
+        total = round(
+            sum(float(item["price"]) * int(item.get("quantity", 1)) for item in items), 2
+        )
         if total <= mission["budget"]:
             yield items, total
 
@@ -975,6 +980,15 @@ def _normalize_place(place: dict[str, Any], slot: dict[str, Any]) -> PlaceCandid
         "latitude": location.get("latitude"),
         "longitude": location.get("longitude"),
     }
+    photos = place.get("photos") if isinstance(place.get("photos"), list) else []
+    first_photo = next((photo for photo in photos if isinstance(photo, dict) and photo.get("name")), None)
+    if first_photo:
+        optional["photoName"] = str(first_photo["name"])
+        attributions = first_photo.get("authorAttributions")
+        if isinstance(attributions, list):
+            optional["photoAttributions"] = [
+                attribution for attribution in attributions if isinstance(attribution, dict)
+            ]
     opening = place.get("currentOpeningHours")
     if isinstance(opening, dict):
         optional["openNow"] = opening.get("openNow")

@@ -1,35 +1,35 @@
 [
   {
     "id": "wife",
-    "name": "Maya",
-    "relationship": "wife",
+    "name": "Priya",
+    "relationship": "roommate",
     "look": "sprite_03",
-    "colors": ["#fff4d6", "#c9a227"],
-    "personality": ["calm", "tidy", "practical"],
-    "loves": ["white and gold decor", "warm lights", "minimal design"],
-    "avoids": ["clutter", "loud colors"],
-    "houseRules": [{ "type": "maxHeight", "inches": 48, "why": "The living room is small." }]
+    "colors": ["#e8dcc8", "#7c9885"],
+    "personality": ["practical", "tasteful", "budget-minded"],
+    "loves": ["quality over quantity", "neutral tones", "useful gifts"],
+    "avoids": ["clutter", "novelty items"],
+    "houseRules": [{ "type": "maxHeight", "inches": 24, "why": "It has to fit on the shared shelf." }]
   },
   {
     "id": "daughter",
-    "name": "Ava",
-    "relationship": "daughter",
+    "name": "Sam",
+    "relationship": "close friend",
     "look": "sprite_07",
-    "colors": ["#ff8fcf", "#ffe5f5"],
-    "personality": ["bright", "creative", "sparkly"],
-    "loves": ["dolls", "pink", "sparkle"],
-    "avoids": ["plain decor", "dark colors"],
+    "colors": ["#9b8aa6", "#e8dcc8"],
+    "personality": ["creative", "particular", "generous"],
+    "loves": ["design-forward pieces", "local makers", "a bit of color"],
+    "avoids": ["generic", "mass-produced"],
     "houseRules": []
   },
   {
     "id": "son",
-    "name": "Leo",
-    "relationship": "son",
+    "name": "Jordan",
+    "relationship": "close friend",
     "look": "sprite_11",
-    "colors": ["#45d483", "#2474ff"],
-    "personality": ["excited", "adventurous", "silly"],
-    "loves": ["dinosaurs", "color-changing lights", "giant inflatable T-rex"],
-    "avoids": ["boring ornaments"],
+    "colors": ["#7b98a6", "#a68a64"],
+    "personality": ["enthusiastic", "curious", "a little extra"],
+    "loves": ["gadgets", "oversized", "conversation pieces"],
+    "avoids": ["boring gifts"],
     "houseRules": []
   }
 ]

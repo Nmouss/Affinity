@@ -1,9 +1,20 @@
-import type { CartMandate } from "@/types/domain";
+import type { CommerceCart, NotificationDelivery, ReceiptResult, SignedMandate } from "@/types/domain";
 import styles from "./Receipt.module.css";
 
-/** Shown once /api/mandate verified the handshake's signature. Vocabulary follows AP2. */
-export function Receipt({ receiptId, mandate }: { receiptId: string; mandate: CartMandate }) {
+/** Shown only after LangGraph finalizes approval and any post-approval side effects. */
+export function Receipt({
+  receipt,
+  mandate,
+  carts,
+  notifications,
+}: {
+  receipt: ReceiptResult;
+  mandate: SignedMandate;
+  carts: CommerceCart[];
+  notifications: NotificationDelivery[];
+}) {
   const approved = new Date(mandate.approvedAt);
+  const isCart = "bundle" in mandate;
   return (
     <aside className={styles.receipt} aria-label="Signed mandate receipt" aria-live="polite">
       <p className={styles.seal} aria-hidden>
@@ -15,20 +26,36 @@ export function Receipt({ receiptId, mandate }: { receiptId: string; mandate: Ca
         <dd>
           {mandate.mission.freeText} · budget ${mandate.mission.budget}
         </dd>
-        <dt>Cart mandate</dt>
+        <dt>{isCart ? "Cart mandate" : "Plan mandate"}</dt>
         <dd>
-          {mandate.bundle.items.length} items · ${mandate.bundle.total}
+          {isCart
+            ? `${mandate.bundle.items.length} items · $${mandate.bundle.total}`
+            : `${mandate.plan.stops.length} stops · ${mandate.plan.location}`}
         </dd>
         <dt>Approved</dt>
         <dd>{Number.isNaN(approved.getTime()) ? mandate.approvedAt : approved.toLocaleString()}</dd>
         <dt>Signature</dt>
         <dd className={styles.mono}>{mandate.signature.slice(0, 24)}…</dd>
         <dt>Receipt</dt>
-        <dd className={styles.mono}>{receiptId}</dd>
+        <dd className={styles.mono}>{receipt.threadId}</dd>
       </dl>
+      {carts.length > 0 && (
+        <div className={styles.checkoutLinks}>
+          {carts.map((cart) => (
+            <a key={`${cart.merchantDomain}:${cart.cartId}`} href={cart.checkoutUrl} target="_blank" rel="noreferrer">
+              Checkout at {cart.merchantDomain}
+            </a>
+          ))}
+        </div>
+      )}
+      {notifications.length > 0 && (
+        <p className={styles.note}>
+          Plan notifications: {notifications.filter((item) => item.status !== "failed").length}/{notifications.length} delivered.
+        </p>
+      )}
       <p className={styles.note}>
-        Human-present flow: the mission is the intent, the approved bundle is the cart mandate, and your handshake signed
-        it with this device&apos;s ECDSA P-256 key. No money moved.
+        Human-present flow: your handshake signed this proposal with this device&apos;s ECDSA P-256 key.
+        {isCart ? " Checkout remains a separate handoff; no payment was submitted." : " The approved plan is now finalized."}
       </p>
       <p className={styles.reset}>
         Press <span className={styles.kbd}>R</span> to start over

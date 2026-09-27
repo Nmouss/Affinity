@@ -23,31 +23,32 @@ function AutoClear({ saved, restore = false }: { saved: RefObject<boolean>; rest
   return null;
 }
 
-// The fire light lives in Hearth and the lamp in Furniture; this is the cool window light, the low
-// fill, and a baked Lightformer environment for reflections (no HDR download).
+// Bright, even fill so 2D/3D content stays the visual focus, not the room's atmosphere: a soft
+// neutral key light, a baked Lightformer environment for reflections (no HDR download), and light
+// contact shadows.
 export function Lighting() {
-  const { moon, hemisphere, ambient, envIntensity } = useControls("Lighting", {
-    moon: { value: 0.55, min: 0, max: 3 },
-    hemisphere: { value: 0.35, min: 0, max: 2 },
-    ambient: { value: 0.08, min: 0, max: 1 },
-    envIntensity: { value: 0.35, min: 0, max: 2 },
+  const { key, hemisphere, ambient, envIntensity } = useControls("Lighting", {
+    key: { value: 1.4, min: 0, max: 3 },
+    hemisphere: { value: 0.9, min: 0, max: 2 },
+    ambient: { value: 0.55, min: 0, max: 1 },
+    envIntensity: { value: 0.6, min: 0, max: 2 },
   });
 
   const savedAutoClear = useRef(false);
 
   return (
     <>
-      <hemisphereLight args={["#50608a", "#3a2418", hemisphere]} />
-      <ambientLight color="#ffd9b0" intensity={ambient} />
-      <directionalLight position={[ROOM.leftWallX - 8, 10, -3]} color="#8fb0ff" intensity={moon} />
+      <hemisphereLight args={["#ffffff", "#dcdcd2", hemisphere]} />
+      <ambientLight color="#ffffff" intensity={ambient} />
+      <directionalLight position={[ROOM.leftWallX - 8, 10, -3]} color="#fff8ec" intensity={key} />
       <Environment resolution={64} frames={1} environmentIntensity={envIntensity}>
-        <Lightformer form="rect" intensity={3} color="#ff9a4d" position={[0, 2, -9]} scale={[6, 4, 1]} />
-        <Lightformer form="rect" intensity={1.5} color="#7fa2ff" position={[-11, 5, -3]} rotation-y={Math.PI / 2} scale={[4, 4, 1]} />
-        <Lightformer form="ring" intensity={1.2} color="#ffd6a0" position={[9, 6, -5]} scale={2} />
-        <Lightformer form="rect" intensity={0.4} color="#fff1e0" position={[0, 12, 0]} rotation-x={Math.PI / 2} scale={[20, 16, 1]} />
+        <Lightformer form="rect" intensity={1.6} color="#ffffff" position={[0, 2, -9]} scale={[6, 4, 1]} />
+        <Lightformer form="rect" intensity={1.2} color="#ffffff" position={[-11, 5, -3]} rotation-y={Math.PI / 2} scale={[4, 4, 1]} />
+        <Lightformer form="ring" intensity={1} color="#fff6e6" position={[9, 6, -5]} scale={2} />
+        <Lightformer form="rect" intensity={1.4} color="#ffffff" position={[0, 12, 0]} rotation-x={Math.PI / 2} scale={[20, 16, 1]} />
       </Environment>
       <AutoClear saved={savedAutoClear} />
-      <ContactShadows position={[0, 0.02, 0]} scale={[ROOM.width, ROOM.depth]} resolution={512} blur={2.4} opacity={0.55} far={6} color="#1a0c05" />
+      <ContactShadows position={[0, 0.02, 0]} scale={[ROOM.width, ROOM.depth]} resolution={512} blur={2.4} opacity={0.25} far={6} color="#b8b0a0" />
       <AutoClear saved={savedAutoClear} restore />
     </>
   );

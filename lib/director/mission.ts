@@ -3,6 +3,16 @@ import type { Mission } from "@/types/domain";
 export const DEFAULT_BUDGET = 200;
 
 const OCCASIONS = ["christmas", "hanukkah", "birthday", "anniversary", "thanksgiving", "halloween", "easter"];
+const PLAN_WORDS = /\b(dinner|restaurant|reservation|activity|activities|outing|date night|things to do|itinerary|plan a)\b/i;
+
+export function isPlanPrompt(text: string): boolean {
+  return PLAN_WORDS.test(text);
+}
+
+export function parsePlanLocation(text: string): string {
+  const match = text.match(/\b(?:in|near|around)\s+([^,.;]+?)(?=\s+(?:under|below|at|on|for)\b|$)/i);
+  return match?.[1]?.trim() || process.env.NEXT_PUBLIC_DEFAULT_PLAN_LOCATION || "Atlanta, GA";
+}
 
 export function parseBudget(text: string): number {
   const dollars = text.match(/\$\s*(\d[\d,]*(?:\.\d+)?)/);
@@ -22,11 +32,35 @@ export function parseOccasion(text: string): string {
 
 /** Mission text plus the seated sprites (in seat order) become the intent the council works on. */
 export function buildMission(text: string, invitedSpriteIds: string[]): Mission {
+  const freeText = text.trim();
+  if (isPlanPrompt(freeText)) {
+    const wantsDinner = /\b(dinner|restaurant|reservation|date night|food)\b/i.test(freeText);
+    const wantsActivity = /\b(activity|activities|outing|things to do|date night|after dinner)\b/i.test(freeText);
+    const planSlots = [
+      ...(wantsDinner
+        ? [{ id: "dinner", query: freeText, includedType: "restaurant", minRating: 4, durationMinutes: 90 }]
+        : []),
+      ...(wantsActivity || !wantsDinner
+        ? [{ id: "activity", query: freeText, minRating: 4, durationMinutes: 90 }]
+        : []),
+    ];
+    return {
+      kind: "plan",
+      occasion: parseOccasion(freeText),
+      budget: parseBudget(freeText),
+      freeText,
+      type: "shared",
+      invitedSpriteIds,
+      location: { label: parsePlanLocation(freeText) },
+      planSlots,
+    };
+  }
   return {
     occasion: parseOccasion(text),
     budget: parseBudget(text),
-    freeText: text.trim(),
+    freeText,
     type: "shared",
     invitedSpriteIds,
+    kind: "shopping",
   };
 }

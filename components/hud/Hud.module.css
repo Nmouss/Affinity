@@ -41,35 +41,12 @@
   color: #dcc8b7;
 }
 
-.pipLive,
-.pipReplay,
 .badge {
   display: inline-flex;
   gap: 0.35rem;
   align-items: center;
   font-size: 0.72rem;
   color: #dcc8b7;
-}
-
-.pipLive::before,
-.pipReplay::before {
-  content: "";
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-}
-
-.pipLive::before {
-  background: #6fe38a;
-  box-shadow: 0 0 0.5rem #6fe38a;
-  animation: pulse 1.6s ease-in-out infinite;
-}
-
-.pipReplay::before {
-  background: #ffb35c;
-}
-
-.badge {
   padding: 0.1rem 0.45rem;
   border: 1px solid rgba(255, 209, 138, 0.35);
   border-radius: 999px;
@@ -113,7 +90,7 @@
 
 .toast {
   position: absolute;
-  top: 3.6rem;
+  top: 5.4rem;
   left: 50%;
   margin: 0;
   padding: 0.5rem 0.9rem;
@@ -124,6 +101,44 @@
   font-size: 0.82rem;
   transform: translateX(-50%);
   animation: fadeIn 200ms ease-out;
+}
+
+.deliberating {
+  position: absolute;
+  top: 3.6rem;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid rgba(255, 209, 138, 0.35);
+  border-radius: 999px;
+  background: rgba(18, 13, 11, 0.7);
+  color: #ffe9c2;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.deliberatingDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #ffd18a;
+  box-shadow: 0 0 0.5rem #ffd18a;
+  animation: deliberatingPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes deliberatingPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
 }
 
 .left {
@@ -218,12 +233,6 @@
   font-size: 0.78rem;
   white-space: nowrap;
   animation: fadeIn 400ms ease-out;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.45;
-  }
 }
 
 @keyframes fadeIn {

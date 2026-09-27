@@ -1,0 +1,13 @@
+.plan { display: grid; gap: .65rem; }
+.location { margin: 0; color: #ffd18a; font-size: .82rem; }
+.stops { display: grid; gap: .7rem; margin: 0; padding: 0; list-style: none; }
+.stop { display: grid; grid-template-columns: 5rem 1fr; gap: .65rem; }
+.photo, .placeholder { width: 5rem; height: 4rem; border-radius: .55rem; object-fit: cover; background: rgba(255,248,235,.08); }
+.details { min-width: 0; display: grid; gap: .12rem; font-size: .72rem; color: #dcc8b7; }
+.details strong { overflow: hidden; color: #fff4df; font-size: .86rem; white-space: nowrap; text-overflow: ellipsis; }
+.people, .links { display: flex; gap: .35rem; align-items: center; }
+.dot { width: .5rem; height: .5rem; border-radius: 50%; }
+.links a, .links button { border: 1px solid rgba(255,209,138,.35); border-radius: 999px; padding: .12rem .4rem; background: transparent; color: #ffe9c2; font: inherit; text-decoration: none; }
+.credit { color: #9f8d80; font-size: .58rem; }
+.credit a { color: inherit; }
+.warning { margin: 0; color: #cbb8aa; font-size: .65rem; }

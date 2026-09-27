@@ -1,14 +1,14 @@
-import type { CartMandate } from "@/types/domain";
+import type { SignedMandate } from "@/types/domain";
 
-export function unsignedPayload(mandate: CartMandate) {
+export function unsignedPayload(mandate: SignedMandate) {
   return new TextEncoder().encode(JSON.stringify({
     mission: mandate.mission,
-    bundle: mandate.bundle,
+    ...( "bundle" in mandate ? { bundle: mandate.bundle } : { plan: mandate.plan }),
     approvedAt: mandate.approvedAt,
   }));
 }
 
-export async function verifyMandate(mandate: CartMandate): Promise<boolean> {
+export async function verifyMandate(mandate: SignedMandate): Promise<boolean> {
   try {
     const publicKey = await crypto.subtle.importKey(
       "jwk",

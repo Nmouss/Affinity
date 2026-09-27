@@ -4,8 +4,8 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { BufferAttribute, PlaneGeometry, type Group } from "three";
 import { ROOM } from "@/lib/stage/layout";
-import { Snow } from "./Snow";
-import { nightSkyTexture, wallpaperTexture, woodFloorTexture } from "./textures";
+import { ENVIRONMENTS, type EnvironmentPreset } from "./environments";
+import { wallpaperTexture, woodFloorTexture } from "./textures";
 
 /** Left-wall window opening, in ft. */
 export const WINDOW = { zMin: -5.6, zMax: -1.4, yMin: 2.6, yMax: 6.6 } as const;
@@ -74,7 +74,7 @@ function LeftWall() {
       <Trim position={[x, wy, wz]} size={[0.08, 0.08, ww]} />
       <mesh position={[x - 0.02, wy, wz]} rotation-y={Math.PI / 2}>
         <planeGeometry args={[ww, wh]} />
-        <meshStandardMaterial color="#1c3470" transparent opacity={0.22} roughness={0.05} metalness={0.3} depthWrite={false} />
+        <meshStandardMaterial color="#eef4fb" transparent opacity={0.12} roughness={0.05} metalness={0.1} depthWrite={false} />
       </mesh>
     </group>
   );
@@ -98,38 +98,8 @@ function BackWall() {
   );
 }
 
-/** What the window looks out on: sky, snowy ground, a few pines, and falling snow. */
-function Outside() {
-  const sky = useMemo(() => nightSkyTexture(), []);
-  const pines: Array<[number, number, number]> = [
-    [-14, 0, -6.5],
-    [-16.5, 0, -2.5],
-    [-13, 0, 0.5],
-  ];
-  return (
-    <group>
-      <mesh position={[-22, 5, -3]} rotation-y={Math.PI / 2}>
-        <planeGeometry args={[40, 22]} />
-        <meshBasicMaterial map={sky} />
-      </mesh>
-      <mesh position={[-16, -0.4, -3]} rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[12, 30]} />
-        <meshStandardMaterial color="#c9d8f2" roughness={1} />
-      </mesh>
-      {pines.map((position, index) => (
-        <group key={index} position={position}>
-          <mesh position-y={2.5 + index * 0.4}>
-            <coneGeometry args={[1.4, 5 + index * 0.8, 7]} />
-            <meshStandardMaterial color="#0f2a24" roughness={1} />
-          </mesh>
-        </group>
-      ))}
-      <Snow />
-    </group>
-  );
-}
-
-export function RoomShell() {
+export function RoomShell({ environment }: { environment: EnvironmentPreset }) {
+  const Environment = ENVIRONMENTS[environment];
   const floor = useMemo(() => woodFloorTexture(), []);
   const back = useRef<Group>(null);
   const left = useRef<Group>(null);
@@ -157,10 +127,10 @@ export function RoomShell() {
       <group ref={ceiling}>
         <mesh rotation-x={Math.PI / 2} position={[ROOM.leftWallX + ROOM.width / 2, ROOM.height, ROOM.backWallZ + ROOM.depth / 2]}>
           <planeGeometry args={[ROOM.width, ROOM.depth]} />
-          <meshStandardMaterial color="#3a2a20" roughness={1} />
+          <meshStandardMaterial color="#f8f6f0" roughness={0.95} />
         </mesh>
       </group>
-      <Outside />
+      <Environment />
     </group>
   );
 }

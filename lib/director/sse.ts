@@ -1,13 +1,27 @@
 import type { CouncilEvent } from "@/types/domain";
 
 const COUNCIL_EVENT_TYPES: ReadonlySet<string> = new Set<CouncilEvent["type"]>([
+  "mission",
   "opinion",
+  "deliberation",
   "constraints",
+  "consensus",
+  "search_plan",
   "bundle",
+  "plan",
   "score",
+  "revision",
+  "scores_complete",
   "veto",
   "awaiting_mandate",
+  "repair_requested",
+  "repair",
+  "preflight",
   "receipt",
+  "carts",
+  "notifications",
+  "error",
+  "run_state",
 ]);
 
 export interface SseParser {

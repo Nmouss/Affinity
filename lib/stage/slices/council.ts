@@ -6,11 +6,18 @@ import { getCircle, getPeople, getPerson, lobbySpot, useRoster } from "@/lib/peo
 import { DOORWAY, guestSpot, type Vec3 } from "@/lib/stage/layout";
 import type {
   Bundle,
-  CartMandate,
   CatalogItem,
   ConstraintSet,
   CouncilEvent,
+  CommerceCart,
   Mission,
+  NotificationDelivery,
+  Plan,
+  PreflightResult,
+  ProposalRepair,
+  ReceiptResult,
+  SearchPlan,
+  SignedMandate,
   SpriteOpinion,
   SpriteScore,
 } from "@/types/domain";
@@ -42,10 +49,15 @@ export interface CouncilSlice {
   /** Set when a veto arrives (explicit fields from the agents, matching heuristics otherwise). */
   conflict: ConflictAttribution | null;
   bundle: Bundle | null;
+  plan: Plan | null;
+  searchPlan: SearchPlan | null;
   scores: Record<string, SpriteScore>;
-  mandate: CartMandate | null;
-  receiptId: string | null;
-  reasoningVisible: boolean;
+  mandate: SignedMandate | null;
+  receipt: ReceiptResult | null;
+  carts: CommerceCart[];
+  notifications: NotificationDelivery[];
+  preflight: PreflightResult | null;
+  repair: ProposalRepair | null;
   profileOpenId: string | null;
   eventLog: LoggedCouncilEvent[];
   /** The intent sent to /api/council on convene. */
@@ -54,8 +66,8 @@ export interface CouncilSlice {
   councilSource: CouncilSource | null;
   /** Date.now() when the current bundle first appeared; arms the handshake after a settle time. */
   bundleShownAt: number | null;
-  /** Sprite whose reasoning is highlighted after a pinch outside the lobby. */
-  reasoningFocusId: string | null;
+  /** Backend-assigned id for the current graph run; needed to resume it for a swap. */
+  threadId: string | null;
   /** Friend ids currently in the living room (walked in from the doorway, seated or not). Family
    *  are always present and never appear here. */
   visitors: string[];
@@ -70,12 +82,11 @@ export interface CouncilSlice {
   seatSprite: (spriteId: string, seat: number | null) => void;
   setMissionText: (text: string) => void;
   setMission: (mission: Mission | null) => void;
+  setThreadId: (threadId: string | null) => void;
+  setMandate: (mandate: SignedMandate | null) => void;
   setCouncilSource: (source: CouncilSource | null) => void;
   setError: (error: string | null) => void;
   openProfile: (spriteId: string | null) => void;
-  setReasoningFocus: (spriteId: string | null) => void;
-  toggleReasoning: () => void;
-  completeMandate: (receiptId: string, mandate: CartMandate) => void;
   resetCouncil: () => void;
 }
 
@@ -90,23 +101,28 @@ function initialSprites(): Record<string, SpriteStageState> {
 function initialCouncil() {
   return {
     phase: "lobby" as StagePhase,
-    missionText: "Family Christmas tree, under $200",
+    missionText: "",
     sprites: initialSprites(),
     opinions: {},
     constraints: null,
     veto: null,
     conflict: null,
     bundle: null,
+    plan: null,
+    searchPlan: null,
     scores: {},
     mandate: null,
-    receiptId: null,
-    reasoningVisible: false,
+    receipt: null,
+    carts: [],
+    notifications: [],
+    preflight: null,
+    repair: null,
     profileOpenId: null,
     eventLog: [],
     mission: null,
     councilSource: null,
     bundleShownAt: null,
-    reasoningFocusId: null,
+    threadId: null,
     visitors: [] as string[],
     error: null,
   };
@@ -192,8 +208,10 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
     applyCouncilEvent: (event) =>
       set((state) => {
         const eventLog = [...state.eventLog, { event, at: performance.now() }];
-        const phase = nextPhase(state.phase, event.type, state.bundle !== null);
+        const phase = nextPhase(state.phase, event.type, state.bundle !== null || state.plan !== null);
         switch (event.type) {
+          case "mission":
+            return { eventLog, phase, mission: event.payload };
           case "opinion": {
             const { spriteId, say } = event.payload;
             // A removed person's line is skipped entirely: no bubble, no ghost sprite entry, and
@@ -206,8 +224,24 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
               sprites: patchSprite(quietSpeakers(state.sprites, spriteId), spriteId, { mood: "speaking", bubble: say }),
             };
           }
+          case "deliberation": {
+            const { spriteId, say } = event.payload;
+            if (!alive(spriteId)) return { eventLog, phase };
+            return {
+              eventLog,
+              phase,
+              sprites: patchSprite(quietSpeakers(state.sprites, spriteId), spriteId, {
+                mood: "speaking",
+                bubble: say,
+              }),
+            };
+          }
           case "constraints":
             return { eventLog, phase, constraints: event.payload, sprites: quietSpeakers(state.sprites) };
+          case "consensus":
+            return { eventLog, phase, constraints: event.payload, sprites: quietSpeakers(state.sprites) };
+          case "search_plan":
+            return { eventLog, phase, searchPlan: event.payload, sprites: quietSpeakers(state.sprites) };
           case "veto": {
             const conflict = attributeVeto(event.payload, state.opinions, getPeople(), CATALOG);
             let sprites = quietSpeakers(state.sprites);
@@ -221,6 +255,16 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
               eventLog,
               phase,
               bundle: event.payload,
+              bundleShownAt: Date.now(),
+              sprites: mapSprites(state.sprites, (id) => (participants.includes(id) ? { mood: "scoring" } : null)),
+            };
+          }
+          case "plan": {
+            const participants = participantIds(state);
+            return {
+              eventLog,
+              phase,
+              plan: event.payload,
               bundleShownAt: Date.now(),
               sprites: mapSprites(state.sprites, (id) => (participants.includes(id) ? { mood: "scoring" } : null)),
             };
@@ -239,23 +283,51 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
               }),
             };
           }
+          case "revision":
+            return { eventLog, phase, error: null };
+          case "scores_complete":
+            return { eventLog, phase };
           case "awaiting_mandate":
-            return { eventLog, phase, bundle: event.payload, bundleShownAt: state.bundleShownAt ?? Date.now() };
+            {
+              const envelope = "requiredGesture" in event.payload ? event.payload : null;
+              const legacyBundle: Bundle | undefined = envelope ? undefined : event.payload as Bundle;
+            return {
+              eventLog,
+              phase,
+              bundle: envelope?.bundle ?? legacyBundle ?? state.bundle,
+              plan: envelope?.plan ?? state.plan,
+              bundleShownAt: state.bundleShownAt ?? Date.now(),
+            };
+            }
+          case "repair_requested":
+            return { eventLog, phase };
+          case "repair":
+            return { eventLog, phase, repair: event.payload };
+          case "preflight":
+            return { eventLog, phase, preflight: event.payload };
           case "receipt": {
             const participants = participantIds(state);
             return {
               eventLog,
               phase,
-              mandate: event.payload,
+              receipt: event.payload,
               sprites: mapSprites(state.sprites, (id) => (participants.includes(id) ? { mood: "celebrating" } : null)),
             };
           }
+          case "carts":
+            return { eventLog, phase, carts: event.payload };
+          case "notifications":
+            return { eventLog, phase, notifications: event.payload };
+          case "run_state":
+            return { eventLog, phase, threadId: event.payload.threadId };
+          case "error":
+            return { eventLog, phase, error: event.payload.detail, sprites: quietSpeakers(state.sprites) };
         }
       }),
 
     setPhase: (phase) => set({ phase }),
 
-    advancePhase: (input) => set((state) => ({ phase: nextPhase(state.phase, input, state.bundle !== null) })),
+    advancePhase: (input) => set((state) => ({ phase: nextPhase(state.phase, input, state.bundle !== null || state.plan !== null) })),
 
     setConflict: (conflict) => set({ conflict }),
 
@@ -278,27 +350,15 @@ export const createCouncilSlice: StateCreator<StageStore, [], [], CouncilSlice> 
 
     setMission: (mission) => set({ mission }),
 
+    setThreadId: (threadId) => set({ threadId }),
+
+    setMandate: (mandate) => set({ mandate }),
+
     setCouncilSource: (councilSource) => set({ councilSource }),
 
     setError: (error) => set({ error }),
 
     openProfile: (profileOpenId) => set({ profileOpenId }),
-
-    setReasoningFocus: (reasoningFocusId) => set({ reasoningFocusId }),
-
-    toggleReasoning: () => set((state) => ({ reasoningVisible: !state.reasoningVisible })),
-
-    completeMandate: (receiptId, mandate) =>
-      set((state) => {
-        const participants = participantIds(state);
-        return {
-          receiptId,
-          mandate,
-          error: null,
-          phase: nextPhase(state.phase, "mandateVerified"),
-          sprites: mapSprites(state.sprites, (id) => (participants.includes(id) ? { mood: "celebrating" } : null)),
-        };
-      }),
 
     resetCouncil: () => set(initialCouncil()),
   };

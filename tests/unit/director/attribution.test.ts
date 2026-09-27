@@ -6,7 +6,7 @@ import { getPeople } from "@/lib/people/roster";
 import { CATALOG } from "@/lib/stage/slices/council";
 import type { CouncilEvent, SpriteOpinion } from "@/types/domain";
 
-// The starter roster's family (wife/daughter/son) is what the cached transcript and stage
+// The starter roster (wife/daughter/son ids) is what the cached transcript and stage
 // transcript were both written for.
 const FAMILY = getPeople();
 const events = cachedTranscript as CouncilEvent[];
@@ -16,12 +16,12 @@ const opinions: Record<string, SpriteOpinion> = Object.fromEntries(
 const veto = events.find((event) => event.type === "veto")!.payload as { rule: string; wish: string; resolution: string };
 
 describe("attributeVeto", () => {
-  it("attributes the demo veto: Leo's T-rex, Maya's height rule, dinosaur ornaments", () => {
+  it("attributes the demo veto: Jordan's oversized lamp, Priya's height rule, the desk lamp swap", () => {
     expect(attributeVeto(veto, opinions, FAMILY, CATALOG)).toEqual({
       wishBy: "son",
       ruleBy: "wife",
-      itemId: "inflatable-trex",
-      resolvedItemId: "orn-dino",
+      itemId: "oversized-lamp",
+      resolvedItemId: "gift-lamp",
     });
   });
 

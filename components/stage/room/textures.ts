@@ -32,7 +32,7 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** Honey-oak planks with staggered joints and grain. One tile covers 4 × 4 ft. */
+/** Pale oak planks with staggered joints and grain. One tile covers 4 × 4 ft. */
 export function woodFloorTexture(): CanvasTexture {
   const size = 1024;
   const [canvas, ctx] = makeCanvas(size, size);
@@ -43,10 +43,10 @@ export function woodFloorTexture(): CanvasTexture {
     let x = -random() * size * 0.5;
     while (x < size) {
       const length = size * (0.45 + random() * 0.5);
-      const light = 42 + random() * 10;
-      ctx.fillStyle = `hsl(${26 + random() * 6}, ${48 + random() * 10}%, ${light}%)`;
+      const light = 76 + random() * 8;
+      ctx.fillStyle = `hsl(${30 + random() * 6}, ${22 + random() * 8}%, ${light}%)`;
       ctx.fillRect(x, row * plank, length, plank);
-      ctx.strokeStyle = `hsla(24, 50%, ${light - 12}%, 0.35)`;
+      ctx.strokeStyle = `hsla(28, 25%, ${light - 14}%, 0.3)`;
       ctx.lineWidth = 1.5;
       for (let g = 0; g < 7; g += 1) {
         const y = row * plank + 6 + random() * (plank - 12);
@@ -55,40 +55,26 @@ export function woodFloorTexture(): CanvasTexture {
         ctx.bezierCurveTo(x + length * 0.3, y + random() * 6 - 3, x + length * 0.6, y + random() * 6 - 3, x + length, y);
         ctx.stroke();
       }
-      ctx.fillStyle = "rgba(40, 20, 10, 0.55)";
+      ctx.fillStyle = "rgba(90, 70, 50, 0.25)";
       ctx.fillRect(x, row * plank, 3, plank);
       x += length;
     }
-    ctx.fillStyle = "rgba(40, 20, 10, 0.6)";
+    ctx.fillStyle = "rgba(90, 70, 50, 0.3)";
     ctx.fillRect(0, row * plank, size, 3);
   }
   return toTexture(canvas, [5, 4]);
 }
 
-/** Cream wallpaper with soft stripes and a small diamond motif. Walls map one tile per 4 ft. */
+/** Soft off-white walls with a faint stripe. Walls map one tile per 4 ft. */
 export function wallpaperTexture(): CanvasTexture {
   const size = 512;
   const [canvas, ctx] = makeCanvas(size, size);
-  ctx.fillStyle = "#e9d6b4";
+  ctx.fillStyle = "#f4f1ea";
   ctx.fillRect(0, 0, size, size);
   const stripe = size / 8;
   for (let i = 0; i < 8; i += 2) {
-    ctx.fillStyle = "#dfc79f";
+    ctx.fillStyle = "#eeeae1";
     ctx.fillRect(i * stripe, 0, stripe, size);
-  }
-  ctx.fillStyle = "#c9a878";
-  for (let i = 0; i < 8; i += 2) {
-    for (let j = 0; j < 8; j += 1) {
-      const cx = i * stripe + stripe * 1.5;
-      const cy = j * stripe + stripe / 2;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - 7);
-      ctx.lineTo(cx + 5, cy);
-      ctx.lineTo(cx, cy + 7);
-      ctx.lineTo(cx - 5, cy);
-      ctx.closePath();
-      ctx.fill();
-    }
   }
   return toTexture(canvas);
 }
@@ -114,7 +100,7 @@ export function brickTexture(): CanvasTexture {
   return toTexture(canvas);
 }
 
-/** The council rug: concentric bands, a star medallion, and a scalloped border. */
+/** The council rug: soft neutral concentric bands, no traditional motif. */
 export function rugTexture(): CanvasTexture {
   const size = 1024;
   const [canvas, ctx] = makeCanvas(size, size);
@@ -125,31 +111,11 @@ export function rugTexture(): CanvasTexture {
     ctx.arc(c, c, radius, 0, Math.PI * 2);
     ctx.fill();
   };
-  ring(c, "#f1e2c4");
-  ring(c * 0.96, "#8e2b2b");
-  ring(c * 0.9, "#f1e2c4");
-  for (let i = 0; i < 36; i += 1) {
-    const angle = (i / 36) * Math.PI * 2;
-    ctx.fillStyle = i % 2 === 0 ? "#2f5e4a" : "#c99a3a";
-    ctx.beginPath();
-    ctx.arc(c + Math.cos(angle) * c * 0.84, c + Math.sin(angle) * c * 0.84, c * 0.035, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ring(c * 0.78, "#2f5e4a");
-  ring(c * 0.74, "#a8392f");
-  ring(c * 0.5, "#f1e2c4");
-  ring(c * 0.46, "#c99a3a");
-  ring(c * 0.42, "#8e2b2b");
-  ctx.fillStyle = "#f1e2c4";
-  ctx.beginPath();
-  for (let i = 0; i < 16; i += 1) {
-    const angle = (i / 16) * Math.PI * 2 - Math.PI / 2;
-    const radius = i % 2 === 0 ? c * 0.36 : c * 0.16;
-    ctx.lineTo(c + Math.cos(angle) * radius, c + Math.sin(angle) * radius);
-  }
-  ctx.closePath();
-  ctx.fill();
-  ring(c * 0.08, "#c99a3a");
+  ring(c, "#e4e0d6");
+  ring(c * 0.94, "#d3cdbe");
+  ring(c * 0.88, "#e4e0d6");
+  ring(c * 0.5, "#d3cdbe");
+  ring(c * 0.46, "#e4e0d6");
   return toTexture(canvas);
 }
 

@@ -40,18 +40,16 @@ describe("arming table", () => {
         "reset",
         "seat",
         "swipe",
-        "toggleReasoning",
       ].sort(),
     );
   });
 
   it("arms each gesture in exactly the right phases", () => {
     expect(armedPhases("hover")).toEqual(PHASES);
-    expect(armedPhases("toggleReasoning")).toEqual(PHASES);
     expect(armedPhases("reset")).toEqual(PHASES);
     expect(armedPhases("pinchTap")).toEqual(PHASES.filter((phase) => phase !== "signing"));
     for (const type of ["dragStart", "dragEnd", "seat", "convene"] as const) expect(armedPhases(type)).toEqual(["lobby"]);
-    expect(armedPhases("orbit")).toEqual(["bundle", "scoring", "awaitMandate"]);
+    expect(armedPhases("orbit")).toEqual([]);
     for (const type of ["swipe", "handshakeProgress", "handshakeComplete"] as const) {
       expect(armedPhases(type)).toEqual(["awaitMandate"]);
     }

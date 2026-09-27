@@ -1,4 +1,4 @@
-import type { Bundle, CartMandate, Mission } from "@/types/domain";
+import type { Bundle, CartMandate, Mission, Plan, PlanMandate, SignedMandate } from "@/types/domain";
 import { unsignedPayload } from "./mandate";
 
 // Browser-side half of the AP2-style cart mandate: a per-device ECDSA P-256 key signs exactly the
@@ -65,6 +65,15 @@ export interface SignOptions {
   approvedAt?: Date;
 }
 
+async function signUnsigned<T extends SignedMandate>(unsigned: T, keyPair: CryptoKeyPair): Promise<T> {
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    keyPair.privateKey,
+    unsignedPayload(unsigned),
+  );
+  return { ...unsigned, signature: toBase64(signature) };
+}
+
 /** Signs {mission, bundle, approvedAt} and returns the CartMandate /api/mandate expects. */
 export async function signMandate(mission: Mission, bundle: Bundle, options: SignOptions = {}): Promise<CartMandate> {
   const keyPair = options.keyPair ?? (await getDeviceKeyPair());
@@ -76,10 +85,19 @@ export async function signMandate(mission: Mission, bundle: Bundle, options: Sig
     publicKey,
     signature: "",
   };
-  const signature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    keyPair.privateKey,
-    unsignedPayload(unsigned),
-  );
-  return { ...unsigned, signature: toBase64(signature) };
+  return signUnsigned(unsigned, keyPair);
+}
+
+/** Signs an approved place itinerary with the same device-bound key as shopping mandates. */
+export async function signPlanMandate(mission: Mission, plan: Plan, options: SignOptions = {}): Promise<PlanMandate> {
+  const keyPair = options.keyPair ?? (await getDeviceKeyPair());
+  const publicKey = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
+  const unsigned: PlanMandate = {
+    mission,
+    plan,
+    approvedAt: (options.approvedAt ?? new Date()).toISOString(),
+    publicKey,
+    signature: "",
+  };
+  return signUnsigned(unsigned, keyPair);
 }

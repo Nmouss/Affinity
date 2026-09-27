@@ -36,9 +36,8 @@ export type TargetId =
   | `sprite:${string}`
   | `seat:${number}`
   | "hearth"
-  | "tree"
+  | "centerpiece"
   | `item:${string}`
-  | `anchor:${number}`
   /** A DOM control the hand can point at (People Maker buttons); see data-hand-target. */
   | `ui:${string}`;
 
@@ -56,7 +55,6 @@ export type GestureEvent =
   | { type: "handshakeProgress"; progress: number }
   | { type: "handshakeComplete" }
   | { type: "convene" }
-  | { type: "toggleReasoning" }
   | { type: "reset" };
 
 export type GestureType = GestureEvent["type"];

@@ -7,14 +7,14 @@ import { useStage } from "@/lib/stage/store";
 import { getTargetWorldPosition } from "@/lib/stage/targets";
 import { createTextLabel } from "./textLabel";
 
-// The approval ring. It hangs around the tree when the tree target exists, otherwise in front of the
-// camera, and its arc fills from hand.handshakeProgress (hand, Space, or the approve button alike).
+// The approval ring. It hangs around the centerpiece when that target exists, otherwise in front of
+// the camera, and its arc fills from hand.handshakeProgress (hand, Space, or the approve button alike).
 
 const SEGMENTS = 128;
 /** Indices per theta segment of a RingGeometry with one phi segment. */
 const INDICES_PER_SEGMENT = 6;
-const TREE_CENTER_HEIGHT = 2.2;
-const TREE_RING_RADIUS = 2.8;
+const CENTERPIECE_CENTER_HEIGHT = 2.2;
+const CENTERPIECE_RING_RADIUS = 2.8;
 const CAMERA_DISTANCE = 7;
 const CAMERA_RING_RADIUS = 1.6;
 const FILL = new Color("#ffd18a");
@@ -32,7 +32,7 @@ export function HandshakeRing({ visible }: { visible: boolean }) {
   const arc = useRef<Mesh>(null);
   const shownPercent = useRef(-1);
   const label = useMemo(() => createTextLabel(), []);
-  const scratch = useMemo(() => ({ tree: new Vector3(), forward: new Vector3() }), []);
+  const scratch = useMemo(() => ({ centerpiece: new Vector3(), forward: new Vector3() }), []);
   // Starts at 12 o'clock; mirrored on x below so it fills clockwise.
   const arcGeometry = useMemo(() => new RingGeometry(0.9, 1, SEGMENTS, 1, Math.PI / 2, Math.PI * 2), []);
 
@@ -45,11 +45,15 @@ export function HandshakeRing({ visible }: { visible: boolean }) {
       return;
     }
 
-    const tree = getTargetWorldPosition("tree", scratch.tree);
-    if (tree) {
-      // The tree may register its base (on the floor) or its middle; center the ring on the middle.
-      root.position.set(tree.x, tree.y < 1 ? tree.y + TREE_CENTER_HEIGHT : tree.y, tree.z);
-      root.scale.set(TREE_RING_RADIUS, TREE_RING_RADIUS, TREE_RING_RADIUS);
+    const centerpiece = getTargetWorldPosition("centerpiece", scratch.centerpiece);
+    if (centerpiece) {
+      // The centerpiece may register its base (on the floor) or its middle; center the ring on the middle.
+      root.position.set(
+        centerpiece.x,
+        centerpiece.y < 1 ? centerpiece.y + CENTERPIECE_CENTER_HEIGHT : centerpiece.y,
+        centerpiece.z,
+      );
+      root.scale.set(CENTERPIECE_RING_RADIUS, CENTERPIECE_RING_RADIUS, CENTERPIECE_RING_RADIUS);
     } else {
       camera.getWorldDirection(scratch.forward);
       root.position.copy(camera.position).addScaledVector(scratch.forward, CAMERA_DISTANCE);

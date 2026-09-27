@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import family from "@/data/family.json";
 import { DEFAULT_ICON, MAX_ICONS, MIN_ICONS, iconsForLove, iconsForProfile } from "@/components/sprites/icons";
-import type { FamilyProfile } from "@/types/domain";
-
-const profiles = family as FamilyProfile[];
-const byId = (id: string) => profiles.find((profile) => profile.id === id)!;
-const kinds = (id: string) => iconsForProfile(byId(id)).map((icon) => icon.kind);
 
 describe("iconsForLove", () => {
   it.each([
@@ -28,22 +22,27 @@ describe("iconsForLove", () => {
 });
 
 describe("iconsForProfile", () => {
-  it("gives Maya bauble, star, bulb and snowflake", () => {
-    expect(kinds("wife")).toEqual(["bauble", "star", "bulb", "snowflake"]);
+  it("derives bauble, star, bulb and snowflake from gold/sparkle/lights/minimal loves", () => {
+    const kinds = iconsForProfile({ loves: ["white and gold decor", "warm lights", "minimal design"] }).map(
+      (icon) => icon.kind,
+    );
+    expect(kinds).toEqual(["bauble", "star", "bulb", "snowflake"]);
   });
 
-  it("gives Ava doll, bow and star", () => {
-    expect(kinds("daughter")).toEqual(["doll", "bow", "star"]);
+  it("derives doll, bow and star from doll/pink/sparkle loves", () => {
+    const kinds = iconsForProfile({ loves: ["dolls", "pink", "sparkle"] }).map((icon) => icon.kind);
+    expect(kinds).toEqual(["doll", "bow", "star"]);
   });
 
-  it("gives Leo dinosaurs and a color-changing bulb", () => {
-    const icons = iconsForProfile(byId("son"));
+  it("derives dinosaurs and a color-changing bulb from dino/lights loves", () => {
+    const icons = iconsForProfile({ loves: ["dinosaurs", "color-changing lights", "giant inflatable T-rex"] });
     expect(icons.map((icon) => icon.kind)).toEqual(["dino", "bulb", "dino"]);
     expect(icons.find((icon) => icon.kind === "bulb")?.rainbow).toBe(true);
   });
 
-  it("keeps Maya's warm lights warm", () => {
-    expect(iconsForProfile(byId("wife")).find((icon) => icon.kind === "bulb")?.rainbow).toBe(false);
+  it("keeps warm lights warm (not rainbow)", () => {
+    const icons = iconsForProfile({ loves: ["white and gold decor", "warm lights", "minimal design"] });
+    expect(icons.find((icon) => icon.kind === "bulb")?.rainbow).toBe(false);
   });
 
   it("always returns 3–4 icons", () => {

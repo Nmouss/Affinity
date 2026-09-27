@@ -92,8 +92,6 @@ export function mapKey(event: KeyLike, phase: "down" | "up"): KeyAction | null {
       return { kind: "emit", event: { type: "convene" } };
     case "KeyR":
       return { kind: "emit", event: { type: "reset" } };
-    case "KeyD":
-      return { kind: "emit", event: { type: "toggleReasoning" } };
     default:
       return null;
   }

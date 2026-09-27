@@ -15,7 +15,6 @@ describe("mapKey", () => {
     expect(mapKey({ code: "Digit3" }, "down")).toMatchObject({ event: { spriteId: "son" } });
     expect(mapKey({ code: "Enter" }, "down")).toEqual({ kind: "emit", event: { type: "convene" } });
     expect(mapKey({ code: "KeyR" }, "down")).toEqual({ kind: "emit", event: { type: "reset" } });
-    expect(mapKey({ code: "KeyD" }, "down")).toEqual({ kind: "emit", event: { type: "toggleReasoning" } });
     expect(mapKey({ code: "KeyP" }, "down")).toEqual({ kind: "tapHover" });
     expect(mapKey({ code: "KeyX" }, "down")).toEqual({ kind: "swipeHover" });
     expect(mapKey({ code: "Tab" }, "down")).toEqual({ kind: "cycleHover", step: 1 });

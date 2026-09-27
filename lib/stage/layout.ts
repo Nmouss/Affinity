@@ -13,9 +13,9 @@ export const HEARTH = { position: [0, 0, -7.4] as Vec3 } as const;
 /** The rug in front of the hearth. Seats sit on the camera side of the ring. */
 export const COUNCIL_RING = { center: [0, 0, -2.5] as Vec3, radius: 3.2, seatAngles: [-0.8, 0, 0.8] } as const;
 
-/** Tree corner beside the fire, with the growth-chart ruler on the back wall behind it. */
-export const TREE = { position: [-5.5, 0, -6] as Vec3 } as const;
-export const RULER = { position: [-7.4, 0, -7.9] as Vec3 } as const;
+/** Open spot to the side of the ring, well clear of both walls, where the bundle's centerpiece
+ *  display stands so the orbit camera always has room to swing around it. */
+export const CENTERPIECE = { position: [5, 0, -1] as Vec3 } as const;
 
 /** Where each sprite waits in the lobby (Maya by the window, Ava at the toy shelf, Leo at the toy box). */
 export const HOME_SPOTS: Record<string, Vec3> = {

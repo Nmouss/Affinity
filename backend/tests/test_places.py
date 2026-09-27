@@ -23,6 +23,12 @@ async def _fake_search(self, query, **kwargs):
                 "googleMapsUri": "https://maps.google.com/?cid=dinner-1",
                 "websiteUri": "https://garden.example",
                 "reservable": True,
+                "photos": [
+                    {
+                        "name": "places/dinner-1/photos/photo-1",
+                        "authorAttributions": [{"displayName": "Demo Photographer", "uri": "https://example.com/credit"}],
+                    }
+                ],
             }
         ]
     return [
@@ -82,10 +88,12 @@ def test_plan_graph_searches_scores_and_interrupts(monkeypatch) -> None:
 
     assert [stop["slot"] for stop in paused["plan"]["stops"]] == ["dinner", "activity"]
     assert paused["plan"]["source"] == "google_places"
+    assert paused["plan"]["stops"][0]["photoName"] == "places/dinner-1/photos/photo-1"
+    assert paused["plan"]["stops"][0]["photoAttributions"][0]["displayName"] == "Demo Photographer"
     assert paused["__interrupt__"][0].value["type"] == "plan_mandate"
     assert "bundle" not in paused["__interrupt__"][0].value
     assert paused["__interrupt__"][0].value["notificationPreview"] == [
-        {"spriteId": "wife", "name": "Maya", "email": "maya@example.com"}
+        {"spriteId": "wife", "name": "Priya", "email": "maya@example.com"}
     ]
     assert sent == []
 

@@ -17,12 +17,16 @@ removed from API responses by :func:`_response`.
 from __future__ import annotations
 
 import json
+import os
+import re
 from typing import Any, Literal
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.responses import Response
+import httpx
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
@@ -133,6 +137,30 @@ async def _stream_execution(input_value: Any, thread_id: str):
 async def health() -> dict[str, str]:
     """Return a dependency-free liveness response."""
     return {"status": "ok"}
+
+
+@app.get("/places/photo")
+async def place_photo(name: str, max_width: int = 640) -> Response:
+    """Proxy one short-lived Google Place photo without exposing the server API key."""
+    if not re.fullmatch(r"places/[^/]+/photos/[^/]+", name):
+        raise HTTPException(status_code=400, detail="Invalid Google Place photo name")
+    api_key = os.getenv("GOOGLE_PLACES_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="Google Places is not configured")
+    width = max(1, min(max_width, 1600))
+    url = f"https://places.googleapis.com/v1/{name}/media"
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            upstream = await client.get(url, params={"key": api_key, "maxWidthPx": width})
+    except httpx.HTTPError as error:
+        raise HTTPException(status_code=502, detail="Place photo unavailable") from error
+    if upstream.is_error:
+        raise HTTPException(status_code=upstream.status_code, detail="Place photo unavailable")
+    return Response(
+        content=upstream.content,
+        media_type=upstream.headers.get("content-type", "image/jpeg"),
+        headers={"Cache-Control": "private, no-store"},
+    )
 
 
 @app.post("/runs")

@@ -9,11 +9,17 @@ from backend.nodes import decide_revision_node, proposal_repair_node
 
 
 MISSION = {
-    "occasion": "Christmas",
+    "occasion": "Birthday",
     "budget": 200,
-    "freeText": "A family tree",
+    "freeText": "A thoughtful shared gift",
     "type": "shared",
     "invitedSpriteIds": ["wife", "daughter", "son"],
+    "shoppingSlots": [
+        {"id": "centerpiece", "query": "main gift"},
+        {"id": "wrapping", "query": "gift wrapping"},
+        {"id": "card", "query": "birthday card"},
+        {"id": "extra", "query": "small extra gift"},
+    ],
 }
 
 
@@ -28,8 +34,8 @@ def test_graph_fans_out_merges_and_interrupts_for_mandate() -> None:
     assert len(result["deliberations"]) == 3
     assert len(result["scores"]) == 3
     assert result["bundle"]["total"] <= MISSION["budget"]
-    tree = next(item for item in result["bundle"]["items"] if item["slot"] == "tree")
-    assert tree["heightIn"] <= 48
+    centerpiece = next(item for item in result["bundle"]["items"] if item["slot"] == "centerpiece")
+    assert centerpiece["heightIn"] <= 24
     assert result["__interrupt__"][0].value["requiredGesture"] == "handshake"
     assert result["carts"] == []
 
@@ -111,7 +117,7 @@ def test_rejected_item_can_be_replaced_with_a_human_prompt() -> None:
     graph = build_graph()
     config = {"configurable": {"thread_id": "repair-run"}}
     paused = asyncio.run(graph.ainvoke({"mission": MISSION}, config))
-    rejected = next(item for item in paused["bundle"]["items"] if item["slot"] == "lights")
+    rejected = next(item for item in paused["bundle"]["items"] if item["slot"] == "wrapping")
 
     repaired = asyncio.run(
         graph.ainvoke(
@@ -132,7 +138,7 @@ def test_rejected_item_can_be_replaced_with_a_human_prompt() -> None:
     assert any(
         "calmer alternative" in query
         for slot in repaired["searchPlan"]["slots"]
-        if slot["slotId"] == "lights"
+        if slot["slotId"] == "wrapping"
         for query in slot["queries"]
     )
     assert all(item.get("selectedBecause") for item in repaired["bundle"]["items"])
@@ -146,9 +152,9 @@ def test_replacement_without_prompt_generates_autonomous_guidance() -> None:
             "bundle": {
                 "items": [
                     {
-                        "id": "lights-warm",
-                        "slot": "lights",
-                        "name": "Warm white lights",
+                        "id": "wrap-simple",
+                        "slot": "wrapping",
+                        "name": "Kraft paper and twine",
                         "price": 18,
                         "tags": ["warm"],
                     }
@@ -158,14 +164,14 @@ def test_replacement_without_prompt_generates_autonomous_guidance() -> None:
             },
             "mandateDecision": {
                 "action": "replace_agent",
-                "itemId": "lights-warm",
+                "itemId": "wrap-simple",
             },
             "rejectedCandidateIds": [],
         }
     )
 
     assert result["repairRequest"]["autonomous"] is True
-    assert "different lights option" in result["repairRequest"]["prompt"]
+    assert "different wrapping option" in result["repairRequest"]["prompt"]
 
 
 def test_revision_loop_is_capped_at_two() -> None:

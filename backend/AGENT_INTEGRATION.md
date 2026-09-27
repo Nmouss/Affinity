@@ -464,6 +464,10 @@ Important fields:
       "reservable": true,
       "googleMapsUri": "https://maps.google.com/...",
       "websiteUri": "https://restaurant.example",
+      "photoName": "places/google-place-id/photos/photo-resource",
+      "photoAttributions": [
+        {"displayName": "Contributor", "uri": "https://example.com/profile"}
+      ],
       "selectedBecause": ["Rated 4.7 from 850 reviews."]
     }
   ],
@@ -477,6 +481,18 @@ Important fields:
 ```
 
 `reservable: true` is metadata, not confirmation of an available table.
+
+Place photo names are short-lived Google resources and must not be cached.
+Render them through the server-side proxy so the Google API key is never sent
+to the browser:
+
+```http
+GET /places/photo?name=places/google-place-id/photos/photo-resource&max_width=640
+```
+
+The Next frontend exposes the same operation at `/api/places/photo`. Display
+every returned `photoAttributions` entry beside the image when the list is not
+empty.
 
 ## Terminal shopping state
 

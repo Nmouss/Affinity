@@ -1,34 +1,27 @@
 "use client";
 
 import { Effects } from "@/components/stage/fx/Effects";
-import { DecoyGhosts } from "@/components/stage/tree/DecoyGhosts";
-import { HeightRuler } from "@/components/stage/tree/HeightRuler";
-import { OrnamentFlights } from "@/components/stage/tree/OrnamentFlights";
-import { TreeAssembly } from "@/components/stage/tree/TreeAssembly";
-import { VetoBeat } from "@/components/stage/tree/VetoBeat";
+import { CenterpieceAssembly } from "@/components/stage/centerpiece/CenterpieceAssembly";
+import { useStage } from "@/lib/stage/store";
 import { CameraRig } from "./CameraRig";
-import { Furniture, Rug } from "./Furniture";
+import { Rug } from "./Furniture";
 import { Hearth } from "./Hearth";
 import { Lighting } from "./Lighting";
 import { RoomShell } from "./RoomShell";
 import { SceneDirector } from "./SceneDirector";
 
-/** The living room: shell, hearth, rug, furniture, the tree corner and its beats, camera, and post. */
+/** The living room: shell (with its environment preset), hearth, rug, the bundle's centerpiece, camera, and post. */
 export function RoomLayer() {
+  const environment = useStage((state) => state.scene.environment);
   return (
     <group>
       <SceneDirector />
       <CameraRig />
       <Lighting />
-      <RoomShell />
+      <RoomShell environment={environment} />
       <Hearth />
       <Rug />
-      <Furniture />
-      <HeightRuler />
-      <DecoyGhosts />
-      <VetoBeat />
-      <TreeAssembly />
-      <OrnamentFlights />
+      <CenterpieceAssembly />
       <Effects />
     </group>
   );

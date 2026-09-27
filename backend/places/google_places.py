@@ -29,6 +29,7 @@ TEXT_SEARCH_FIELD_MASK = ",".join(
         "places.currentOpeningHours.openNow",
         "places.businessStatus",
         "places.reservable",
+        "places.photos",
     )
 )
 

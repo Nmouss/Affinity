@@ -16,10 +16,25 @@ function sse(events: CouncilEvent[]): Response {
 }
 
 /** Routes the director's fetches to the real Next route handlers (or overrides for /api/council). */
-function fakeFetch(council?: (init?: RequestInit) => Promise<Response>): typeof fetch {
+function fakeFetch(
+  council?: (init?: RequestInit) => Promise<Response>,
+  resume?: (init?: RequestInit) => Promise<Response>,
+): typeof fetch {
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const request = new Request(new URL(url, "http://localhost"), init);
+    if (url.endsWith("/api/council/resume")) {
+      if (resume) return resume(init);
+      const requestBody = JSON.parse(String(init?.body)) as { threadId: string };
+      return sse([
+        { type: "preflight", payload: { status: "ready", changes: [], total: 103 } },
+        { type: "receipt", payload: { status: "approved", threadId: requestBody.threadId, total: 103 } },
+        {
+          type: "carts",
+          payload: [{ merchantDomain: "merchant.example", cartId: "cart-1", checkoutUrl: "https://merchant.example/cart/1" }],
+        },
+      ]);
+    }
     if (url.endsWith("/api/council")) return council ? council(init) : councilRoute(request);
     if (url.endsWith("/api/mandate")) return mandateRoute(request);
     throw new Error(`unexpected fetch ${url}`);
@@ -40,6 +55,7 @@ function start(options: Partial<DirectorOptions> = {}): Director {
 }
 
 function seatAllAndConvene() {
+  state().setMissionText("Family Christmas tree, under $200");
   for (const spriteId of ["son", "wife", "daughter"]) emitGesture({ type: "seat", spriteId });
   expect(emitGesture({ type: "convene" })).toBe(true);
 }
@@ -107,10 +123,8 @@ describe("beat queue", () => {
     start();
     seatAllAndConvene();
     await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.opinion);
-    state().toggleReasoning();
     expect(emitGesture({ type: "reset" })).toBe(true);
     expect(state().phase).toBe("lobby");
-    expect(state().reasoningVisible).toBe(false);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(state().phase).toBe("lobby");
     expect(state().eventLog).toEqual([]);
@@ -143,10 +157,10 @@ describe("council transports", () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining("offline"));
   });
 
-  it("falls back to replay when the live stream stays silent for 4 s", async () => {
+  it("falls back to replay when the live stream stays silent for 15 s", async () => {
     start({ fetchImpl: fakeFetch((init) => new Promise((_, reject) => init?.signal?.addEventListener("abort", () => reject(new Error("aborted"))))) });
     seatAllAndConvene();
-    await vi.advanceTimersByTimeAsync(3999);
+    await vi.advanceTimersByTimeAsync(14_999);
     expect(state().councilSource).toBe("live");
     await vi.advanceTimersByTimeAsync(1);
     expect(state().councilSource).toBe("replay");
@@ -187,8 +201,11 @@ describe("signing", () => {
     expect(state().phase).toBe("signing");
     expect(emitGesture({ type: "pinchTap", target: "hearth" })).toBe(false);
     await vi.waitFor(() => expect(state().phase).toBe("receipt"));
-    expect(state().receiptId).toMatch(/[0-9a-f-]{36}/);
-    expect(state().mandate?.bundle.total).toBe(182);
+    expect(state().receipt?.threadId).toMatch(/[0-9a-f-]{36}/);
+    const signed = state().mandate;
+    expect(signed && "bundle" in signed ? signed.bundle.total : null).toBe(103);
+    expect(state().preflight?.status).toBe("ready");
+    expect(state().carts[0]?.checkoutUrl).toBe("https://merchant.example/cart/1");
     expect(state().sprites.son!.mood).toBe("celebrating");
   });
 
@@ -207,7 +224,7 @@ describe("signing", () => {
     expect(emitGesture({ type: "handshakeComplete" })).toBe(true);
     await vi.waitFor(() => expect(state().phase).toBe("awaitMandate"));
     expect(state().error).toMatch(/rejected/);
-    expect(state().receiptId).toBeNull();
+    expect(state().receipt).toBeNull();
   });
 });
 
@@ -233,12 +250,13 @@ describe("intents", () => {
     start();
     emitGesture({ type: "pinchTap", target: "sprite:son" });
     expect(state().profileOpenId).toBe("son");
-    emitGesture({ type: "pinchTap", target: "tree" });
+    emitGesture({ type: "pinchTap", target: "centerpiece" });
     expect(state().profileOpenId).toBeNull();
   });
 
   it("convenes from the hearth only once someone is seated", async () => {
     start();
+    state().setMissionText("Family Christmas tree, under $200");
     emitGesture({ type: "pinchTap", target: "hearth" });
     expect(state().phase).toBe("lobby");
     expect(state().error).toMatch(/Seat at least one/);
@@ -248,17 +266,12 @@ describe("intents", () => {
     expect(state().mission).toMatchObject({ budget: 200, type: "shared", invitedSpriteIds: ["son"] });
   });
 
-  it("rejects lobby gestures once the council is running and toggles reasoning anywhere", async () => {
+  it("rejects lobby gestures once the council is running, and a sprite tap outside the lobby is a no-op", async () => {
     start();
     seatAllAndConvene();
     expect(emitGesture({ type: "seat", spriteId: "wife" })).toBe(false);
-    expect(emitGesture({ type: "toggleReasoning" })).toBe(true);
-    expect(state().reasoningVisible).toBe(true);
-    emitGesture({ type: "toggleReasoning" });
     await vi.advanceTimersByTimeAsync(0);
     emitGesture({ type: "pinchTap", target: "sprite:son" });
-    expect(state().reasoningFocusId).toBe("son");
-    expect(state().reasoningVisible).toBe(true);
     expect(state().profileOpenId).toBeNull();
   });
 
@@ -266,5 +279,50 @@ describe("intents", () => {
     start().dispose();
     director = null;
     expect(emitGesture({ type: "handshakeComplete" })).toBe(true);
+  });
+});
+
+describe("swap", () => {
+  const bundleV1: CouncilEvent = {
+    type: "bundle",
+    payload: { items: [{ id: "a", slot: "centerpiece", name: "A", price: 10, tags: [] }], total: 10, serves: {} },
+  };
+  const bundleV2: CouncilEvent = {
+    type: "bundle",
+    payload: { items: [{ id: "b", slot: "centerpiece", name: "B", price: 12, tags: [] }], total: 12, serves: {} },
+  };
+  const runState: CouncilEvent = {
+    type: "run_state",
+    payload: { threadId: "thread-1", status: "interrupted", interrupts: [], state: {} },
+  };
+
+  it("captures threadId from a run_state event", async () => {
+    start({ fetchImpl: fakeFetch(async () => sse([bundleV1, runState])) });
+    seatAllAndConvene();
+    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.bundle);
+    expect(state().threadId).toBe("thread-1");
+  });
+
+  it("does nothing and surfaces an error when no threadId is set yet", async () => {
+    const resume = vi.fn();
+    const d = start({ fetchImpl: fakeFetch(async () => sse([bundleV1]), resume) });
+    await d.swapItem("a");
+    expect(resume).not.toHaveBeenCalled();
+    expect(state().error).toMatch(/hasn't started/);
+  });
+
+  it("posts a replace_agent resume and patches the bundle from the response", async () => {
+    const resume = vi.fn(async (init?: RequestInit) => {
+      expect(JSON.parse(String(init?.body))).toEqual({ threadId: "thread-1", action: "replace_agent", itemId: "a" });
+      return sse([bundleV2]);
+    });
+    const d = start({ fetchImpl: fakeFetch(async () => sse([bundleV1, runState]), resume) });
+    seatAllAndConvene();
+    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.bundle);
+    expect(state().bundle?.items[0]?.id).toBe("a");
+    await d.swapItem("a");
+    expect(resume).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(DEFAULT_BEATS.bundle);
+    expect(state().bundle?.items[0]?.id).toBe("b");
   });
 });

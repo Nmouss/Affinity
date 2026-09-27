@@ -227,6 +227,8 @@ class PlaceCandidate(TypedDict):
     reservable: NotRequired[bool]
     durationMinutes: NotRequired[int]
     selectedBecause: NotRequired[list[str]]
+    photoName: NotRequired[str]
+    photoAttributions: NotRequired[list[dict[str, str]]]
 
 
 class Plan(TypedDict):

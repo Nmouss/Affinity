@@ -11,11 +11,16 @@ export type PhaseInput =
   | "mandateRejected"
   | "reset";
 
-const EVENT_PHASE: Record<CouncilEvent["type"], StagePhase> = {
+const EVENT_PHASE: Partial<Record<CouncilEvent["type"], StagePhase>> = {
+  mission: "convening",
   opinion: "opinions",
+  deliberation: "opinions",
   constraints: "merge",
+  consensus: "merge",
+  search_plan: "merge",
   veto: "conflict",
   bundle: "bundle",
+  plan: "bundle",
   score: "scoring",
   awaiting_mandate: "awaitMandate",
   receipt: "receipt",
@@ -25,6 +30,9 @@ const EVENT_PHASE: Record<CouncilEvent["type"], StagePhase> = {
 const LOCKED: readonly StagePhase[] = ["signing", "receipt"];
 
 export function nextPhase(phase: StagePhase, input: PhaseInput, hasBundle = false): StagePhase {
+  // Preflight can require fresh consent after an approval attempt, so the backend is allowed to
+  // re-enter the mandate screen while the local UI is in its signing phase.
+  if (input === "awaiting_mandate") return "awaitMandate";
   switch (input) {
     case "reset":
       return "lobby";
@@ -41,6 +49,6 @@ export function nextPhase(phase: StagePhase, input: PhaseInput, hasBundle = fals
     case "receipt":
       return "receipt";
     default:
-      return LOCKED.includes(phase) ? phase : EVENT_PHASE[input];
+      return LOCKED.includes(phase) ? phase : (EVENT_PHASE[input] ?? phase);
   }
 }

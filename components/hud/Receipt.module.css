@@ -50,6 +50,21 @@
   color: #dcc8b7;
 }
 
+.checkoutLinks {
+  display: grid;
+  gap: .45rem;
+  margin-top: .8rem;
+}
+
+.checkoutLinks a {
+  padding: .5rem .7rem;
+  border: 1px solid rgba(255, 209, 138, .55);
+  border-radius: .5rem;
+  color: #ffe9c2;
+  text-align: center;
+  text-decoration: none;
+}
+
 .reset {
   margin: 0.6rem 0 0;
   font-size: 0.75rem;

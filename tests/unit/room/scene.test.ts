@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
+import { cameraModeFor } from "@/components/stage/room/SceneDirector";
 import { ORBIT_LIMITS, applyOrbitDelta, clampOrbit } from "@/lib/stage/slices/scene";
+import type { StagePhase } from "@/types/stage";
+
+describe("council camera", () => {
+  it("keeps the wide fixed view throughout the conversation and mandate", () => {
+    const phases: StagePhase[] = [
+      "lobby",
+      "convening",
+      "opinions",
+      "merge",
+      "conflict",
+      "bundle",
+      "scoring",
+      "awaitMandate",
+      "signing",
+      "receipt",
+    ];
+    expect(phases.map(cameraModeFor)).toEqual(phases.map(() => "fixed"));
+  });
+});
 
 describe("orbit clamping", () => {
   it("accumulates gesture deltas", () => {

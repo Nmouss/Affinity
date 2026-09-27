@@ -1,5 +1,6 @@
 import type { StateCreator } from "zustand";
-import { TREE } from "../layout";
+import type { EnvironmentPreset } from "@/components/stage/room/environments";
+import { CENTERPIECE } from "../layout";
 import type { StageStore } from "../store";
 
 // Owned by the room track. Beat timestamps are performance.now() values so useFrame code can
@@ -14,26 +15,16 @@ export interface OrbitState {
   polar: number;
 }
 
-/** The T-rex → dinosaur ornaments beat, started by the veto and resolved by the next bundle. */
-export interface ConflictBeat {
-  startedAt: number;
-  /** When the vetoed item starts shrinking into the ornament box; null until a bundle arrives. */
-  resolveAt: number | null;
-  /** Catalog item that was vetoed (inflatable-trex in the demo). */
-  itemId: string;
-  /** Ornament set it turns into (orn-dino in the demo). */
-  resolvedItemId: string;
-}
-
 export interface SceneState {
-  /** fixed: the home view with hand parallax. orbit: the inspect view around the tree. */
+  /** fixed: the home view with hand parallax. orbit: the inspect view around the centerpiece. */
   cameraMode: CameraMode;
   orbit: OrbitState;
   /** performance.now() of the last hearth flare. */
   fireFlareAt: number | null;
-  /** World point the inspect view looks at (the assembled tree's middle). */
+  /** World point the inspect view looks at (the centerpiece display's middle). */
   inspectTarget: [number, number, number];
-  conflictBeat: ConflictBeat | null;
+  /** Background preset, chosen from the mission text on convene. */
+  environment: EnvironmentPreset;
 }
 
 export interface SceneSlice {
@@ -81,8 +72,8 @@ export function initialScene(): SceneState {
     cameraMode: "fixed",
     orbit: { azimuth: 0, polar: 0 },
     fireFlareAt: null,
-    inspectTarget: [TREE.position[0], 2, TREE.position[2]],
-    conflictBeat: null,
+    inspectTarget: [CENTERPIECE.position[0], 2, CENTERPIECE.position[2]],
+    environment: "neutral",
   };
 }
 

@@ -50,9 +50,16 @@ export function PeopleMaker() {
     recipientIds?: string[];
   } | null>(null);
   useMakerKeyboard(state, dispatch);
-  // The scene hides dinner-plan furniture (the mission circle) while a gift is being shopped.
+  // The scene hides dinner-plan furniture (the mission circle) while a gift is being shopped. When
+  // a gift council ends, the people it gathered leave the circle again so the next pick starts clean.
   useEffect(() => {
-    usePlaza.getState().setMissionMode(activeMission?.mode ?? null);
+    const plaza = usePlaza.getState();
+    plaza.setMissionMode(activeMission?.mode ?? null);
+    return () => {
+      if (activeMission?.mode === "shopping") {
+        for (const id of usePlaza.getState().missionMemberIds) usePlaza.getState().setMissionMember(id, false);
+      }
+    };
   }, [activeMission]);
 
   const wrappedDispatch = useCallback(

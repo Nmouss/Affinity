@@ -36,7 +36,8 @@ describe("gift pick flow", () => {
     expect(giftRoleOf(state, "son")).toBeNull();
   });
 
-  it("prefills buyers from the mission circle and drops the recipient from them", () => {
+  it("starts clean by default; an explicit prefill drops the recipient from the buyers", () => {
+    expect(startGiftPick()).toEqual({ step: "recipient", recipientId: null, buyerIds: [] });
     let state = startGiftPick(["son", "wife", "son"]);
     expect(state.buyerIds).toEqual(["son", "wife"]);
     state = pickGiftPerson(state, "wife");

@@ -160,11 +160,11 @@ export function PlazaRails({ dispatch, onLaunch, hideMissions = false }: PlazaRa
     const knownIds = new Set(people.map((person) => person.id));
     const invited = missionMemberIds.filter((id) => knownIds.has(id));
     if (mode === "shopping") {
-      // Gifts are picked in the Plaza itself: who it's for, then who's buying. Anyone already in
-      // the mission circle starts out as a buyer.
+      // Gifts are picked in the Plaza itself: who it's for, then who's buying. Every gift starts
+      // from a clean slate; the mission circle is dinner-plan furniture and never pre-fills buyers.
       playBlip("select");
       usePlaza.getState().select(null);
-      setGiftPick(startGiftPick(invited));
+      setGiftPick(startGiftPick());
       return;
     }
     if (invited.length === 0) {

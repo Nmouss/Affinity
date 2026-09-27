@@ -1,6 +1,7 @@
 "use client";
 
-import { BODY_SIZES, CIRCLES, type BodySize, type Circle } from "@/types/character";
+import { BODY_SIZES, CIRCLES, type BodySize, type CharacterLook, type Circle } from "@/types/character";
+import { LookPortrait } from "@/components/sprites/LookPortrait";
 import { SIZE_RELATIONSHIP, type MakerAction } from "./flow";
 import { playBlip } from "./sound";
 import styles from "./WhoPanel.module.css";
@@ -8,9 +9,10 @@ import styles from "./WhoPanel.module.css";
 const CIRCLE_LABEL: Record<Circle, string> = { family: "Family", friend: "Friend" };
 const SIZE_LABEL: Record<BodySize, string> = { grownup: "Grown-up", kid: "Kid", little: "Little one" };
 
-export function WhoCirclePanel({ dispatch }: { dispatch: (action: MakerAction) => void }) {
+export function WhoCirclePanel({ dispatch, look }: { dispatch: (action: MakerAction) => void; look?: CharacterLook }) {
   return (
     <div className={styles.card}>
+      {look && <LookPortrait look={look} size="lg" />}
       <h2 className={styles.title}>Who is this?</h2>
       <p className={styles.subtitle}>Family or friend?</p>
       <div className={styles.choices}>

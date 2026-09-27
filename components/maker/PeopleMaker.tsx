@@ -119,9 +119,9 @@ export function PeopleMaker() {
 
       {(state.step === "who-circle" || state.step === "who-size" || state.step === "start") && (
         <div className={styles.overlay}>
-          {state.step === "who-circle" && <WhoCirclePanel dispatch={wrappedDispatch} />}
+          {state.step === "who-circle" && <WhoCirclePanel dispatch={wrappedDispatch} look={state.draft?.look} />}
           {state.step === "who-size" && <WhoSizePanel dispatch={wrappedDispatch} />}
-          {state.step === "start" && <StartPanel dispatch={wrappedDispatch} />}
+          {state.step === "start" && <StartPanel dispatch={wrappedDispatch} look={state.draft?.look} />}
         </div>
       )}
 

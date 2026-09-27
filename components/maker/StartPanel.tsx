@@ -1,14 +1,17 @@
 "use client";
 
 import { PRESET_KEYS, PRESET_LABELS, type MakerAction } from "./flow";
+import type { CharacterLook } from "@/types/character";
+import { LookPortrait } from "@/components/sprites/LookPortrait";
 import { playBlip } from "./sound";
 import { DiceIcon } from "@/components/hud/icons";
 import styles from "./WhoPanel.module.css";
 import startStyles from "./StartPanel.module.css";
 
-export function StartPanel({ dispatch }: { dispatch: (action: MakerAction) => void }) {
+export function StartPanel({ dispatch, look }: { dispatch: (action: MakerAction) => void; look?: CharacterLook }) {
   return (
-    <div className={styles.card}>
+    <div className={`${styles.card} ${startStyles.card}`}>
+      {look && <LookPortrait look={look} />}
       <h2 className={styles.title}>Start from scratch, or a look-alike?</h2>
       <div className={startStyles.grid}>
         <button

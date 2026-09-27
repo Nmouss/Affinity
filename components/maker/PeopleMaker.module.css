@@ -26,6 +26,9 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  /* Above the plaza's name tags and speech bubbles (drei Html, z-index up to 80). */
+  z-index: 90;
+  padding: 1.5rem;
 }
 
 .overlay > * {

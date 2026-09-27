@@ -12,6 +12,7 @@ import type { DraftPerson, MakerStep } from "./flow";
 import { PlazaCrowd } from "./plaza/PlazaCrowd";
 import { PlazaFloor } from "./plaza/PlazaFloor";
 import { PlazaSky } from "./plaza/PlazaSky";
+import { PlazaCritters } from "./plaza/PlazaCritters";
 import { MissionCircle } from "./plaza/MissionCircle";
 import { PlazaPointer } from "./plaza/PlazaPointer";
 import { usePlaza } from "./plaza/plazaState";
@@ -56,6 +57,7 @@ function PlazaScene() {
       <CameraFraming frame={PLAZA_CAMERA} />
       <PlazaSky />
       <PlazaFloor />
+      <PlazaCritters />
       <MissionCircle />
       <PlazaCrowd />
       <PlazaPointer />

@@ -52,7 +52,9 @@ export function InterviewPanel({ name, existing, onFinish }: InterviewPanelProps
   return (
     <section className={styles.panel} aria-label={`Getting to know ${name}`}>
       <div className={styles.header}>
-        <h2 className={styles.title}>{state.phase === "review" ? `Here's what I picked up` : `Getting to know ${name}`}</h2>
+        <h2 className={styles.title}>
+          {state.phase === "review" ? `Here's what I picked up` : state.script.knows ? `Getting to know ${name} better` : `Getting to know ${name}`}
+        </h2>
         {total > 1 && state.phase !== "review" && state.phase !== "extracting" && state.phase !== "finished" && (
           <span className={styles.progress} aria-live="polite">
             {state.phase === "intro" || state.phase === "idle" ? "Hello" : `Question ${index + 1} of ${total}`}
@@ -70,7 +72,7 @@ export function InterviewPanel({ name, existing, onFinish }: InterviewPanelProps
 
       {(state.phase === "idle" || state.phase === "intro") && (
         <>
-          <p className={styles.question}>Nice to meet you, {name}. Tell me a bit about yourself.</p>
+          <p className={styles.question}>{state.script.knows ? `Let's get to know ${name} a bit better.` : `Nice to meet you, ${name}. Tell me a bit about yourself.`}</p>
           <p className={styles.hint}>Out loud, or typed if you&apos;d rather.</p>
         </>
       )}

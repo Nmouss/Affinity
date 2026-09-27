@@ -1,5 +1,6 @@
 import { normalizePreferences } from "./extract";
-import { closingFor, introFor, QUESTIONS } from "./script";
+import { scriptFor, type InterviewScript } from "./script";
+import { EMPTY_PREFERENCES } from "./types";
 import type { ExtractedPreferences, InterviewAnswer, InterviewQuestion, Preferences } from "./types";
 
 // The interview as a pure state machine. UI and voice engines dispatch events; the reducer returns
@@ -17,7 +18,7 @@ export interface Capabilities {
 export interface InterviewState {
   phase: Phase;
   mode: Mode;
-  /** Which question we're on, 0..QUESTIONS.length-1. */
+  /** Which prompt we're on (one per run today). */
   index: number;
   /** One recorded answer per question, "" when skipped. */
   answers: string[];
@@ -32,6 +33,8 @@ export interface InterviewState {
   notice: string | null;
   result: ExtractedPreferences | null;
   capabilities: Capabilities;
+  /** The words for this run: first-meeting or getting-to-know-you-better. Set on start. */
+  script: InterviewScript;
 }
 
 export type InterviewEvent =
@@ -85,15 +88,19 @@ export function initialInterviewState(): InterviewState {
     notice: null,
     result: null,
     capabilities: { canSpeak: false, canListen: false },
+    script: scriptFor("", EMPTY_PREFERENCES),
   };
 }
 
-export function currentQuestion(state: Pick<InterviewState, "index">): InterviewQuestion | null {
-  return QUESTIONS[state.index] ?? null;
+export function currentQuestion(state: Pick<InterviewState, "index" | "script">): InterviewQuestion | null {
+  return state.index === 0 ? state.script.question : null;
 }
 
+/** One prompt per run. */
+export const QUESTION_COUNT = 1;
+
 export function progress(state: Pick<InterviewState, "index">): { index: number; total: number } {
-  return { index: Math.min(state.index, QUESTIONS.length - 1), total: QUESTIONS.length };
+  return { index: Math.min(state.index, QUESTION_COUNT - 1), total: QUESTION_COUNT };
 }
 
 const ANSWERING: readonly Phase[] = ["listening", "typing"];
@@ -125,28 +132,31 @@ function askQuestion(state: InterviewState): Step {
 }
 
 function answersOf(state: InterviewState): InterviewAnswer[] {
-  return QUESTIONS.map((question, index) => ({ questionId: question.id, question: question.spoken, answer: state.answers[index] ?? "", feeds: question.feeds }));
+  const question = state.script.question;
+  return [{ questionId: question.id, question: question.spoken, answer: state.answers[0] ?? "", feeds: question.feeds }];
 }
 
 /** Records the answer for the current question and moves to the next one, or to extraction. */
-function record(state: InterviewState, answer: string, name: string): Step {
+function record(state: InterviewState, answer: string): Step {
   const answers = [...state.answers];
   answers[state.index] = answer.trim();
   const next: InterviewState = { ...state, answers, retries: 0, notice: null, interim: "", typed: "", stopping: false };
-  if (state.index + 1 < QUESTIONS.length) return askQuestion({ ...next, index: state.index + 1 });
+  if (state.index + 1 < QUESTION_COUNT) return askQuestion({ ...next, index: state.index + 1 });
   const extracting: InterviewState = { ...next, phase: "extracting" };
   const extract: Effect = { type: "extract", answers: answersOf(extracting) };
-  if (extracting.capabilities.canSpeak) return { state: extracting, effects: [{ type: "speak", text: closingFor(name) }, extract] };
+  if (extracting.capabilities.canSpeak) return { state: extracting, effects: [{ type: "speak", text: state.script.closing }, extract] };
   return { state: extracting, effects: [extract] };
 }
 
 export interface ReducerOptions {
   /** The person's name, for the spoken intro and closing. */
   name: string;
+  /** What the roster already knows; when there is anything, the prompt builds on it. */
+  existing?: Preferences;
 }
 
 export function interviewReducer(state: InterviewState, event: InterviewEvent, options: ReducerOptions = { name: "" }): Step {
-  const { name } = options;
+  const { name, existing = EMPTY_PREFERENCES } = options;
   switch (event.type) {
     case "start": {
       if (state.phase !== "idle") return same(state);
@@ -157,8 +167,9 @@ export function interviewReducer(state: InterviewState, event: InterviewEvent, o
         mode,
         capabilities: event.capabilities,
         notice: !event.capabilities.canListen && !event.capabilities.canSpeak ? NOTICES.voiceOff : null,
+        script: scriptFor(name, existing),
       };
-      return ask(started, introFor(name), askQuestion);
+      return ask(started, started.script.intro, askQuestion);
     }
 
     case "speakEnd": {
@@ -188,7 +199,7 @@ export function interviewReducer(state: InterviewState, event: InterviewEvent, o
           effects: [{ type: "listen" }],
         };
       }
-      return record(state, text, name);
+      return record(state, text);
     }
 
     case "typed":
@@ -198,7 +209,7 @@ export function interviewReducer(state: InterviewState, event: InterviewEvent, o
       if (state.phase !== "typing") return same(state);
       const text = state.typed.trim();
       if (!text) return same(state);
-      return record(state, text, name);
+      return record(state, text);
     }
 
     case "useTyping": {
@@ -209,7 +220,7 @@ export function interviewReducer(state: InterviewState, event: InterviewEvent, o
 
     case "skipQuestion": {
       if (!ANSWERING.includes(state.phase) && state.phase !== "asking") return same(state);
-      const step = record(state, "", name);
+      const step = record(state, "");
       return state.phase === "listening" ? { state: step.state, effects: [{ type: "stopListening" }, ...step.effects] } : step;
     }
 

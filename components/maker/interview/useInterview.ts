@@ -2,13 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  closingFor,
   extractLocally,
   initialInterviewState,
   interviewReducer,
-  introFor,
   mergeForReview,
-  QUESTIONS,
+  scriptFor,
   type Effect,
   type ExtractedPreferences,
   type InterviewAnswer,
@@ -214,14 +212,14 @@ export function useInterview({ name, existing, onFinish, engines: injected, fetc
   const send = useCallback(
     (event: InterviewEvent) => {
       const mySession = session.current;
-      const step = interviewReducer(stateRef.current, event, { name });
+      const step = interviewReducer(stateRef.current, event, { name, existing });
       if (step.state !== stateRef.current) {
         stateRef.current = step.state;
         setState(step.state);
       }
       for (const effect of step.effects) runEffect(effect, mySession);
     },
-    [name, runEffect],
+    [name, existing, runEffect],
   );
   sendRef.current = send;
 
@@ -251,7 +249,8 @@ export function useInterview({ name, existing, onFinish, engines: injected, fetc
       if (mySession !== session.current) return;
       enginesRef.current = engines;
       setChoice(picked);
-      engines.speaker.prefetch?.([introFor(name), ...QUESTIONS.map((question) => question.spoken), closingFor(name)]);
+      const script = scriptFor(name, existing);
+      engines.speaker.prefetch?.([script.intro, script.question.spoken, script.closing]);
       const canSpeak = engines.speaker.supported;
       const canListen = engines.recognizer.supported;
       sendRef.current({ type: "start", capabilities: { canSpeak, canListen }, mode: canListen ? "voice" : "typed" });

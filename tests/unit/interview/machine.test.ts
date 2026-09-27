@@ -221,3 +221,26 @@ describe("skip and guards", () => {
     }
   });
 });
+
+describe("getting to know an existing character", () => {
+  it("speaks the recap prompt and keeps the known chips in review", () => {
+    const existing = { loves: ["gym"], avoids: ["clutter"], personality: ["practical"] };
+    let state = initialInterviewState();
+    const effects: Effect[] = [];
+    const send = (event: InterviewEvent) => {
+      const step = interviewReducer(state, event, { name: "Maya", existing });
+      state = step.state;
+      effects.push(...step.effects);
+    };
+    send({ type: "start", capabilities: { canSpeak: true, canListen: true } });
+    expect(state.script.knows).toBe(true);
+    expect(effects[0]).toEqual({ type: "speak", text: "Let's get to know Maya a bit better." });
+    send({ type: "speakEnd" });
+    expect(effects.at(-1)).toEqual({ type: "speak", text: expect.stringContaining("Here's what I know about Maya so far") });
+    send({ type: "speakEnd" });
+    expect(state.phase).toBe("listening");
+    send({ type: "final", text: "she's also into pottery now" });
+    const extract = effects.find((effect) => effect.type === "extract");
+    expect(extract && extract.type === "extract" ? extract.answers[0]!.question : "").toContain("What else should I know?");
+  });
+});

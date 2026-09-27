@@ -13,6 +13,15 @@ describe("buildMission", () => {
     });
   });
 
+  it("shops one catalog slot per selected recipient", () => {
+    const mission = buildMission("Find gifts under $200", ["son", "wife"], { recipientIds: ["son", "wife"] });
+    expect(mission.type).toBe("shared");
+    expect(mission.recipientIds).toEqual(["son", "wife"]);
+    expect(mission.shoppingSlots).toHaveLength(2);
+    expect(mission.shoppingSlots?.map((slot) => slot.id)).toEqual(["centerpiece", "extra"]);
+    expect(mission.shoppingSlots?.[0]?.query).toMatch(/Jonathan/);
+  });
+
   it("builds a Google Places mission for dinner and activity prompts", () => {
     expect(buildMission("Plan dinner and an activity in Midtown Atlanta under $150", ["wife"])).toMatchObject({
       kind: "plan",

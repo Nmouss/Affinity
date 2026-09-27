@@ -86,10 +86,9 @@ export function buildMission(
     budget: parseBudget(text),
     freeText,
     type: recipientIds.length === 1 ? "gift" : "shared",
-    recipientId: recipientIds[0],
-    recipientIds: recipientIds.length ? recipientIds : undefined,
     invitedSpriteIds,
     kind: "shopping",
-    shoppingSlots,
+    ...(recipientIds[0] ? { recipientId: recipientIds[0] } : {}),
+    ...(recipientIds.length ? { recipientIds, shoppingSlots } : {}),
   };
 }

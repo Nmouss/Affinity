@@ -259,8 +259,20 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
 
     case "pickCircle": {
       if (state.step !== "who-circle" || !state.draft) return state;
-      const relationship = action.circle === "friend" ? "friend" : SIZE_RELATIONSHIP[state.draft.size];
-      return { ...state, step: "who-size", draft: { ...state.draft, circle: action.circle, relationship } };
+      // Everyone starts grown-up sized; height and build are adjusted in the editor's Body tab.
+      const size: BodySize = "grownup";
+      const relationship = action.circle === "friend" ? "friend" : SIZE_RELATIONSHIP[size];
+      return {
+        ...state,
+        step: "start",
+        draft: {
+          ...state.draft,
+          circle: action.circle,
+          size,
+          relationship,
+          look: { ...cloneLook(state.draft.look), body: { ...BODY_PRESETS[size] } },
+        },
+      };
     }
 
     case "pickSize": {
@@ -415,7 +427,7 @@ export function flowReducer(state: MakerState, action: MakerAction, deps: FlowDe
         case "who-size":
           return { ...state, step: "who-circle" };
         case "start":
-          return { ...state, step: "who-size" };
+          return { ...state, step: "who-circle" };
         case "editor":
           return { ...state, step: "quit-dialog" };
         case "quit-dialog":

@@ -29,7 +29,13 @@ describe("council slice + the people roster", () => {
   });
 
   it("seating a family member never adds them to visitors", () => {
-    useStage.getState().seatSprite("wife", 0);
+    const familyId = useRoster.getState().addPerson({
+      name: "Cousin",
+      circle: "family",
+      relationship: "cousin",
+      look: BLANK_LOOK,
+    });
+    useStage.getState().seatSprite(familyId!, 0);
     expect(useStage.getState().visitors).toEqual([]);
   });
 

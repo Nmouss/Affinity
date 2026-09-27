@@ -1,4 +1,6 @@
+import { useRef, type RefObject } from "react";
 import { create } from "zustand";
+import type { GiftPickState } from "./giftPick";
 
 // Shared state between the Plaza's 3D scene (hover, drag, formation) and its DOM rails (icons,
 // whistle, cursor). MakerHands and the mouse both write the pointer; the scene decides what's under it.
@@ -44,6 +46,15 @@ export interface PlazaState {
   missionMemberIds: string[];
   /** Set by the scene when a person is dropped on (or an icon is used with) a rail icon; the flow consumes it. */
   dropAction: { action: PlazaDrop; personId: string; at: number } | null;
+  /** DOM host for 3D name chips / bubbles so they paint above the mission action bar. */
+  htmlHost: HTMLElement | null;
+  /** Picking who a gift is for and who's buying; the scene lines people up and badges them while set. */
+  giftPick: GiftPickState | null;
+  /** The council running over the plaza, if any. The mission circle is dinner-plan furniture. */
+  missionMode: "shopping" | "plan" | null;
+  setHtmlHost: (htmlHost: HTMLElement | null) => void;
+  setGiftPick: (giftPick: GiftPickState | null) => void;
+  setMissionMode: (missionMode: "shopping" | "plan" | null) => void;
   setPointer: (pointer: [number, number] | null, source: "mouse" | "hand" | null) => void;
   setGrabbing: (grabbing: boolean) => void;
   setHovered: (id: string | null) => void;
@@ -65,6 +76,12 @@ export const usePlaza = create<PlazaState>()((set) => ({
   whistle: { on: false, sort: "name" },
   missionMemberIds: [],
   dropAction: null,
+  htmlHost: null,
+  giftPick: null,
+  missionMode: null,
+  setHtmlHost: (htmlHost) => set({ htmlHost }),
+  setGiftPick: (giftPick) => set({ giftPick }),
+  setMissionMode: (missionMode) => set({ missionMode }),
   setPointer: (pointer, pointerSource) => set({ pointer, pointerSource }),
   setGrabbing: (grabbing) => set({ grabbing }),
   setHovered: (hoveredId) => set({ hoveredId }),
@@ -82,6 +99,14 @@ export const usePlaza = create<PlazaState>()((set) => ({
   requestDrop: (action, personId) => set({ dropAction: { action, personId, at: Date.now() } }),
   clearDrop: () => set({ dropAction: null }),
 }));
+
+/** drei <Html> portal so speech bubbles and name chips paint above the mission action bar. */
+export function usePlazaHtmlPortal(): RefObject<HTMLElement> | undefined {
+  const host = usePlaza((state) => state.htmlHost);
+  const ref = useRef<HTMLElement>(null!);
+  if (host) ref.current = host;
+  return host ? ref : undefined;
+}
 
 // Read-only handle for browser checks (the headless walkthrough watches drags and drops through it).
 if (typeof window !== "undefined") (window as unknown as { __affinityPlaza?: typeof usePlaza }).__affinityPlaza = usePlaza;

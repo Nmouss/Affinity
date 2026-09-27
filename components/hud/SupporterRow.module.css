@@ -1,0 +1,24 @@
+/* A row of supporter circles plus one plain sentence about the room's mood. */
+.wrap {
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.line {
+  margin: 0;
+  font-size: 0.82rem;
+  text-align: center;
+  color: inherit;
+  opacity: 0.85;
+}

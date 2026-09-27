@@ -14,6 +14,10 @@ import { ProfileCard } from "@/components/sprites/ProfileCard";
 import { hasSavedRoster, usePeople, useRosterHydration } from "@/lib/people/roster";
 import { DEFAULT_BUDGET } from "@/lib/director/mission";
 import { useDirector } from "@/lib/director/useDirector";
+import { FAST_FORWARD_PACE } from "@/lib/director/director";
+import { FastForwardIcon, SkipForwardIcon } from "./icons";
+import { SupporterRow } from "./SupporterRow";
+import { supportersForProposal } from "./supporters";
 import { emitGesture } from "@/lib/stage/bus";
 import { participantIds } from "@/lib/stage/slices/council";
 import { useStage } from "@/lib/stage/store";
@@ -122,9 +126,57 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
     phase === "receipt" && (receipt?.status === "rejected" || (receipt?.status === "approved" && Boolean(mandate)));
   const decisionOpen = shoppingDecision || planDecision || receiptDecision;
 
+  // Fast-forward is a per-run choice: it clears when the council goes home.
+  const [fastForward, setFastForward] = useState(false);
+  useEffect(() => {
+    if (phase === "lobby") setFastForward(false);
+  }, [phase]);
+  const toggleFastForward = useCallback(() => {
+    if (!director) return;
+    const next = !fastForward;
+    setFastForward(next);
+    director.setPace(next ? FAST_FORWARD_PACE : 1);
+  }, [director, fastForward]);
+  const skipTalk = useCallback(() => {
+    if (!director) return;
+    setFastForward(true);
+    director.skipTalk();
+  }, [director]);
+  const talking = DELIBERATING.includes(phase);
+
   return (
     <div className={`${styles.hud} ${plaza ? styles.plazaHud : ""}`}>
       {director && flags?.lab && <BeatTuner director={director} />}
+
+      {director && talking && (
+        <nav className={styles.pace} aria-label="Council pace">
+          <button
+            type="button"
+            className={styles.paceButton}
+            data-hand-target="pace-fast"
+            aria-pressed={fastForward}
+            title={fastForward ? "Back to normal speed" : "Play the council's talk faster"}
+            onClick={toggleFastForward}
+          >
+            <span className={styles.paceIcon}>
+              <FastForwardIcon size={18} />
+            </span>
+            {fastForward ? "Fast" : "Fast forward"}
+          </button>
+          <button
+            type="button"
+            className={styles.paceButton}
+            data-hand-target="pace-skip"
+            title="Skip the talk and go straight to the pick"
+            onClick={skipTalk}
+          >
+            <span className={styles.paceIcon}>
+              <SkipForwardIcon size={18} />
+            </span>
+            Skip the chat
+          </button>
+        </nav>
+      )}
 
       {!plaza && <header className={styles.top}>
         <strong className={styles.brand}>Affinity</strong>
@@ -160,14 +212,15 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
       )}
 
       <div className={styles.left}>
-        {plaza && (bundle || plan) && phase !== "lobby" && (
+        {plaza && !decisionOpen && bundle && !plan && phase !== "lobby" && (
           <ItemRanking
-            title={plan ? "Stops" : "Items"}
-            items={
-              plan
-                ? plan.stops.map((stop) => ({ id: stop.id, name: stop.name }))
-                : (bundle?.items ?? []).map((item) => ({ id: item.id, name: item.name }))
-            }
+            title="Items"
+            items={bundle.items.map((item) => ({
+              id: item.id,
+              name: item.name,
+              imageUrl: item.imageUrl,
+              forName: people.find((member) => bundle.serves[member.id]?.includes(item.id))?.name ?? null,
+            }))}
             agents={rankingAgents}
             scores={scores}
             pending={!SETTLED.includes(phase)}
@@ -201,14 +254,15 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
           </section>
         )}
         {plan && !planDecision && (
-          <section className={styles.cart} aria-label="Plan and happiness">
-            <h2 className={styles.title}>Plan</h2>
-            <PlanPreview plan={plan} family={people} onSwap={handleSwap} swapping={swapping} />
+          <section className={styles.cart} aria-label="Affinity's plan and who likes it">
+            <h2 className={styles.title}>Affinity&apos;s plan</h2>
+            <PlanPreview plaza={plaza} compact plan={plan} family={people} onSwap={handleSwap} swapping={swapping} />
             <div className={styles.meters}>
-              {participants.map((id) => {
-                const profile = people.find((member) => member.id === id);
-                return <HappinessMeter key={id} name={profile?.name ?? id} color={profile?.colors[0] ?? "#ffd18a"} score={scores[id]?.score ?? null} say={scores[id]?.say} pending={!SETTLED.includes(phase)} />;
-              })}
+              <SupporterRow
+                supporters={supportersForProposal(participants, {}, scores)}
+                nameOf={(id) => people.find((member) => member.id === id)?.name ?? id}
+                ariaLabel="Who likes this plan so far"
+              />
             </div>
           </section>
         )}
@@ -233,22 +287,15 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
           {planDecision && plan && (
             <section className={styles.decisionCard} aria-label="Your decision">
               <h2 className={styles.title}>Your decision</h2>
+              <p className={styles.decisionHeading}>Affinity&apos;s plan</p>
               <PlanPreview plaza={plaza} plan={plan} family={people} onSwap={handleSwap} swapping={swapping} />
               <div className={styles.meters}>
-                {participants.map((id) => {
-                  const profile = people.find((member) => member.id === id);
-                  return (
-                    <HappinessMeter
-                      key={id}
-                      plaza={plaza}
-                      name={profile?.name ?? id}
-                      color={profile?.colors[0] ?? "#ffd18a"}
-                      score={scores[id]?.score ?? null}
-                      say={scores[id]?.say}
-                      pending={false}
-                    />
-                  );
-                })}
+                <SupporterRow
+                  size="lg"
+                  supporters={supportersForProposal(participants, {}, scores)}
+                  nameOf={(id) => people.find((member) => member.id === id)?.name ?? id}
+                  ariaLabel="Who likes this plan"
+                />
               </div>
               <div className={styles.mandate}>
                 <MandateButton

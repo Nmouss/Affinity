@@ -50,6 +50,17 @@ export function PeopleMaker() {
     recipientIds?: string[];
   } | null>(null);
   useMakerKeyboard(state, dispatch);
+  // The scene hides dinner-plan furniture (the mission circle) while a gift is being shopped. When
+  // a gift council ends, the people it gathered leave the circle again so the next pick starts clean.
+  useEffect(() => {
+    const plaza = usePlaza.getState();
+    plaza.setMissionMode(activeMission?.mode ?? null);
+    return () => {
+      if (activeMission?.mode === "shopping") {
+        for (const id of usePlaza.getState().missionMemberIds) usePlaza.getState().setMissionMember(id, false);
+      }
+    };
+  }, [activeMission]);
 
   const wrappedDispatch = useCallback(
     (action: MakerAction) => {
@@ -73,12 +84,21 @@ export function PeopleMaker() {
       </div>
 
       {state.step === "plaza" && (
-        <PlazaRails
-          dispatch={wrappedDispatch}
-          onLaunch={(mode, invitedIds, recipientIds) => {
-            if (!activeMission) setActiveMission({ mode, invitedIds, recipientIds });
-          }}
-        />
+        <>
+          <PlazaRails
+            hideMissions={Boolean(activeMission)}
+            dispatch={wrappedDispatch}
+            onLaunch={(mode, invitedIds, recipientIds) => {
+              if (!activeMission) setActiveMission({ mode, invitedIds, recipientIds });
+            }}
+          />
+          <div
+            className={styles.htmlLayer}
+            ref={(node) => {
+              usePlaza.getState().setHtmlHost(node);
+            }}
+          />
+        </>
       )}
 
       {activeMission && (

@@ -42,9 +42,7 @@ describe("flowReducer", () => {
     expect(h.state.step).toBe("who-circle");
 
     h.dispatch({ type: "pickCircle", circle: "family" });
-    expect(h.state.step).toBe("who-size");
-
-    h.dispatch({ type: "pickSize", size: "grownup" });
+    // Family or friend goes straight to the start choices; everyone begins grown-up sized.
     expect(h.state.step).toBe("start");
     expect(h.state.draft?.relationship).toBe("grown-up");
     expect(h.state.draft?.look.body).toEqual(BODY_PRESETS.grownup);
@@ -80,7 +78,7 @@ describe("flowReducer", () => {
     h.dispatch({ type: "pickCircle", circle: "friend" });
     h.dispatch({ type: "pickSize", size: "kid" });
     expect(h.state.draft?.relationship).toBe("friend");
-    expect(h.state.draft?.look.body).toEqual(BODY_PRESETS.kid);
+    expect(h.state.draft?.look.body).toEqual(BODY_PRESETS.grownup);
   });
 
   it("start from a preset copies the preset look but keeps the chosen body size", () => {
@@ -92,8 +90,8 @@ describe("flowReducer", () => {
 
     expect(h.state.draft?.look.accessory).toEqual(STARTER_LOOKS.daughter!.accessory);
     expect(h.state.draft?.look.bodyColor).toBe(STARTER_LOOKS.daughter!.bodyColor);
-    // Body comes from the who-size pick, not the preset.
-    expect(h.state.draft?.look.body).toEqual(BODY_PRESETS.little);
+    // Body starts grown-up sized (the Body tab adjusts it), not from the preset.
+    expect(h.state.draft?.look.body).toEqual(BODY_PRESETS.grownup);
 
     // Mutating the saved draft must never leak back into the frozen STARTER_LOOKS constant.
     h.dispatch({ type: "setColor", field: "bodyColor", color: "#000000" });
@@ -218,9 +216,6 @@ describe("flowReducer", () => {
     h.dispatch({ type: "pickCircle", circle: "family" });
     h.dispatch({ type: "pickSize", size: "kid" });
     expect(h.state.step).toBe("start");
-
-    h.dispatch({ type: "back" });
-    expect(h.state.step).toBe("who-size");
 
     h.dispatch({ type: "back" });
     expect(h.state.step).toBe("who-circle");

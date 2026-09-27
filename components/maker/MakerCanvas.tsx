@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useRef, type PointerEvent as ReactPointerEvent } from "react";
-import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
-import { MathUtils } from "three";
+import { Suspense, useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
+import { ContactShadows } from "@react-three/drei";
+import { MathUtils, PerspectiveCamera } from "three";
 import { CharacterModel } from "@/components/sprites/CharacterModel";
 import { createMotion, type CharacterMotion } from "@/components/sprites/characterPose";
 import type { FamilyProfile } from "@/types/domain";
@@ -21,9 +22,36 @@ import { addYaw, turntable } from "./turntable";
 // simple — no postprocessing, cheap shadows — since this is a UI-heavy screen, not the family
 // council stage.
 
+/** One camera per scene. The Canvas only reads its `camera` prop once, so switching between the
+ *  Plaza and the editor has to move the camera explicitly or the editor is seen from the Plaza's
+ *  high, far vantage point. */
+interface CameraFrame {
+  position: [number, number, number];
+  target: [number, number, number];
+  fov: number;
+}
+const PLAZA_CAMERA: CameraFrame = { position: [0, 12, 10], target: [0, 0, 0], fov: 40 };
+/** Close and low: every eye, brow, and mouth change is visible and the feet meet the disc. */
+// Offset in +x so the ~2 ft character stands in the clear left of the editor panel, framed head to toe.
+const EDITOR_CAMERA: CameraFrame = { position: [0.75, 1.15, 4.6], target: [0.75, 0.95, 0], fov: 32 };
+
+function CameraFraming({ frame }: { frame: CameraFrame }) {
+  const camera = useThree((state) => state.camera);
+  useEffect(() => {
+    camera.position.set(...frame.position);
+    camera.lookAt(...frame.target);
+    if (camera instanceof PerspectiveCamera) {
+      camera.fov = frame.fov;
+      camera.updateProjectionMatrix();
+    }
+  }, [camera, frame]);
+  return null;
+}
+
 function PlazaScene() {
   return (
     <group>
+      <CameraFraming frame={PLAZA_CAMERA} />
       <PlazaFloor />
       <MissionCircle />
       <PlazaCrowd />
@@ -117,16 +145,24 @@ function EditorScene({ draft }: { draft: DraftPerson }) {
 
   return (
     <group>
+      <CameraFraming frame={EDITOR_CAMERA} />
       <group ref={group} position={[0, 0, 0]}>
         <CharacterModel profile={profile} mood={mood} gaze={gaze} motion={motion} look={draft.look} />
       </group>
       <OrbitPlane />
       <ambientLight intensity={0.7} />
       <directionalLight position={[3, 5, 4]} intensity={1} />
+      {/* A small stage disc the character actually stands on, with a soft contact shadow so it reads
+          as grounded rather than floating in front of a gray blob. */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-        <circleGeometry args={[2.4, 32]} />
-        <meshStandardMaterial color="#e8dfd2" />
+        <circleGeometry args={[1.5, 48]} />
+        <meshStandardMaterial color="#efe6d6" />
       </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.005, 0]}>
+        <ringGeometry args={[1.42, 1.5, 48]} />
+        <meshBasicMaterial color="#c9bda6" toneMapped={false} />
+      </mesh>
+      <ContactShadows position={[0, 0.002, 0]} opacity={0.6} scale={3} blur={1.8} far={2.4} resolution={512} color="#3a2c22" frames={Infinity} />
     </group>
   );
 }
@@ -171,11 +207,8 @@ export default function MakerCanvas({ step, draft }: MakerCanvasProps) {
       shadows={false}
       dpr={[1, 1.5]}
       style={{ cursor }}
-      camera={{
-        position: editing ? [0, 1.5, 3.4] : [0, 12, 10],
-        fov: editing ? 35 : 40,
-      }}
-      onCreated={({ camera }) => camera.lookAt(0, editing ? 1 : 0, 0)}
+      camera={{ position: PLAZA_CAMERA.position, fov: PLAZA_CAMERA.fov }}
+      onCreated={({ camera }) => camera.lookAt(...PLAZA_CAMERA.target)}
       {...pointerHandlers}
     >
       <Suspense fallback={null}>{editing && draft ? <EditorScene draft={draft} /> : <PlazaScene />}</Suspense>

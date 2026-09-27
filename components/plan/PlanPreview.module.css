@@ -1,32 +1,93 @@
-.plan { display: grid; gap: .65rem; }
-.location { margin: 0; color: #ffd18a; font-size: .82rem; }
-.stops { display: grid; gap: .7rem; margin: 0; padding: 0; list-style: none; }
-.stop { display: grid; grid-template-columns: 5rem 1fr; gap: .65rem; }
-.photo, .placeholder { width: 5rem; height: 4rem; border-radius: .55rem; object-fit: cover; background: rgba(255,248,235,.08); }
-.details { min-width: 0; display: grid; gap: .12rem; font-size: .72rem; color: #dcc8b7; }
-.details strong { overflow: hidden; color: #fff4df; font-size: .86rem; white-space: nowrap; text-overflow: ellipsis; }
-.people, .links { display: flex; gap: .35rem; align-items: center; }
-.dot { width: .5rem; height: .5rem; border-radius: 50%; }
-.links a, .links button { border: 1px solid rgba(255,209,138,.35); border-radius: 999px; padding: .12rem .4rem; background: transparent; color: #ffe9c2; font: inherit; text-decoration: none; }
-.links button[data-hand-hover] { outline: 2px solid #ffd18a; outline-offset: 1px; background: rgba(255, 209, 138, .18); }
-.credit { color: #9f8d80; font-size: .58rem; }
+/* The dinner plan, in the same language as the gift review card: each stop is a cream card with a
+   large photo, name, rating, and address, and round Plaza-style actions beneath. */
+.plan { display: grid; gap: 0.75rem; }
+
+.location {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ffd18a;
+}
+
+.stops { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+
+.stop {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 209, 138, 0.25);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.photoWrap {
+  position: relative;
+  border-radius: 0.7rem;
+  overflow: hidden;
+  background: rgba(255, 248, 235, 0.08);
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: 8.5rem;
+  object-fit: cover;
+}
+
+.placeholder {
+  display: block;
+  width: 100%;
+  height: 5rem;
+}
+
+.slot {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(30, 19, 15, 0.75);
+  color: #ffe9c2;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.details { min-width: 0; display: grid; gap: 0.15rem; font-size: 0.78rem; color: #dcc8b7; }
+.details strong { color: #fff4df; font-size: 1rem; line-height: 1.3; }
+.rating { display: inline-flex; align-items: center; gap: 0.3rem; }
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 1.1rem;
+  padding-top: 0.2rem;
+}
+
+.credit { color: #9f8d80; font-size: 0.6rem; }
 .credit a { color: inherit; }
-.warning { margin: 0; color: #cbb8aa; font-size: .65rem; }
+.warning { margin: 0; color: #cbb8aa; font-size: 0.68rem; line-height: 1.4; }
+
+/* Decision card with several stops: side by side, so the card and the supporters fit one screen. */
+.twoUp .stops { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.twoUp .photo { height: 6.5rem; }
+.twoUp .details strong { font-size: 0.92rem; }
+.twoUp .actions { gap: 0.8rem; }
+
+/* Side-panel (compact) variant: smaller photo, smaller buttons. */
+.compact .stops { gap: 0.5rem; }
+.compact .stop { padding: 0.5rem; gap: 0.4rem; }
+.compact .photo { height: 4.25rem; }
+.compact .details { font-size: 0.72rem; }
+.compact .details strong { font-size: 0.86rem; }
+.compact .actions { gap: 0.7rem; padding-top: 0; }
+.compact .credit { display: none; }
 
 .plaza .location { color: #6b7349; }
+.plaza .stop { border: 1.5px solid rgba(44, 36, 28, 0.16); background: #fffaf1; }
+.plaza .photoWrap, .plaza .placeholder { background: #e4e8d4; }
+.plaza .slot { background: #f7f1e8; color: #6b7349; border: 1px solid rgba(44, 36, 28, 0.18); }
 .plaza .details { color: #5c574c; }
 .plaza .details strong { color: #2c241c; }
-.plaza .photo, .plaza .placeholder { background: #e4e8d4; }
-.plaza .links a, .plaza .links button {
-  border: 1.5px solid rgba(44, 36, 28, 0.22);
-  background: #f7f1e8;
-  color: #2c241c;
-  font-weight: 600;
-  box-shadow: none;
-}
-.plaza .links button[data-hand-hover] {
-  outline: none;
-  background: #eef0e4;
-  box-shadow: 0 0 0 3px rgba(107, 115, 73, 0.28);
-}
 .plaza .credit, .plaza .warning { color: #6b665c; }

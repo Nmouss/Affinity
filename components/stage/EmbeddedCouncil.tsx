@@ -37,9 +37,12 @@ export function EmbeddedCouncil({
 }) {
   useEffect(() => {
     const requested = new Set(invitedIds);
-    const invited = getPeople()
-      .filter((person) => requested.has(person.id))
-      .slice(0, MAX_SEATS);
+    const known = new Set(getPeople().map((person) => person.id));
+    // Keep the caller's order: for a gift, the recipient comes first and sits by the hearth.
+    const invited = invitedIds
+      .filter((id, index) => known.has(id) && invitedIds.indexOf(id) === index)
+      .slice(0, MAX_SEATS)
+      .map((id) => getPerson(id)!);
     const stage = useStage.getState();
     stage.resetCouncil();
     const recipients = recipientIds.filter((id) => requested.has(id));

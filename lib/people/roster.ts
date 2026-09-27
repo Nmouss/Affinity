@@ -14,7 +14,7 @@ import { STARTER_CIRCLES, STARTER_LOOKS, STARTER_PEOPLE } from "./starters";
 
 export const MAX_PEOPLE = 24;
 
-const STORAGE_KEY = "affinity.people.v1";
+const STORAGE_KEY = "affinity.people.v2";
 type Persisted = Pick<RosterState, "people" | "looks" | "circles">;
 
 export interface NewPerson {

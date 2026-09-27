@@ -71,9 +71,12 @@ describe("phase walk over the stage transcript", () => {
     expect(state().bundleShownAt).not.toBeNull();
     expect(state().sprites.daughter!.mood).toBe("scoring");
 
-    for (const score of scores) state().applyCouncilEvent(score);
+    for (const score of scores.filter((event) => event.type === "score")) state().applyCouncilEvent(score);
     expect(state().sprites.wife).toMatchObject({ mood: "happy", score: 9 });
     expect(state().sprites.son).toMatchObject({ mood: "happy", score: 7 });
+    expect(state().sprites.son!.bubble).toBeTruthy();
+    state().applyCouncilEvent({ type: "awaiting_mandate", payload: { items: [], total: 0, serves: {} } });
+    expect(Object.values(state().sprites).every((sprite) => sprite.bubble === null)).toBe(true);
   });
 
   it("still drives the lab stepper's cached transcript from the lobby", () => {

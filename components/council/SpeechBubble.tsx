@@ -27,6 +27,7 @@ export function SpeechBubble({
   align = "center",
   active = true,
 }: SpeechBubbleProps) {
+  const root = useRef<HTMLDivElement>(null);
   const typed = useRef<HTMLSpanElement>(null);
   const rest = useRef<HTMLSpanElement>(null);
   const line = text ? clampBubble(text) : "";
@@ -46,10 +47,27 @@ export function SpeechBubble({
     return () => cancelAnimationFrame(frame);
   }, [line, thinking]);
 
+  // Keep the bubble below a top margin so it never clips off the viewport.
+  useLayoutEffect(() => {
+    const node = root.current;
+    if (!node) return;
+    const margin = 28;
+    let frame = 0;
+    const pin = () => {
+      const drop = Number.parseFloat(node.style.getPropertyValue("--drop") || "0") || 0;
+      const top = node.getBoundingClientRect().top;
+      const next = Math.max(0, drop + (margin - top));
+      if (Math.abs(next - drop) > 0.5) node.style.setProperty("--drop", `${next}px`);
+      frame = requestAnimationFrame(pin);
+    };
+    frame = requestAnimationFrame(pin);
+    return () => cancelAnimationFrame(frame);
+  }, [line, thinking]);
+
   if (!thinking && !line) return null;
 
   return (
-    <div className={`${styles.anchor} ${align === "center" ? "" : styles[align]}`}>
+    <div ref={root} className={`${styles.anchor} ${align === "center" ? "" : styles[align]}`}>
       <div
         key={thinking ? "thinking" : line}
         className={styles.bubble}

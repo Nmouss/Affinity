@@ -99,6 +99,9 @@ export class BeatQueue {
   private readonly pending: Beat[] = [];
   private current: Beat | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  /** Holds are divided by this: 1 is the show as written, larger is fast-forward. */
+  private speed = 1;
+  private holdEndsAt = 0;
 
   constructor(private readonly options: BeatQueueOptions) {}
 
@@ -112,11 +115,60 @@ export class BeatQueue {
     return this.timer !== null || this.pending.length > 0;
   }
 
+  get pace(): number {
+    return this.speed;
+  }
+
+  /**
+   * Fast-forward: every hold (including the one in progress) is divided by `factor`. The remaining
+   * part of the current hold is rescheduled so pressing the button is felt at once.
+   */
+  setSpeed(factor: number): void {
+    const next = Number.isFinite(factor) && factor >= 1 ? factor : 1;
+    if (next === this.speed) return;
+    const previous = this.speed;
+    this.speed = next;
+    if (!this.timer) return;
+    const remaining = Math.max(0, this.holdEndsAt - Date.now()) * (previous / next);
+    clearTimeout(this.timer);
+    this.schedule(remaining);
+  }
+
+  /** Skip the talk: end the current hold and apply everything already waiting, in order, right now. */
+  skip(): void {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+      const finished = this.current;
+      this.current = null;
+      if (finished) this.options.onBeatEnd?.(finished);
+    }
+    while (this.pending.length > 0) {
+      const beat = this.pending.shift()!;
+      this.current = beat;
+      this.options.apply(beat);
+      if (this.current !== beat) return; // apply() reset the stage and cleared the queue
+      this.current = null;
+      this.options.onBeatEnd?.(beat);
+    }
+  }
+
   clear(): void {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     this.current = null;
     this.pending.length = 0;
+    this.speed = 1;
+  }
+
+  private schedule(hold: number): void {
+    this.holdEndsAt = Date.now() + hold;
+    this.timer = setTimeout(() => {
+      const finished = this.current;
+      this.current = null;
+      if (finished) this.options.onBeatEnd?.(finished);
+      this.next();
+    }, hold);
   }
 
   private next(): void {
@@ -128,12 +180,7 @@ export class BeatQueue {
     this.current = beat;
     this.options.apply(beat);
     if (this.current !== beat) return; // apply() reset the stage and cleared the queue
-    const hold = beatHoldMs(beat, this.options.durations(), this.options.readPauseMs?.() ?? READ_PAUSE_MS);
-    this.timer = setTimeout(() => {
-      const finished = this.current;
-      this.current = null;
-      if (finished) this.options.onBeatEnd?.(finished);
-      this.next();
-    }, hold);
+    const hold = beatHoldMs(beat, this.options.durations(), this.options.readPauseMs?.() ?? READ_PAUSE_MS) / this.speed;
+    this.schedule(hold);
   }
 }

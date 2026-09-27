@@ -5,6 +5,8 @@ import { useFrame } from "@react-three/fiber";
 import { getAgents, resolveOverlaps } from "@/lib/people/crowd";
 import { usePeople, useRoster } from "@/lib/people/roster";
 import { formationSlots, missionCircleSlots, sortForWhistle } from "./formation";
+import { formationForPicks } from "./giftPick";
+import { GiftRoleMarkers } from "./GiftRoleMarkers";
 import { PlazaPerson } from "./PlazaPerson";
 import { usePlaza } from "./plazaState";
 
@@ -23,12 +25,15 @@ export function PlazaCrowd() {
   const whistleOn = usePlaza((state) => state.whistle.on);
   const sort = usePlaza((state) => state.whistle.sort);
   const missionMemberIds = usePlaza((state) => state.missionMemberIds);
+  const giftPick = usePlaza((state) => state.giftPick);
 
   const slots = useMemo(() => {
+    // Picking a gift's people lines everyone up around the picks; otherwise the whistle decides.
+    if (giftPick) return formationForPicks(people.map((person) => person.id), giftPick);
     if (!whistleOn) return null;
     const order = sortForWhistle(people, circles, sort);
     return formationSlots(order, circles, sort);
-  }, [whistleOn, sort, people, circles]);
+  }, [giftPick, whistleOn, sort, people, circles]);
   const missionSlots = useMemo(
     () => missionCircleSlots(missionMemberIds.filter((id) => people.some((person) => person.id === id))),
     [missionMemberIds, people],
@@ -48,6 +53,7 @@ export function PlazaCrowd() {
           missionSlot={missionSlots[profile.id] ?? null}
         />
       ))}
+      {giftPick && <GiftRoleMarkers pick={giftPick} />}
     </group>
   );
 }

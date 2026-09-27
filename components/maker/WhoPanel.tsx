@@ -25,7 +25,11 @@ export function WhoCirclePanel({ dispatch }: { dispatch: (action: MakerAction) =
               dispatch({ type: "pickCircle", circle });
             }}
           >
+            <span className={circle === "family" ? styles.chipFamily : styles.chipFriend} aria-hidden>
+              {CIRCLE_LABEL[circle]}
+            </span>
             {CIRCLE_LABEL[circle]}
+            <span className={styles.hint}>{circle === "family" ? "Lives in the living room" : "Visits when invited"}</span>
           </button>
         ))}
       </div>

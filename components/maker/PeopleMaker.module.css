@@ -12,6 +12,13 @@
   inset: 0;
 }
 
+.htmlLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+}
+
 .overlay {
   position: absolute;
   inset: 0;

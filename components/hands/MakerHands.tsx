@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { MachineContext } from "@/lib/gestures/detector";
 import { createGestureMachine } from "@/lib/gestures/detector";
 import { connectLeap, type LeapStatus } from "@/lib/gestures/leap";
+import { handshakeAssisted } from "@/lib/gestures/live";
 import { createPointerFilter } from "@/lib/gestures/pointer";
 import type { HandFrame } from "@/lib/gestures/types";
 import type { GestureEvent } from "@/types/stage";
@@ -11,8 +12,11 @@ import { addYaw } from "@/components/maker/turntable";
 import { playBlip } from "@/components/maker/sound";
 import { usePlaza } from "@/components/maker/plaza/plazaState";
 import { emitGesture } from "@/lib/stage/bus";
+import { useStage } from "@/lib/stage/store";
 import { GrabbingHandGlyph, PointerHandGlyph } from "@/components/maker/plaza/plazaIcons";
-import { HAND_HOVER_ATTR, HAND_TARGET_ATTR, ndcToClient, uiTargetId, uiTargetValue } from "./makerHitTest";
+import { HAND_HOVER_ATTR, HAND_TARGET_ATTR, ndcToClient, uiTargetValue } from "./makerHitTest";
+import { handshakeProgressChanged } from "./makerHandshake";
+import { resolveHandTarget } from "./makerTargets";
 import styles from "./MakerHands.module.css";
 
 // Standalone Leap input for /create: unlike the main stage (a canvas HandLayer fed by the
@@ -28,12 +32,22 @@ import styles from "./MakerHands.module.css";
 // machine only ever emits pinchTap for a `ui:` target (one under a DOM [data-hand-target] element),
 // so a pinch that starts over the canvas — with no such target under it — never .click()s anything;
 // the scene reads pointer/grabbing directly to handle taps and drags on people itself.
+//
+// It also carries the handshake: every step (hand tracked or not) passes handshakeAssist from
+// lib/gestures/live.ts, so the hold-to-approve button (MandateButton) and Space fill the same meter
+// here as they do on the room stage's HandLayer — and it writes the resulting handshakeProgress into
+// the hand slice so MandateButton's fill actually moves (reset to 0 on unmount). And a hover/swipe
+// over a cart or plan item (data-hand-item, tagged by a different track) resolves to an `item:<id>`
+// target via makerTargets.resolveHandTarget, which the detector already turns into a `swipe` event
+// forwarded straight to the bus below — a pinch tap on an `item:` target never .click()s anything,
+// since uiTargetValue is null for it.
 
 const FRAME_STALE_MS = 250;
 const ORBIT_ZONE = "[data-orbit-zone]";
 
-function closestHandTarget(element: Element | null): HTMLElement | null {
-  return element?.closest(`[${HAND_TARGET_ATTR}]`) as HTMLElement | null;
+/** Walks an element then each ancestor in turn, for resolveHandTarget's "nearest wins" search. */
+function* elementChain(start: Element | null): IterableIterator<Element> {
+  for (let element = start; element; element = element.parentElement) yield element;
 }
 
 export function MakerHands() {
@@ -47,6 +61,8 @@ export function MakerHands() {
     const machine = createGestureMachine({
       emit: (event: GestureEvent) => {
         if (event.type === "hover") {
+          // Cleared unconditionally, so hovering an `item:` target (no [data-hand-target] element)
+          // or nothing at all still turns the previous glow off.
           if (hoveredElement.current) hoveredElement.current.removeAttribute(HAND_HOVER_ATTR);
           const value = uiTargetValue(event.target);
           const element = value ? (document.querySelector(`[${HAND_TARGET_ATTR}="${cssEscape(value)}"]`) as HTMLElement | null) : null;
@@ -56,6 +72,8 @@ export function MakerHands() {
             playBlip("hover");
           }
         } else if (event.type === "pinchTap") {
+          // uiTargetValue is null for an `item:` target, so a pinch tap over an item card never
+          // .click()s anything — items only respond to swipe.
           const value = uiTargetValue(event.target);
           if (value) {
             const element = document.querySelector(`[${HAND_TARGET_ATTR}="${cssEscape(value)}"]`) as HTMLElement | null;
@@ -78,9 +96,7 @@ export function MakerHands() {
         const [x, y] = ndcToClient(pointer, width, height);
         lastClient.x = x;
         lastClient.y = y;
-        const target = closestHandTarget(document.elementFromPoint(x, y));
-        const value = target?.getAttribute(HAND_TARGET_ATTR);
-        return value ? uiTargetId(value) : null;
+        return resolveHandTarget(elementChain(document.elementFromPoint(x, y)));
       },
       dropSeat() {
         return null;
@@ -93,6 +109,15 @@ export function MakerHands() {
     let raf = 0;
     let wasPresent = false;
     let wasPinching = false;
+    let lastHandshakeProgress = 0;
+
+    /** Writes handshakeProgress into the hand slice only past a small epsilon, so MandateButton's
+     * fill (which reads it every render via a CSS variable) moves without spamming the store. */
+    const applyHandshakeProgress = (progress: number) => {
+      if (!handshakeProgressChanged(lastHandshakeProgress, progress)) return;
+      lastHandshakeProgress = progress;
+      useStage.getState().setHand({ handshakeProgress: progress });
+    };
 
     const disconnect = connectLeap(
       (frame) => {
@@ -109,9 +134,12 @@ export function MakerHands() {
       const now = performance.now();
       const fresh = now - lastFrameAt < FRAME_STALE_MS ? lastFrame : null;
       const tracked = fresh?.hand ?? null;
+      // Read every frame so the button/Space can fill the handshake even with no Leap hand at all.
+      const handshakeAssist = handshakeAssisted();
 
       if (!tracked) {
-        machine.step({ t: now, hand: null }, context);
+        const snap = machine.step({ t: now, hand: null, handshakeAssist }, context);
+        applyHandshakeProgress(snap.handshakeProgress);
         setPresent((was) => (was ? false : was));
         setCursor((was) => (was === null ? was : null));
         if (wasPresent) {
@@ -126,7 +154,7 @@ export function MakerHands() {
       }
 
       const pointer = filter.update(tracked.palm, fresh!.timestamp);
-      machine.step(
+      const snap = machine.step(
         {
           t: now,
           hand: {
@@ -136,9 +164,11 @@ export function MakerHands() {
             rollRadians: tracked.rollRadians,
             velocityX: tracked.velocity[0],
           },
+          handshakeAssist,
         },
         context,
       );
+      applyHandshakeProgress(snap.handshakeProgress);
       const [x, y] = ndcToClient(pointer, window.innerWidth, window.innerHeight);
       lastClient.x = x;
       lastClient.y = y;
@@ -163,6 +193,7 @@ export function MakerHands() {
       if (hoveredElement.current) hoveredElement.current.removeAttribute(HAND_HOVER_ATTR);
       usePlaza.getState().setPointer(null, null);
       usePlaza.getState().setGrabbing(false);
+      useStage.getState().setHand({ handshakeProgress: 0 });
     };
   }, []);
 

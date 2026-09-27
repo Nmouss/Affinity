@@ -35,7 +35,7 @@ export const HOME_SPOT_LIST: readonly Vec3[] = [
   [-7, 0, -1],
   [6.5, 0, -4],
   [7, 0, 1.5],
-  [-8, 0, 3],
+  [-5, 0, 1.5], // [-8, 0, 3] was left of the camera's view: a fourth family member stood off-screen
   [3.8, 0, -5.8],
   [-3.2, 0, -5.4],
 ];

@@ -9,3 +9,5 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 /docs 
+.venv/
+*.tsbuildinfo

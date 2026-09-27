@@ -1,5 +1,6 @@
+import { PerspectiveCamera, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
-import { activeSeatCount, MAX_SEATS, seatAngles } from "@/lib/stage/layout";
+import { activeSeatCount, CAMERA, HOME_SPOT_LIST, MAX_SEATS, seatAngles } from "@/lib/stage/layout";
 
 describe("seatAngles", () => {
   it("matches today's three-seat ring exactly", () => {
@@ -30,5 +31,27 @@ describe("activeSeatCount", () => {
     expect(activeSeatCount(4)).toBe(4);
     expect(activeSeatCount(MAX_SEATS)).toBe(MAX_SEATS);
     expect(activeSeatCount(MAX_SEATS + 5)).toBe(MAX_SEATS);
+  });
+});
+
+describe("HOME_SPOT_LIST", () => {
+  // Everyone standing at a home spot must be visible from the room's resting camera, feet to head,
+  // on common laptop and projector aspect ratios.
+  it.each([
+    ["16:10", 1440 / 900],
+    ["16:9", 1280 / 720],
+  ])("keeps every family member in view at %s", (_label, aspect) => {
+    const camera = new PerspectiveCamera(CAMERA.fov, aspect, 0.1, 100);
+    camera.position.set(...CAMERA.position);
+    camera.lookAt(...CAMERA.target);
+    camera.updateMatrixWorld();
+    camera.updateProjectionMatrix();
+    HOME_SPOT_LIST.forEach(([x, , z], index) => {
+      for (const y of [0, 2.5]) {
+        const ndc = new Vector3(x, y, z).project(camera);
+        expect(Math.abs(ndc.x), `home spot ${index} (y=${y}) horizontally`).toBeLessThanOrEqual(1);
+        expect(Math.abs(ndc.y), `home spot ${index} (y=${y}) vertically`).toBeLessThanOrEqual(1);
+      }
+    });
   });
 });

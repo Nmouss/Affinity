@@ -1,5 +1,18 @@
+"use client";
+
+import { handTarget } from "@/components/hands/makerHitTest";
 import type { CommerceCart, NotificationDelivery, ReceiptResult, SignedMandate } from "@/types/domain";
 import styles from "./Receipt.module.css";
+
+/**
+ * Pure: which checkout link to surface. A handshake has no user activation, so checkout can no longer
+ * open itself automatically at signing time (see Hud's former checkoutTab); instead the receipt shows
+ * a real button once the backend hands back a merchant checkout URL, and a real click on it carries
+ * its own activation.
+ */
+export function selectCheckoutUrl(carts: readonly CommerceCart[]): string | null {
+  return carts[0]?.checkoutUrl ?? null;
+}
 
 /** Shown only after LangGraph finalizes approval and any post-approval side effects. */
 export function Receipt({
@@ -17,6 +30,7 @@ export function Receipt({
 }) {
   const approved = new Date(mandate.approvedAt);
   const isCart = "bundle" in mandate;
+  const checkoutUrl = selectCheckoutUrl(carts);
   return (
     <aside className={`${styles.receipt} ${plaza ? styles.plaza : ""}`} aria-label="Approved proposal" aria-live="polite">
       <p className={styles.seal} aria-hidden>
@@ -45,13 +59,16 @@ export function Receipt({
           </>
         )}
       </dl>
-      {carts.length > 0 && (
+      {checkoutUrl && (
         <div className={styles.checkoutLinks}>
-          {carts.map((cart) => (
-            <a key={`${cart.merchantDomain}:${cart.cartId}`} href={cart.checkoutUrl} target="_blank" rel="noreferrer">
-              Checkout at {cart.merchantDomain}
-            </a>
-          ))}
+          <button
+            type="button"
+            className={styles.checkoutButton}
+            {...handTarget("receipt-checkout")}
+            onClick={() => window.open(checkoutUrl, "_blank", "noopener")}
+          >
+            Open Shopify checkout
+          </button>
         </div>
       )}
       {notifications.length > 0 && (

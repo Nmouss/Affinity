@@ -1,4 +1,5 @@
 import type { CommerceCart, NotificationDelivery, ReceiptResult, SignedMandate } from "@/types/domain";
+import { SparkleIcon } from "./icons";
 import styles from "./Receipt.module.css";
 
 /** Shown only after LangGraph finalizes approval and any post-approval side effects. */
@@ -20,7 +21,7 @@ export function Receipt({
   return (
     <aside className={`${styles.receipt} ${plaza ? styles.plaza : ""}`} aria-label="Approved proposal" aria-live="polite">
       <p className={styles.seal} aria-hidden>
-        ✦
+        <SparkleIcon size={28} />
       </p>
       <h2 className={styles.heading}>{plaza ? "You're all set" : "Mandate signed"}</h2>
       <dl className={styles.facts}>

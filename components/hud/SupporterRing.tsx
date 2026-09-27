@@ -3,6 +3,7 @@
 import { useLook } from "@/lib/people/roster";
 import { BLANK_LOOK, STARTER_LOOKS } from "@/lib/people/starters";
 import type { Supporter } from "./supporters";
+import { StarIcon } from "./icons";
 import styles from "./SupporterRing.module.css";
 
 const LEVEL_CLASS = {
@@ -36,7 +37,11 @@ export function SupporterRing({ supporter, name }: { supporter: Supporter; name:
           <span className={styles.eye} style={{ background: look.eyes.color }} />
         </span>
       </span>
-      {supporter.serves && <span className={styles.pickedFor} aria-hidden>★</span>}
+      {supporter.serves && (
+        <span className={styles.pickedFor} aria-hidden>
+          <StarIcon size={11} />
+        </span>
+      )}
       <span className={styles.name}>{name}</span>
     </li>
   );

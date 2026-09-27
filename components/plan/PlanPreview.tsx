@@ -1,4 +1,5 @@
 import type { FamilyProfile, Plan } from "@/types/domain";
+import { StarIcon } from "@/components/hud/icons";
 import styles from "./PlanPreview.module.css";
 
 export interface PlanPreviewProps {
@@ -35,7 +36,7 @@ export function PlanPreview({ plan, family, onSwap, swapping, plaza = false }: P
               <strong>{stop.name}</strong>
               <span>{stop.address}</span>
               <span>
-                {stop.rating ? `★ ${stop.rating}` : "Rating unavailable"}
+                {stop.rating ? <><StarIcon size={12} /> {stop.rating}</> : "Rating unavailable"}
                 {stop.reservable ? " · Reservations" : ""}
               </span>
               <span className={styles.people}>

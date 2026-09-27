@@ -2,6 +2,7 @@
 
 import { PRESET_KEYS, PRESET_LABELS, type MakerAction } from "./flow";
 import { playBlip } from "./sound";
+import { DiceIcon } from "@/components/hud/icons";
 import styles from "./WhoPanel.module.css";
 import startStyles from "./StartPanel.module.css";
 
@@ -44,7 +45,7 @@ export function StartPanel({ dispatch }: { dispatch: (action: MakerAction) => vo
             dispatch({ type: "startRandom" });
           }}
         >
-          🎲 Random
+          <DiceIcon size={20} /> Random
         </button>
       </div>
       <button type="button" data-hand-target="who-back" className={styles.back} onClick={() => dispatch({ type: "back" })}>

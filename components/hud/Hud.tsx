@@ -14,6 +14,7 @@ import { hasSavedRoster, usePeople, useRosterHydration } from "@/lib/people/rost
 import { DEFAULT_BUDGET } from "@/lib/director/mission";
 import { useDirector } from "@/lib/director/useDirector";
 import { FAST_FORWARD_PACE } from "@/lib/director/director";
+import { FastForwardIcon, SkipForwardIcon } from "./icons";
 import { emitGesture } from "@/lib/stage/bus";
 import { participantIds } from "@/lib/stage/slices/council";
 import { useStage } from "@/lib/stage/store";
@@ -180,8 +181,8 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
             title={fastForward ? "Back to normal speed" : "Play the council's talk faster"}
             onClick={toggleFastForward}
           >
-            <span className={styles.paceIcon} aria-hidden>
-              ⏩
+            <span className={styles.paceIcon}>
+              <FastForwardIcon size={18} />
             </span>
             {fastForward ? "Fast" : "Fast forward"}
           </button>
@@ -192,8 +193,8 @@ export function Hud({ plaza = false }: { plaza?: boolean }) {
             title="Skip the talk and go straight to the pick"
             onClick={skipTalk}
           >
-            <span className={styles.paceIcon} aria-hidden>
-              ⏭
+            <span className={styles.paceIcon}>
+              <SkipForwardIcon size={18} />
             </span>
             Skip the chat
           </button>

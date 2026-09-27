@@ -7,6 +7,7 @@ import { useStage } from "@/lib/stage/store";
 import type { Bundle, CatalogItem } from "@/types/domain";
 import { SupporterRing } from "./SupporterRing";
 import { supportersFor, supportSentence } from "./supporters";
+import { CheckIcon, CrossIcon, GiftIcon, RefreshIcon } from "./icons";
 import styles from "./CartReview.module.css";
 
 const money = (value: number, currency = "USD") =>
@@ -30,7 +31,7 @@ function RoundAction({
   target,
   ...rest
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   tone: "approve" | "swap" | "cancel";
   target: string;
@@ -56,7 +57,7 @@ function Hero({ item }: { item: CatalogItem }) {
   return (
     <div className={styles.heroCard} role="img" aria-label={item.name}>
       <span className={styles.heroCardBow} aria-hidden>
-        🎁
+        <GiftIcon size={44} strokeWidth={1.8} />
       </span>
       <span className={styles.heroCardName}>{item.name}</span>
     </div>
@@ -206,9 +207,9 @@ export function CartReview({ bundle, swapping, onSwap, onCancel, onApproveCart, 
       {!complete && (
         <div className={styles.decisionActions}>
           <div className={styles.roundRow}>
-            <RoundAction icon="✓" label={isApproved ? "Approved" : "Approve"} tone="approve" target="review-approve" disabled={isApproved || searching} onClick={() => approveItem(item)} />
-            <RoundAction icon="↻" label={searching ? "Searching…" : "Find another"} tone="swap" target="review-swap" disabled={searching} onClick={() => requestSwap(item)} />
-            <RoundAction icon="✕" label={confirmCancel ? "Sure?" : "Decline cart"} tone="cancel" target="review-cancel" aria-pressed={confirmCancel} onClick={() => setConfirmCancel((was) => !was)} />
+            <RoundAction icon={<CheckIcon size={26} />} label={isApproved ? "Approved" : "Approve"} tone="approve" target="review-approve" disabled={isApproved || searching} onClick={() => approveItem(item)} />
+            <RoundAction icon={<RefreshIcon size={24} />} label={searching ? "Searching…" : "Find another"} tone="swap" target="review-swap" disabled={searching} onClick={() => requestSwap(item)} />
+            <RoundAction icon={<CrossIcon size={24} />} label={confirmCancel ? "Sure?" : "Decline cart"} tone="cancel" target="review-cancel" aria-pressed={confirmCancel} onClick={() => setConfirmCancel((was) => !was)} />
           </div>
           {confirmCancel && (
             <span className={styles.cancelConfirm} role="group" aria-label="Confirm cancelling the cart">
